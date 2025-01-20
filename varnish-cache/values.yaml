@@ -385,6 +385,19 @@ server:
     # See also https://kubernetes.io/docs/concepts/services-networking/service/
     type: NodePort
 
+    # Sets the internal traffic policy for this service. InternalTrafficPolicy describes how nodes distribute service
+    # traffic they receive on the ClusterIP. Can be set to "Local" or "Cluster" (default)
+    #
+    # See also https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+    internalTrafficPolicy: Cluster
+
+    # Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service
+    # traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and
+    # LoadBalancer IPs). Can be set to "Local" or "Cluster" (default)
+    #
+    # See also https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+    externalTrafficPolicy: Cluster
+
     # Sets whether to attach a Cluster IP address to the service. Services have Cluster IP
     # associated to it by default. Setting this to "None" will create a headless service,
     # which will allow the service IP to be resolved directly via DNS resolution (i.e. skipping
