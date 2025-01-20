@@ -27,6 +27,7 @@ spec:
   {{- if .Values.server.service.externalTrafficPolicy }}
   externalTrafficPolicy: {{ .Values.server.service.externalTrafficPolicy }}
   {{- end }}
+  {{- if .Values.server.ingress.tls }}
   tls:
     {{- range .Values.server.ingress.tls }}
     - hosts:
