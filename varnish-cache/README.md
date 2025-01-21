@@ -1245,6 +1245,23 @@ Applies extra annotations to the Service. The value can be set as either an obje
 
 Sets the type of the Service. Can be either `CluterIP`, `LoadBalancer`, or `NodePort`.
 
+**server.service.internalTrafficPolicy**
+
+- Type: string
+- Default: `Cluster`
+
+Sets the internal traffic policy for this service. InternalTrafficPolicy describes how nodes distribute service
+ traffic they receive on the ClusterIP. Can be set to `Local` or `Cluster`
+
+**server.service.externalTrafficPolicy**
+
+- Type: string
+- Default: `Cluster`
+
+Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service
+ traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and
+ LoadBalancer IPs). Can be set to `Local` or `Cluster`
+
 **server.service.clusterIP**
 
 - Type: string
