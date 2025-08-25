@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "properties": {
+    "nameOverride": {
+      "description": "Override the name of Varnish Cache chart and its components",
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "description": "Override the full name of Varnish Cache chart and its components",
+      "type": "string"
+    },
+    "global": {
+      "description": "global values",
+      "properties": {
+        "imagePullSecrets": {
+          "type": "array"
+        },
+        "podSecurityContext": {
+          "description": "securityContext of the Pod",
+          "properties": {
+            "fsGroup": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "securityContext": {
+          "description": "securityContext for all containers",
+          "properties": {
+            "runAsUser": {
+              "type": "integer"
+            },
+            "runAsNonRoot": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "annotations": {
+          "description": "Sets the annotations for all workload resources",
+          "type": "object"
+        },
+        "podAnnotations": {
+          "description": "Sets the annotations for pod templates",
+          "type": "object"
+        },
+        "labels": {
+          "description": "Sets the labels for all workload resources",
+          "type": "object"
+        },
+        "podLabels": {
+          "description": "Sets the labels for pod templates",
+          "type": "object"
+        },
+        "resources": {
+          "description": "Configures a resource limits for all containers",
+          "properties": {
+            "limits": {
+              "properties": {
+                "cpu": {
+                  "description": "CPU limit",
+                  "type": "string"
+                },
+                "memory": {
+                  "description": "memory limit",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "requests": {
+              "description": "Configures a resource limits for all containers",
+              "properties": {
+                "cpu": {
+                  "description": "CPU requests",
+                  "type": "string"
+                },
+                "memory": {
+                  "description": "memory requests",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },  
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "serviceAccount": {
+      "description": "varnish cache kubernetes service account",
+      "properties": {
+        "create": {
+          "description": "# Specifies whether a service account should be created",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+
+    "name": {
+      "description": "Service name",
+      "type": "string"
+    }
+  },
+  "required": [
+  ],
+  "title": "Values",
+  "type": "object"
+}
