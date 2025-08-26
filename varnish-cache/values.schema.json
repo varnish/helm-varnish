@@ -118,9 +118,9 @@
           "type": "integer"
         },
         "kind": {
-          "description": "sets the deployment kind (Deployment or StatefulSet)",
+          "description": "sets the deployment kind (Deployment, StatefulSet or DaemonSet)",
           "type": "string",
-          "pattern": "^(Deployment|StatefulSet)$"
+          "pattern": "^(Deployment|StatefulSet|DaemonSet)$"
         },
         "labels": {
           "description": "Sets extra labels for the deployment",
