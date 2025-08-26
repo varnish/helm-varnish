@@ -92,20 +92,137 @@
       "description": "varnish cache kubernetes service account",
       "properties": {
         "create": {
-          "description": "# Specifies whether a service account should be created",
+          "description": "Specifies whether a service account should be created",
           "type": "boolean"
+        },
+        "labels": {
+          "description": "Labels to add to the service account",
+          "type": "object"
+        },
+        "annotations": {
+          "description": "annotations to add to the service account",
+          "type": "object"
+        },
+        "name": {
+          "description": "name of the service account to use",
+          "type": "string"
         }
       },
       "type": "object"
     },
+    "server": {
+      "description": "Configures Varnish Cache server",
+      "properties": {
+        "replicas": {
+          "description": "number of varnish cache server replicas ",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "sets the deployment kind (Deployment or StatefulSet)",
+          "type": "string",
+          "pattern": "^(Deployment|StatefulSet)$"
+        },
+        "labels": {
+          "description": "Sets extra labels for the deployment",
+          "type": "object"
+        },
+        "annotations": {
+          "description": "Sets extra annotations for the deployment",
+          "type": "object"
+        },
+        "strategy": {
+          "description": "sets deployment strategy",
+          "type": "object"
+        },
+        "updateStrategy": {
+          "description": "Sets the updateStrategy for StatefulSet and DaemonSet",
+          "type": "object"
+        },
+        "hostNetwork": {
+          "description": "Enables hostNetwork to expose varnish directly on the node",
+          "type": "boolean"
+        },
+        "hoshareProcessNamespacetNetwork": {
+          "description": "Enables shared process namespace",
+          "type": "boolean"
+        },
+        "http": {
+          "description": "port config",
+          "properties": {
+            "enabled": {
+              "description": "enable/disable the http port",
+              "type": "boolean"
+            },
+            "port": {
+              "description": "http port number",
+              "type": "integer"
+            }
+          }
+        },
+        "admin": {
+          "description": "Varnish admin interfact configuration",
+          "properties": {
+            "address": {
+              "description": "address for Varnish management interface",
+              "type": "string"
+            },
+            "port": {
+              "description": "port for Varnish management interface",
+              "type": "integer"
+            }
+          }
+        },
+        "extraListens": {
+          "description": "extra addresses and ports to listen.",
+          "type": "array"          
+        },
+        "extraEnvs": {
+          "description": "Sets the extra environment variables for Varnish Cache",
+          "type": ["object", "string", "array"]
+        },
+        "ttl": {
+          "description": "sets default Time to Live (TTL) for cached objects",
+          "type": "integer"
+        },
+        "minThreads": {
+          "description": "Sets the minimum number of worker threads in each pool",
+          "type": "integer"
+        },
+        "maxThreads": {
+          "description": "Sets the maximum number of worker threads in each pool",
+          "type": "integer"
+        },
+        "threadTimeout": {
+          "description": "Sets the idle threshold where threads idle for at least this long will be destroyed",
+          "type": "integer"
+        },
+        "extraArgs": {
+          "description": "Sets the extra configuration args for Varnish",
+          "type": "array"
+        },
+        "extraInitContainers": {
+          "description": "Declares the extra init containers to run before Varnish containers are run",
+          "type": ["array", "string"]
+        },
+        "extraContainers": {
+          "description": "Declares the extra containers to run within Varnish pods",
+          "type": ["array", "string"]
+        },
+        "extraVolumeClaimTemplates": {
+          "description": "Declares the extra volumeClaimTemplates",
+          "type": ["array", "string"]
+        }
+        
 
-    "name": {
-      "description": "Service name",
-      "type": "string"
+
+
+
+      }, 
+      "type": "object"
     }
+
   },
-  "required": [
-  ],
+  "required": [],
   "title": "Values",
   "type": "object"
 }
