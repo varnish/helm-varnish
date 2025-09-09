@@ -1602,3 +1602,126 @@ requests:
 
     [ "${actual}" == 'null' ]
 }
+
+@test "Deployment/brainz/geoIp: disabled by default" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/brainz/geoIp: disable explicitly" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=false' \
+        --set 'brainz.geoIp.mmdb_csv_url=http://example.com/test.csv' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/brainz/geoIp: fail with empty mmdb_csv_url URL" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=true' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") 2>&1 |
+        tee -a /dev/stderr)
+    [[ "${actual}" == *"Invalid URL for .Values.brainz.geoIp.mmdb_csv_url"* ]]
+}
+
+@test "Deployment/brainz/geoIp: fail with invalid mmdb_csv_url URL" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=true' \
+        --set 'brainz.geoIp.mmdb_csv_url=test.csv' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") 2>&1 |
+        tee -a /dev/stderr)
+    [[ "${actual}" == *"Invalid URL for .Values.brainz.geoIp.mmdb_csv_url"* ]]
+}
+
+@test "Deployment/brainz/geoIp: test initContainers" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=true' \
+        --set 'brainz.geoIp.mmdb_csv_url=http://example.com/test.csv' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "brainz-download-geoip")' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"brainz-download-geoip","image":"busybox:latest","command":["sh","-c","wget -O /etc/varnish-controller/geoip/geoip.csv http://example.com/test.csv"],"volumeMounts":[{"name":"release-name-geoip","mountPath":"/etc/varnish-controller/geoip"}]}' ]
+}
+
+@test "Deployment/brainz/geoIp: test VARNISH_CONTROLLER_MMDB_FILE_CSV environment variable" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=true' \
+        --set 'brainz.geoIp.mmdb_csv_url=http://example.com/test.csv' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") | .env[]?|
+            select(.name == "VARNISH_CONTROLLER_MMDB_FILE_CSV")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_MMDB_FILE_CSV","value":"/etc/varnish-controller/geoip/geoip.csv"}' ]
+}
+
+@test "Deployment/brainz/geoIp: test geoIp volumeMount" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=true' \
+        --set 'brainz.geoIp.mmdb_csv_url=http://example.com/test.csv' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") | .volumeMounts[]?| select(.name == "release-name-geoip")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"release-name-geoip","mountPath":"/etc/varnish-controller/geoip"}' ]
+}
+
+@test "Deployment/brainz/geoIp: test geoIp volume" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=true' \
+        --set 'brainz.geoIp.mmdb_csv_url=http://example.com/test.csv' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.volumes[]? | select(.name == "release-name-geoip")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"release-name-geoip","emptyDir":{}}' ]
+}

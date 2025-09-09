@@ -28,6 +28,50 @@ spec:
       securityContext:
         {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
       {{- end }}
+      {{- if .Values.router.geoIp.enabled }}
+        {{- $mmdbUrl := .Values.router.geoIp.mmdb_url | trim -}}
+        {{- $uGeo := urlParse $mmdbUrl   -}}
+        {{- if not (and
+              (not (empty $mmdbUrl))
+              (not (empty $uGeo.scheme))
+              (not (empty $uGeo.host))
+              (regexMatch "^(http|https)$" $uGeo.scheme)
+            )
+        }}
+          {{- fail (printf "Invalid URL for .Values.router.geoIp.mmdb_url: %q" $mmdbUrl) -}}
+        {{- end}}
+      {{- end}}
+      {{- if .Values.router.asn.enabled }}
+        {{- $asnUrl := .Values.router.asn.mmdb_url | trim -}}
+        {{- $uAsn := urlParse $asnUrl   -}}
+        {{- if not (and
+              (not (empty $asnUrl))
+              (not (empty $uAsn.scheme))
+              (not (empty $uAsn.host))
+              (regexMatch "^(http|https)$" $uAsn.scheme)
+            )
+        }}
+          {{- fail (printf "Invalid URL for .Values.router.asn.mmdb_url: %q" $asnUrl) -}}
+        {{- end}}
+      {{- end}}
+      {{- if or .Values.router.geoIp.enabled .Values.router.asn.enabled }}
+      initContainers:
+        - name: router-download-geoip-asn
+          image: busybox:latest
+          command:
+          - sh
+          - -c
+          - |
+            {{- if and .Values.router.geoIp.enabled (ne .Values.router.geoIp.mmdb_url "") }}
+            wget -O /etc/varnish-controller-router/geoip.mmdb {{ .Values.router.geoIp.mmdb_url }}
+            {{- end }}
+            {{- if and .Values.router.asn.enabled (ne .Values.router.asn.mmdb_url "") }}
+            wget -O /etc/varnish-controller-router/asn.mmdb {{ .Values.router.asn.mmdb_url }}
+            {{- end }}
+          volumeMounts:
+          - name: {{ .Release.Name }}-data
+            mountPath: /etc/varnish-controller-router
+      {{- end }}
       containers:
         - name: router
           {{- include "varnish-controller-router.securityContext" (merge (dict "section" "router") .) | nindent 10 }}
@@ -147,6 +191,22 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             {{- end }}
+            {{- if and .Values.router.geoIp.enabled (ne .Values.router.geoIp.mmdb_url "") }}
+            - name: VARNISH_CONTROLLER_MMDB_FILE
+              value: /etc/varnish-controller-router/geoip.mmdb
+            {{- end }}
+            {{- if and .Values.router.asn.enabled (ne .Values.router.asn.mmdb_url "") }}
+            - name: VARNISH_CONTROLLER_MMDB_ASN_FILE
+              value: /etc/varnish-controller-router/asn.mmdb
+            {{- end }}
+            {{- if or
+            (and .Values.router.geoIp.enabled (ne .Values.router.geoIp.mmdb_url ""))
+            (and .Values.router.asn.enabled   (ne .Values.router.asn.mmdb_url "")) }}
+          volumeMounts:
+          - name: {{ .Release.Name }}-data
+            mountPath: /etc/varnish-controller-router
+            {{- end }}
+
           {{- if or .Values.router.http.enable .Values.router.https.enable }}
           ports:
             {{- if .Values.router.http.enable }}
@@ -189,5 +249,12 @@ spec:
         {{- else }}
           {{- toYaml .Values.router.tolerations | nindent 8 }}
         {{- end }}
+      {{- end }}
+      {{- if or
+      (and .Values.router.geoIp.enabled (ne .Values.router.geoIp.mmdb_url ""))
+      (and .Values.router.asn.enabled   (ne .Values.router.asn.mmdb_url "")) }}
+      volumes:
+      - name: {{ .Release.Name }}-data
+        emptyDir: {}
       {{- end }}
 {{- end }}

@@ -1333,3 +1333,282 @@ requests:
 
     [ "${actual}" == 'null' ]
 }
+
+@test "Deployment/router/geoIp: disabled by default" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/router/geoIp: disabled, but initContainers still exist when asn is enabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --namespace default \
+        --set 'router.geoIp.enabled=false' \
+        --set 'router.asn.enabled=true' \
+        --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .command' | tee -a /dev/stderr)
+
+    [ "${actual}" == '["sh","-c","wget -O /etc/varnish-controller-router/asn.mmdb http://example.com/test.mmdb\n"]' ]
+}
+
+@test "Deployment/router/geoIp: check initContainers with both geoIp and ASN enabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --namespace default \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --set 'router.asn.enabled=true' \
+        --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .command' | tee -a /dev/stderr)
+
+    [ "${actual}" == '["sh","-c","wget -O /etc/varnish-controller-router/geoip.mmdb http://example.com/test.mmdb\nwget -O /etc/varnish-controller-router/asn.mmdb http://example.com/test.mmdb\n"]' ]
+}
+
+@test "Deployment/router/geoIp: disable explicitly" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.geoIp.enabled=false' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/router/geoIp: fail with empty mmdb_url URL" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.geoIp.enabled=true' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") 2>&1 |
+        tee -a /dev/stderr)
+    [[ "${actual}" == *"Invalid URL for .Values.router.geoIp.mmdb_url"* ]]
+}
+
+@test "Deployment/router/geoIp: fail with invalid mmdb_url URL" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") 2>&1 |
+        tee -a /dev/stderr)
+    [[ "${actual}" == *"Invalid URL for .Values.router.geoIp.mmdb_url"* ]]
+}
+
+@test "Deployment/router/geoIp: test initContainers" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn")' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"router-download-geoip-asn","image":"busybox:latest","command":["sh","-c","wget -O /etc/varnish-controller-router/geoip.mmdb http://example.com/test.mmdb\n"],"volumeMounts":[{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}]}' ]
+}
+
+@test "Deployment/router/geoIp: test VARNISH_CONTROLLER_MMDB_FILE environment variable" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "router") | .env[]?|
+            select(.name == "VARNISH_CONTROLLER_MMDB_FILE")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_MMDB_FILE","value":"/etc/varnish-controller-router/geoip.mmdb"}' ]
+}
+
+@test "Deployment/router/geoIp: test geoIp volumeMount" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "router") | .volumeMounts[]?| select(.name == "release-name-data")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}' ]
+}
+
+@test "Deployment/router/geoIp: test geoIp volume" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.volumes[]? | select(.name == "release-name-data")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"release-name-data","emptyDir":{}}' ]
+}
+
+@test "Deployment/router/asn: disabled by default" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/router/asn: disable explicitly" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.asn.enabled=false' \
+        --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/router/asn: disabled, but initContainers still exist when geoIp is enabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --namespace default \
+        --set 'router.asn.enabled=false' \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .command' | tee -a /dev/stderr)
+
+    [ "${actual}" == '["sh","-c","wget -O /etc/varnish-controller-router/geoip.mmdb http://example.com/test.mmdb\n"]' ]
+}
+
+@test "Deployment/router/asn: fail with empty mmdb_url URL" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.asn.enabled=true' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") 2>&1 |
+        tee -a /dev/stderr)
+    [[ "${actual}" == *"Invalid URL for .Values.router.asn.mmdb_url"* ]]
+}
+
+@test "Deployment/router/asn: fail with invalid mmdb_url URL" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.asn.enabled=true' \
+        --set 'router.asn.mmdb_url=test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") 2>&1 |
+        tee -a /dev/stderr)
+    [[ "${actual}" == *"Invalid URL for .Values.router.asn.mmdb_url"* ]]
+}
+
+@test "Deployment/router/asn: test initContainers" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.asn.enabled=true' \
+        --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn")' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"router-download-geoip-asn","image":"busybox:latest","command":["sh","-c","wget -O /etc/varnish-controller-router/asn.mmdb http://example.com/test.mmdb\n"],"volumeMounts":[{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}]}' ]
+}
+
+@test "Deployment/router/asn: test VARNISH_CONTROLLER_MMDB_ASN_FILE environment variable" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.asn.enabled=true' \
+        --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "router") | .env[]?|
+            select(.name == "VARNISH_CONTROLLER_MMDB_ASN_FILE")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_MMDB_ASN_FILE","value":"/etc/varnish-controller-router/asn.mmdb"}' ]
+}
+
+@test "Deployment/router/asn: test asn volumeMount" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.asn.enabled=true' \
+        --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "router") | .volumeMounts[]?| select(.name == "release-name-data")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}' ]
+}
+
+@test "Deployment/router/asn: test asn volume" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'router.asn.enabled=true' \
+        --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
+        --namespace default \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.volumes[]? | select(.name == "release-name-data")' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"release-name-data","emptyDir":{}}' ]
+}
