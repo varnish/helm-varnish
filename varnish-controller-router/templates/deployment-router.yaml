@@ -57,7 +57,7 @@ spec:
       {{- if or .Values.router.geoIp.enabled .Values.router.asn.enabled }}
       initContainers:
         - name: router-download-geoip-asn
-          image: busybox:latest
+          image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ .Values.global.initContainer.tag | default "1.36"}}
           command:
           - sh
           - -c

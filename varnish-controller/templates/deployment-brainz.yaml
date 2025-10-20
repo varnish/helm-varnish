@@ -42,7 +42,7 @@ spec:
         {{- end}}
       initContainers:
         - name: brainz-download-geoip
-          image: busybox:latest
+          image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ .Values.global.initContainer.tag | default "1.36"}}
           command: ['sh', '-c', 'wget -O /etc/varnish-controller/geoip/geoip.csv {{ .Values.brainz.geoIp.mmdb_csv_url }}']
           volumeMounts:
           - name: {{ .Release.Name }}-geoip

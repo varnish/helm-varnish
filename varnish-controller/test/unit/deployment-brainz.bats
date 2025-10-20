@@ -327,6 +327,26 @@ release-namespace: to-be-override
     [[ "${actual}" == *"Either 'global.natsServer.internal.enabled' or 'global.natsServer.externalAddress' must be set"* ]]
 }
 
+@test "Deployment/brainz: test initContainer image and tag" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --set 'brainz.geoIp.enabled=true' \
+        --set 'brainz.geoIp.mmdb_csv_url=http://example.com/test.csv' \
+        --set 'global.initContainer.image=ubuntu' \
+        --set 'global.initContainer.tag=24.04' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "brainz-download-geoip") | .image' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == 'ubuntu:24.04' ]
+}
+
+
 @test "Deployment/brainz/image: inherits tag from appVersion" {
     cd "$(chart_dir)"
 
@@ -1674,7 +1694,7 @@ requests:
             .spec.template.spec.initContainers[]? | select(.name == "brainz-download-geoip")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '{"name":"brainz-download-geoip","image":"busybox:latest","command":["sh","-c","wget -O /etc/varnish-controller/geoip/geoip.csv http://example.com/test.csv"],"volumeMounts":[{"name":"release-name-geoip","mountPath":"/etc/varnish-controller/geoip"}]}' ]
+    [ "${actual}" == '{"name":"brainz-download-geoip","image":"busybox:1.36","command":["sh","-c","wget -O /etc/varnish-controller/geoip/geoip.csv http://example.com/test.csv"],"volumeMounts":[{"name":"release-name-geoip","mountPath":"/etc/varnish-controller/geoip"}]}' ]
 }
 
 @test "Deployment/brainz/geoIp: test VARNISH_CONTROLLER_MMDB_FILE_CSV environment variable" {

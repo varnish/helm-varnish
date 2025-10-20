@@ -305,6 +305,24 @@ release-namespace: to-be-override
     [[ "${actual}" == *"Either 'global.natsServer.internal.enabled' or 'global.natsServer.externalAddress' must be set"* ]]
 }
 
+@test "Deployment/router: test initContainer image and tag" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --namespace default \
+        --set 'router.asn.enabled=false' \
+        --set 'router.geoIp.enabled=true' \
+        --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
+        --set 'global.initContainer.image=ubuntu' \
+        --set 'global.initContainer.tag=24.04' \
+        --show-only templates/deployment-router.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .image' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'ubuntu:24.04' ]
+}
+
 @test "Deployment/router/image: inherits tag from appVersion" {
     cd "$(chart_dir)"
 
@@ -1433,7 +1451,7 @@ requests:
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '{"name":"router-download-geoip-asn","image":"busybox:latest","command":["sh","-c","wget -O /etc/varnish-controller-router/geoip.mmdb http://example.com/test.mmdb\n"],"volumeMounts":[{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}]}' ]
+    [ "${actual}" == '{"name":"router-download-geoip-asn","image":"busybox:1.36","command":["sh","-c","wget -O /etc/varnish-controller-router/geoip.mmdb http://example.com/test.mmdb\n"],"volumeMounts":[{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}]}' ]
 }
 
 @test "Deployment/router/geoIp: test VARNISH_CONTROLLER_MMDB_FILE environment variable" {
@@ -1564,7 +1582,7 @@ requests:
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '{"name":"router-download-geoip-asn","image":"busybox:latest","command":["sh","-c","wget -O /etc/varnish-controller-router/asn.mmdb http://example.com/test.mmdb\n"],"volumeMounts":[{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}]}' ]
+    [ "${actual}" == '{"name":"router-download-geoip-asn","image":"busybox:1.36","command":["sh","-c","wget -O /etc/varnish-controller-router/asn.mmdb http://example.com/test.mmdb\n"],"volumeMounts":[{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}]}' ]
 }
 
 @test "Deployment/router/asn: test VARNISH_CONTROLLER_MMDB_ASN_FILE environment variable" {

@@ -76,7 +76,10 @@ global:
       # Configures the NATS internal cluster domain name. Only change if NATS is deployed
       # on a separate cluster.
       clusterDomain: "cluster.local"
-
+  # Set which container image & tag to use when initContainers are spun up
+  initContainer:
+    image: "busybox"
+    tag: "1.36"
 serviceAccount:
   # Specifies whether a service account should be created
   create: true

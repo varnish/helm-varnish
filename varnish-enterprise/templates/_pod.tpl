@@ -833,7 +833,7 @@ Declares the Varnish init containers
 initContainers:
 {{- if and .Values.server.agent.enabled .Values.server.initAgent.enabled }}
   - name: init-agent
-    image: busybox:1.36
+    image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ .Values.global.initContainer.tag | default "1.36"}}
     command:
       - /bin/sh
       - -c
