@@ -1,0 +1,62 @@
+{{- if .Values.server.ingress.enabled }}
+{{- if (not (and (.Values.server.service.http.enabled) (.Values.server.service.http.port))) }}
+{{ fail "HTTP service must be enabled in values to enable ingress: 'service.service.http.enabled'" }}
+{{- end }}
+{{- $serviceName := include "varnish-enterprise.fullname" . }}
+{{- $servicePort := .Values.server.service.http.port }}
+{{- if and (eq .Values.server.service.type "ClusterIP") (hasKey .Values.server.service "clusterIP") (eq .Values.server.service.clusterIP "None") }}
+{{- $servicePort = .Values.server.http.port }}
+{{- end }}
+{{- $pathType := .Values.server.ingress.pathType }}
+{{- $kubeVersion := .Capabilities.KubeVersion.Version }}
+{{- if semverCompare ">= 1.19.0-0" $kubeVersion }}
+apiVersion: networking.k8s.io/v1
+{{- else if .Capabilities.APIVersions.Has "networking.k8s.io/v1beta1" }}
+apiVersion: networking.k8s.io/v1beta1
+{{- else }}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+    {{- include "varnish-enterprise.ingressLabels" . | indent 4 }}
+  {{- include "varnish-enterprise.ingressAnnotations" . | indent 2 }}
+spec:
+  {{- if .Values.server.ingress.tls }}
+  tls:
+    {{- range .Values.server.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.server.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.server.ingress.ingressClassName }}
+  {{- end }}
+  rules:
+    {{- range .Values.server.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range (.paths | default (list "/")) }}
+          - path: {{ . }}
+            {{- if semverCompare ">= 1.19.0-0" $kubeVersion }}
+            pathType: {{ $pathType }}
+            {{- end }}
+            backend:
+              {{- if semverCompare ">= 1.19.0-0" $kubeVersion }}
+              service:
+                name: {{ $serviceName }}
+                port:
+                  number: {{ $servicePort }}
+              {{- else }}
+              serviceName: {{ $serviceName }}
+              servicePort: {{ $servicePort }}
+              {{- end }}
+          {{- end }}
+    {{- end }}
+  {{- end }}
