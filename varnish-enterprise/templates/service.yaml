@@ -1,0 +1,99 @@
+{{- if .Values.server.service.enabled -}}
+---
+{{- $serviceType := .Values.server.service.type | toString }}
+{{- $serviceClusterIP := .Values.server.service.clusterIP | toString }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+    {{- include "varnish-enterprise.serviceLabels" . | indent 4 }}
+  {{- include "varnish-enterprise.serviceAnnotations" . | indent 2 }}
+spec:
+  {{- if .Values.server.service.type }}
+  type: {{ .Values.server.service.type }}
+  {{- end }}
+  {{- if .Values.server.service.clusterIP }}
+  clusterIP: {{ .Values.server.service.clusterIP }}
+  {{- end }}
+  {{- if .Values.server.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.server.service.loadBalancerIP }}
+  {{- end }}
+  ports:
+  {{- if .Values.server.service.http.enabled }}
+  {{- if (not .Values.server.http.enabled) }}
+  {{ fail "HTTP support must be enabled in values to enable HTTP service: 'server.http.enabled'" }}
+  {{- else }}
+    - name: http
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.server.http.port }}
+      {{- else }}
+      port: {{ .Values.server.service.http.port }}
+      {{- end }}
+      targetPort: {{ .Values.server.http.port }}
+      {{- if and (.Values.server.service.http.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.server.service.http.nodePort }}
+      {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.server.service.https.enabled }}
+  {{- if (not .Values.server.tls.enabled) }}
+  {{ fail "TLS support must be enabled in values to enable HTTPS service: 'server.tls.enabled'" }}
+  {{- else }}
+    - name: https
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.server.tls.port }}
+      {{- else }}
+      port: {{ .Values.server.service.https.port }}
+      {{- end }}
+      targetPort: {{ .Values.server.tls.port }}
+      {{- if and (.Values.server.service.https.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.server.service.https.nodePort }}
+      {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- range .Values.server.service.extraServices }}
+  {{- if not .name }}
+  {{ fail "Name must be set in extraServices: 'server.service.extraServices[].name'" }}
+  {{- end }}
+  {{- if not .targetPort }}
+  {{ fail "Target port must be set in extraServices: 'server.service.extraServices[].targetPort'" }}
+  {{- end }}
+    - name: extra-{{ .name }}
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .targetPort }}
+      {{- else if not .port }}
+      {{ fail "Port must be set in extraServices: 'server.service.extraServices[].port'" }}
+      {{- else }}
+      port: {{ .port }}
+      {{- end }}
+      targetPort: {{ .targetPort }}
+      {{- if and .nodePort (eq $serviceType "NodePort") }}
+      nodePort: {{ .nodePort }}
+      {{- end }}
+  {{- end }}
+  selector:
+    {{- include "varnish-enterprise.selectorLabels" . | nindent 4 }}
+{{- end }}
+{{- if and .Values.cluster.enabled (not .Values.cluster.headlessServiceName) }}
+---
+{{- if not .Values.server.http.enabled }}
+{{- fail "'server.http.enabled must be true for clustering to work" }}
+{{- end }}
+# Headless service so pods can discover each other
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}-peers
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "varnish-enterprise.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.server.http.port }}
+      targetPort: {{ .Values.server.http.port }}
+{{- end }}

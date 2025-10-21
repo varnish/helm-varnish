@@ -1,0 +1,53 @@
+{{- if eq .Values.server.kind "DaemonSet" }}
+{{- if .Values.server.strategy }}
+{{- fail "'server.strategy' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
+{{- end }}
+{{- if .Values.server.mse.persistence.enabled }}
+{{- fail "'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
+{{- end }}
+{{- if .Values.server.mse4.persistence.enabled }}
+{{- fail "'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
+{{- end }}
+{{- if .Values.server.agent.persistence.enabled }}
+{{- fail "'server.agent.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
+{{- end }}
+{{- if not (empty .Values.server.extraVolumeClaimTemplates) }}
+{{- fail "'server.extraVolumeClaimTemplates' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
+{{- end }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}
+  {{- include "varnish-enterprise.serverLabels" . | nindent 2 }}
+  {{- include "varnish-enterprise.serverAnnotations" . | nindent 2 }}
+spec:
+  {{- include "varnish-enterprise.updateStrategy" . | indent 2 }}
+  selector:
+    matchLabels:
+      {{- include "varnish-enterprise.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- include "varnish-enterprise.podLabels" . | nindent 6 }}
+      {{- include "varnish-enterprise.podAnnotations" . | nindent 6 }}
+    spec:
+      {{- include "varnish-enterprise.podImagePullSecrets" . | indent 6 }}
+      {{- include "varnish-enterprise.podServiceAccount" . | indent 6 }}
+      {{- include "varnish-enterprise.podSecurityContext" . | indent 6 }}
+      shareProcessNamespace: {{ .Values.server.shareProcessNamespace | toJson }}
+      containers:
+        {{- include "varnish-enterprise.serverContainer" . | indent 8 }}
+        {{- include "varnish-enterprise.ncsaContainer" . | indent 8 }}
+        {{- include "varnish-enterprise.agentContainer" . | indent 8 }}
+        {{- include "varnish-enterprise.vcliContainer" . | indent 8 }}
+        {{- include "varnish-enterprise.extraContainers" . | indent 8 }}
+      {{- if .Values.server.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      {{- include "varnish-enterprise.initContainers" . | indent 6 }}
+      {{- include "varnish-enterprise.podVolumes" . | indent 6 }}
+      {{- include "varnish-enterprise.nodeSelector" . | indent 6 }}
+      {{- include "varnish-enterprise.affinity" . | indent 6 }}
+      {{- include "varnish-enterprise.tolerations" . | indent 6 }}
+      {{- include "varnish-enterprise.terminationGracePeriodSeconds" . | indent 6 }}
+{{- end }}
