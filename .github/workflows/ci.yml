@@ -16,8 +16,8 @@ jobs:
 
           pip install yq
 
-          apt-get update
-          apt-get install bats -y
+          sudo apt-get update
+          sudo apt-get install bats -y
       - name: "Add Helm dependencies"
         # See also: https://circleci.com/docs/env-vars/#alpine-linux
         run: |
