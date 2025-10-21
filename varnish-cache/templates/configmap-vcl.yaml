@@ -1,4 +1,4 @@
-{{- $vclConfig := include "varnish-cache.vclConfig" . }}
+{{- $vclConfig := include "varnish.vclConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if not (eq $vclConfig "") }}
 apiVersion: v1

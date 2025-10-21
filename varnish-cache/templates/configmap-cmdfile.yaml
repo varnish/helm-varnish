@@ -1,4 +1,4 @@
-{{- $cmdfileConfig := include "varnish-cache.cmdfileConfig" . }}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
 {{- if not (eq $cmdfileConfig "") }}
 apiVersion: v1
 kind: ConfigMap

@@ -4,10 +4,10 @@ Sets up Pod annotations
 {{- define "varnish-cache.podAnnotations" }}
 {{- $section := default "server" .section }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $vclConfig := include "varnish-cache.vclConfig" . }}
+{{- $vclConfig := include "varnish.vclConfig" . }}
 {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- $cmdfileConfig := include "varnish-cache.cmdfileConfig" . }}
-{{- $secretConfig := include "varnish-cache.secretConfig" . }}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
+{{- $secretConfig := include "varnish.secretConfig" . }}
 {{- $extraManifests := .Values.extraManifests }}
 {{- $checksum := dict }}
 {{- if not (eq $vclConfig "") }}
@@ -117,12 +117,12 @@ volumes:
 - name: {{ .Release.Name }}-config-secret
   secret:
     secretName: {{ .Values.server.secretFrom.name | quote }}
-{{- else if not (eq (include "varnish-cache.secretConfig" .) "") }}
+{{- else if not (eq (include "varnish.secretConfig" .) "") }}
 - name: {{ .Release.Name }}-config-secret
   secret:
     secretName: {{ include "varnish-cache.fullname" . }}-secret
 {{- end }}
-{{- if not (eq (include "varnish-cache.vclConfig" .) "") }}
+{{- if not (eq (include "varnish.vclConfig" .) "") }}
 - name: {{ .Release.Name }}-config-vcl
   configMap:
     name: {{ include "varnish-cache.fullname" . }}-vcl
@@ -135,7 +135,7 @@ volumes:
     name: {{ include "varnish-cache.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
 {{- end }}
 {{- end }}
-{{- if not (eq (include "varnish-cache.cmdfileConfig" .) "") }}
+{{- if not (eq (include "varnish.cmdfileConfig" .) "") }}
 - name: {{ .Release.Name }}-config-cmdfile
   configMap:
     name: {{ include "varnish-cache.fullname" . }}-cmdfile
@@ -185,7 +185,7 @@ Declares the probe for Varnish Cache pod
 Declares the Varnish Cache container
 */}}
 {{- define "varnish-cache.serverContainer" -}}
-{{- $cmdfileConfig := include "varnish-cache.cmdfileConfig" . }}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- $tp := kindOf .Values.server.extraArgs }}
 {{- $varnishExtraArgs := list }}
@@ -305,12 +305,12 @@ Declares the Varnish Cache container
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: {{ .Values.server.secretFrom.key | quote }}
-    {{- else if not (eq (include "varnish-cache.secretConfig" .) "") }}
+    {{- else if not (eq (include "varnish.secretConfig" .) "") }}
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: secret
     {{- end }}
-    {{- if not (eq (include "varnish-cache.vclConfig" .) "") }}
+    {{- if not (eq (include "varnish.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
       mountPath: {{ .Values.server.vclConfigPath | quote }}
       subPath: {{ $defaultVcl }}
@@ -323,7 +323,7 @@ Declares the Varnish Cache container
       subPath: {{ $k | quote }}
     {{- end }}
     {{- end }}
-    {{- if not (eq (include "varnish-cache.cmdfileConfig" .) "") }}
+    {{- if not (eq (include "varnish.cmdfileConfig" .) "") }}
     - name: {{ .Release.Name }}-config-cmdfile
       mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
       subPath: cmds.cli
