@@ -1,0 +1,63 @@
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: "Install system dependencies"
+        run: |
+          curl -sL https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz -o /tmp/helm.tar.gz
+          tar xavf /tmp/helm.tar.gz
+          mv linux-amd64/helm /usr/local/bin/helm
+
+          pip install yq
+
+          apt-get update
+          apt-get install bats -y
+      - name: "Add Helm dependencies"
+        # See also: https://circleci.com/docs/env-vars/#alpine-linux
+        run: |
+            cd varnish-cache
+            # Helm is painful https://github.com/helm/helm/issues/8036
+            i=0
+            yq -r '.dependencies[]?.repository' < Chart.yaml | while read -r p; do
+              i=$((i+1))
+              helm repo add dep$i "$p"
+            done
+            helm dependency build
+      - name: "Unit tests"
+        run: |
+          varnish-cache/test/unit_common/run.sh
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Determine version
+        run: |
+          VERSION=$(sh scripts/gen-version.sh)
+          VERSION=${VERSION##v}
+          echo "export VERSION=$VERSION" | tee -a "$GITHUB_ENV"
+
+            APP_VERSION=$(sh scripts/get-latest-tag.sh "docker://docker.io/varnish")
+            echo "export APP_VERSION=$APP_VERSION" | tee -a "$GITHUB_ENV"
+      - name: Create package
+        run: |
+          set --
+          set -- "$@" --dependency-update
+
+          if [ "$VERSION" != "" ]; then
+            set -- "$@" --version "$VERSION"
+            echo "Version: $VERSION"
+          else
+            echo >&2 "Warning: VERSION was not set"
+          fi
+
+          if [ "$APP_VERSION" != "" ]; then
+            set -- "$@" --app-version "$APP_VERSION"
+            echo "App Version: $APP_VERSION"
+          else
+            echo >&2 "Warning: APP_VERSION was not set"
+          fi
+
+          helm package "$@" "varnish-cache"
+          mkdir -p /tmp/artifacts
+          mv "varnish-cache"-*.tgz /tmp/artifacts
