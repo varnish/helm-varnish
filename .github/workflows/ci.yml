@@ -1,12 +1,17 @@
-name: CI
+name: Build and push
 on:
   push:
     branches:
       - "*"
-    tags:
-      - "gq-*"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish
+        type: boolean
+        default: false
+
 jobs:
-  bats:
+  build_and_push:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -34,45 +39,13 @@ jobs:
       - name: "Unit tests"
         run: |
           varnish-cache/test/unit_common/run.sh
-  package:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Determine version
-        run: |
-          git tag
-          git log
-          VERSION=$(sh scripts/gen-version.sh)
-          VERSION=${VERSION##v}
-          echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
-
-          APP_VERSION=$(sh scripts/get-latest-tag.sh "docker://docker.io/varnish")
-          echo "APP_VERSION=$APP_VERSION" | tee -a "$GITHUB_ENV"
       - name: Create package
         run: |
-          set --
-          set -- "$@" --dependency-update
-
-          if [ "$VERSION" != "" ]; then
-            set -- "$@" --version "$VERSION"
-            echo "Version: $VERSION"
-          else
-            echo >&2 "Warning: VERSION was not set"
-          fi
-
-          if [ "$APP_VERSION" != "" ]; then
-            set -- "$@" --app-version "$APP_VERSION"
-            echo "App Version: $APP_VERSION"
-          else
-            echo >&2 "Warning: APP_VERSION was not set"
-          fi
-
-          helm package "$@" "varnish-cache"
+          helm package "varnish-cache"
           mkdir -p /tmp/artifacts
           mv "varnish-cache"-*.tgz /tmp/artifacts
-      - name: Push chart
-        if: startsWith(github.ref, 'refs/tags/gq')
+      - name: "Push chart"
+        if: ${{ github.event.inputs.publish == true }}
         run: |
-          echo "A tag was pushed: ${{ github.ref_name }}"
+          echo $DOCKER_PASSWORD | helm registry login -u "$DOCKER_USERNAME" --password-stdin registry-1.docker.io
+          helm push /tmp/artifacts/"varnish-cache"-*.tgz "oci://registry-1.docker.io/varnish"
