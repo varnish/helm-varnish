@@ -38,6 +38,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Determine version
         run: |
+          git tag
+          git log
           VERSION=$(sh scripts/gen-version.sh)
           VERSION=${VERSION##v}
           echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
