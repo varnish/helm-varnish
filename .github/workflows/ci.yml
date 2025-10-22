@@ -70,3 +70,7 @@ jobs:
           helm package "$@" "varnish-cache"
           mkdir -p /tmp/artifacts
           mv "varnish-cache"-*.tgz /tmp/artifacts
+      - name: Push chart
+        if: startsWith(github.ref, 'refs/tags/gq')
+        run: |
+          echo "A tag was pushed: ${{ github.ref_name }}"
