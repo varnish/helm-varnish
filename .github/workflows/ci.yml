@@ -40,10 +40,10 @@ jobs:
         run: |
           VERSION=$(sh scripts/gen-version.sh)
           VERSION=${VERSION##v}
-          echo "export VERSION=$VERSION" | tee -a "$GITHUB_ENV"
+          echo "VERSION=$VERSION" | tee -a "$GITHUB_ENV"
 
-            APP_VERSION=$(sh scripts/get-latest-tag.sh "docker://docker.io/varnish")
-            echo "export APP_VERSION=$APP_VERSION" | tee -a "$GITHUB_ENV"
+          APP_VERSION=$(sh scripts/get-latest-tag.sh "docker://docker.io/varnish")
+          echo "APP_VERSION=$APP_VERSION" | tee -a "$GITHUB_ENV"
       - name: Create package
         run: |
           set --
