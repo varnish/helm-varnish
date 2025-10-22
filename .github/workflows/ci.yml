@@ -52,5 +52,5 @@ jobs:
       - name: "Push chart"
         if: ${{ github.event.inputs.publish == matrix.chart }}
         run: |
-          echo $DOCKER_PASSWORD | helm registry login -u "$DOCKER_USERNAME" --password-stdin registry-1.docker.io
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
           helm push /tmp/artifacts/"${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
