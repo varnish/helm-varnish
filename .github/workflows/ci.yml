@@ -7,11 +7,16 @@ on:
     inputs:
       publish:
         description: Publish
-        type: boolean
-        default: false
+        type: choice
+        options:
+          - varnish-cache
 
 jobs:
   build_and_push:
+    strategy:
+      matrix:
+        chart:
+          - varnish-cache
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -28,7 +33,7 @@ jobs:
       - name: "Add Helm dependencies"
         # See also: https://circleci.com/docs/env-vars/#alpine-linux
         run: |
-            cd varnish-cache
+            cd ${{ matrix.chart }}
             # Helm is painful https://github.com/helm/helm/issues/8036
             i=0
             yq -r '.dependencies[]?.repository' < Chart.yaml | while read -r p; do
@@ -38,14 +43,14 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
-          varnish-cache/test/unit_common/run.sh
+          ${{ matrix.chart }}/test/unit_common/run.sh
       - name: Create package
         run: |
-          helm package "varnish-cache"
+          helm package "${{ matrix.chart }}"
           mkdir -p /tmp/artifacts
-          mv "varnish-cache"-*.tgz /tmp/artifacts
+          mv "${{ matrix.chart }}"-*.tgz /tmp/artifacts
       - name: "Push chart"
-        if: ${{ github.event.inputs.publish == true }}
+        if: ${{ github.event.inputs.publish == matrix.chart }}
         run: |
           echo $DOCKER_PASSWORD | helm registry login -u "$DOCKER_USERNAME" --password-stdin registry-1.docker.io
-          helm push /tmp/artifacts/"varnish-cache"-*.tgz "oci://registry-1.docker.io/varnish"
+          helm push /tmp/artifacts/"${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
