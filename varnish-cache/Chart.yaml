@@ -3,8 +3,8 @@ apiVersion: v2
 name: varnish-cache
 description: Varnish Cache Helm chart
 type: application
-version: 0.1.0
-appVersion: 7.4.2
+version: 0.1.2
+appVersion: 8.0.0
 maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software

@@ -1,0 +1,51 @@
+name: Build and push
+on:
+  push:
+    branches:
+      - "*"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish
+        type: boolean
+        default: false
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: "Install system dependencies"
+        run: |
+          curl -sL https://get.helm.sh/helm-v3.19.0-linux-amd64.tar.gz -o /tmp/helm.tar.gz
+          tar xavf /tmp/helm.tar.gz
+          mv linux-amd64/helm /usr/local/bin/helm
+
+          pip install yq
+
+          sudo apt-get update
+          sudo apt-get install bats -y
+      - name: "Add Helm dependencies"
+        # See also: https://circleci.com/docs/env-vars/#alpine-linux
+        run: |
+            cd varnish-cache
+            # Helm is painful https://github.com/helm/helm/issues/8036
+            i=0
+            yq -r '.dependencies[]?.repository' < Chart.yaml | while read -r p; do
+              i=$((i+1))
+              helm repo add dep$i "$p"
+            done
+            helm dependency build
+      - name: "Unit tests"
+        run: |
+          varnish-cache/test/unit_common/run.sh
+      - name: Create package
+        run: |
+          helm package "varnish-cache"
+          mkdir -p /tmp/artifacts
+          mv "varnish-cache"-*.tgz /tmp/artifacts
+      - name: "Push chart"
+        if: ${{ github.event.inputs.publish == true }}
+        run: |
+          echo $DOCKER_PASSWORD | helm registry login -u "$DOCKER_USERNAME" --password-stdin registry-1.docker.io
+          helm push /tmp/artifacts/"varnish-cache"-*.tgz "oci://registry-1.docker.io/varnish"
