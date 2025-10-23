@@ -1,0 +1,96 @@
+{{- if .Values.apigw.enabled }}
+{{- $selectorLabels := include "varnish-controller.selectorLabels" (merge (dict "nameSuffix" "apigw") .) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "varnish-controller.fullname" . }}-apigw
+  {{- include "varnish-controller.serverLabels" (merge (dict "section" "apigw") .) | nindent 2 }}
+  {{- include "varnish-controller.serverAnnotations" (merge (dict "section" "apigw") .) | nindent 2 }}
+spec:
+  {{- if not .Values.apigw.autoscaling.enabled }}
+  replicas: {{ .Values.apigw.replicas }}
+  {{- end }}
+  {{- include "varnish-controller.strategy" (merge (dict "section" "apigw") .) | indent 2 }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+  template:
+    metadata:
+      {{- include "varnish-controller.podLabels" (merge (dict "section" "apigw") .) | nindent 6 }}
+      {{- include "varnish-controller.podAnnotations" (merge (dict "section" "apigw") .) | nindent 6 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "varnish-controller.serviceAccountName" . }}
+      {{- if not (empty .Values.global.podSecurityContext) }}
+      securityContext:
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: apigw
+          {{- include "varnish-controller.securityContext" (merge (dict "section" "apigw") .) | nindent 10 }}
+          {{- include "varnish-controller.image" (merge (dict "base" .Values.global.controller.image "image" .Values.apigw.image) .) | nindent 10 }}
+          {{- if and .Values.apigw.startupProbe (not (empty .Values.apigw.startupProbe)) }}
+          startupProbe:
+            tcpSocket:
+              port: 8002
+            {{- toYaml .Values.apigw.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.apigw.readinessProbe (not (empty .Values.apigw.readinessProbe)) }}
+          readinessProbe:
+            tcpSocket:
+              port: 8002
+            {{- toYaml .Values.apigw.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.apigw.livenessProbe (not (empty .Values.apigw.livenessProbe)) }}
+          livenessProbe:
+            tcpSocket:
+              port: 8002
+            {{- toYaml .Values.apigw.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- include "varnish-controller.resources" (merge (dict "section" "apigw") .) | nindent 10 }}
+          command: ["/usr/bin/varnish-controller-api-gw"]
+          {{- if and .Values.apigw.extraArgs (not (empty .Values.apigw.extraArgs)) }}
+          args: {{- toYaml .Values.apigw.extraArgs | nindent 12 }}
+          {{- end }}
+          env:
+            {{- include "varnish-controller.natsServer" . | indent 12 }}
+            {{- include "varnish-controller.toEnv" (merge (dict "envs" .Values.apigw.extraEnvs) .) | nindent 12 }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: apigw
+              containerPort: 8002
+              protocol: TCP
+      {{- if .Values.apigw.nodeSelector }}
+      nodeSelector:
+        {{- $tp := kindOf .Values.apigw.nodeSelector }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.apigw.nodeSelector . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.apigw.nodeSelector | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.apigw.affinity }}
+      affinity:
+        {{- $tp := kindOf .Values.apigw.affinity }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.apigw.affinity . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.apigw.affinity | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.apigw.tolerations }}
+      tolerations:
+        {{- $tp := kindOf .Values.apigw.tolerations }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.apigw.tolerations . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.apigw.tolerations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+{{- end }}
