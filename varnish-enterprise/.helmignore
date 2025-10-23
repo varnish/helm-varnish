@@ -21,3 +21,5 @@
 .idea/
 *.tmproj
 .vscode/
+# No need to ship tests
+test/
