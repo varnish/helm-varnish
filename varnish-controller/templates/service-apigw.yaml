@@ -1,0 +1,32 @@
+{{- if and .Values.apigw.enabled .Values.apigw.service.enabled }}
+{{- $serviceType := .Values.apigw.service.type | toString }}
+{{- $serviceClusterIP := .Values.apigw.service.clusterIP | toString }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-controller.fullname" . }}-apigw
+  labels:
+    {{- include "varnish-controller.labels" (merge (dict "nameSuffix" "apigw") .) | nindent 4 }}
+    {{- include "varnish-controller.serviceLabels" (merge (dict "section" "apigw") .) | indent 4 }}
+  {{- include "varnish-controller.serviceAnnotations" (merge (dict "section" "apigw.service") .) | indent 2 }}
+spec:
+  {{- if .Values.apigw.service.type }}
+  type: {{ .Values.apigw.service.type }}
+  {{- end }}
+  {{- if .Values.apigw.service.clusterIP }}
+  clusterIP: {{ .Values.apigw.service.clusterIP }}
+  {{- end }}
+  ports:
+    - name: apigw
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: 8002
+      {{- else }}
+      port: {{ .Values.apigw.service.port }}
+      {{- end }}
+      targetPort: 8002
+      {{- if and (.Values.apigw.service.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.apigw.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "varnish-controller.selectorLabels" (merge (dict "nameSuffix" "apigw") .) | nindent 4 }}
+{{- end }}

@@ -1,0 +1,20 @@
+---
+apiVersion: v2
+name: varnish-controller
+description: An intuitive graphical administration platform for managing Varnish clusters
+type: application
+version: 0.2.0
+appVersion: 7.2.1
+maintainers:
+  - email: containers@varnish-software.com
+    name: Varnish Software
+
+dependencies:
+  - condition: postgresql.enabled
+    name: postgresql
+    repository: https://charts.bitnami.com/bitnami
+    version: ~18.0.14
+  - condition: nats.enabled
+    name: nats
+    version: ~1.0.3
+    repository: https://nats-io.github.io/k8s/helm/charts/

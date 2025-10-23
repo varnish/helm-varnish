@@ -1,0 +1,45 @@
+{{- if and .Values.apigw.enabled .Values.apigw.autoscaling.enabled }}
+{{- $kubeVersion := $.Capabilities.KubeVersion.Version }}
+{{- $apiVersions := $.Capabilities.APIVersions }}
+{{- if $kubeVersion | semverCompare ">=1.26.0-0" }}
+apiVersion: autoscaling/v2
+{{- else if $kubeVersion | semverCompare ">=1.23.0-0" | and ($apiVersions.Has "autoscaling/v2") }}
+apiVersion: autoscaling/v2
+{{- else if $kubeVersion | semverCompare ">=1.12.0-0" | and ($apiVersions.Has "autoscaling/v2beta2") }}
+apiVersion: autoscaling/v2beta2
+{{- else if $apiVersions.Has "autoscaling/v2beta1" }}
+apiVersion: autoscaling/v2beta1
+{{- else }}
+apiVersion: autoscaling/v1
+{{- end }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "varnish-controller.fullname" . }}-apigw
+  labels:
+    {{- include "varnish-controller.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "varnish-controller.fullname" . }}-apigw
+  minReplicas: {{ .Values.apigw.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.apigw.autoscaling.maxReplicas }}
+  {{- if not (empty .Values.apigw.autoscaling.behavior) }}
+  {{- $tp := kindOf .Values.apigw.autoscaling.behavior }}
+  behavior:
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.apigw.autoscaling.behavior . | trim | nindent 4 }}
+  {{- else }}
+    {{- toYaml .Values.apigw.autoscaling.behavior | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- if not (empty .Values.apigw.autoscaling.metrics) }}
+  metrics:
+  {{- $tp := kindOf .Values.apigw.autoscaling.metrics }}
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.apigw.autoscaling.metrics . | trim | nindent 4 }}
+  {{- else }}
+    {{- toYaml .Values.apigw.autoscaling.metrics | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}
