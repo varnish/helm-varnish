@@ -1,0 +1,71 @@
+{{- $tp := kindOf .Values.router.httpService.enabled }}
+{{- $tpHttp := kindOf .Values.router.http.enabled }}
+{{- $tpHttps := kindOf .Values.router.http.enabled }}
+{{- $isHttpEnabled := .Values.router.http.enabled }}
+{{- $isHttpsEnabled := .Values.router.https.enabled }}
+{{- if or
+  (and (eq $tp "string") (eq .Values.router.httpService.enabled "-") $isHttpEnabled)
+  (and (eq $tp "string") (eq .Values.router.httpService.enabled "-") $isHttpsEnabled)
+  (and (eq $tp "bool") .Values.router.httpService.enabled) -}}
+{{- $serviceType := .Values.router.httpService.type | toString }}
+{{- $serviceClusterIP := .Values.router.httpService.clusterIP | toString }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-controller-router.fullname" . }}-http
+  labels:
+    {{- include "varnish-controller-router.labels" (merge (dict "nameSuffix" "http") .) | nindent 4 }}
+    {{- include "varnish-controller-router.serviceLabels" (merge (dict "section" "router.httpService") .) | indent 4 }}
+  {{- include "varnish-controller-router.serviceAnnotations" (merge (dict "section" "router.httpService") .) | indent 2 }}
+spec:
+  {{- if .Values.router.httpService.type }}
+  type: {{ .Values.router.httpService.type }}
+  {{- end }}
+  {{- if .Values.router.httpService.clusterIP }}
+  clusterIP: {{ .Values.router.httpService.clusterIP }}
+  {{- end }}
+  {{- if .Values.router.httpService.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.router.httpService.loadBalancerIP }}
+  {{- end }}
+  ports:
+  {{- $tpServiceHttp := kindOf .Values.router.httpService.http.enabled }}
+  {{- if or
+    (and (eq $tpServiceHttp "string") (eq .Values.router.httpService.http.enabled "-") $isHttpEnabled)
+    (and (eq $tpServiceHttp "bool") .Values.router.httpService.http.enabled) }}
+  {{- if (not .Values.router.http.enabled) }}
+  {{ fail "HTTP support must be enabled in values to enable HTTP service: 'router.http.enabled'" }}
+  {{- else }}
+    - name: http
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.router.http.port }}
+      {{- else }}
+      port: {{ .Values.router.httpService.http.port }}
+      {{- end }}
+      targetPort: {{ .Values.router.http.port }}
+      {{- if and (.Values.router.httpService.http.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.router.httpService.http.nodePort }}
+      {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- $tpServiceHttps := kindOf .Values.router.httpService.https.enabled }}
+  {{- if or
+    (and (eq $tpServiceHttps "string") (eq .Values.router.httpService.https.enabled "-") $isHttpsEnabled)
+    (and (eq $tpServiceHttps "bool") .Values.router.httpService.https.enabled) }}
+  {{- if (not .Values.router.https.enabled) }}
+  {{ fail "HTTPS support must be enabled in values to enable HTTPS service: 'router.https.enabled'" }}
+  {{- else }}
+    - name: https
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.router.https.port }}
+      {{- else }}
+      port: {{ .Values.router.httpService.https.port }}
+      {{- end }}
+      targetPort: {{ .Values.router.https.port }}
+      {{- if and (.Values.router.httpService.https.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.router.httpService.https.nodePort }}
+      {{- end }}
+  {{- end }}
+  {{- end }}
+  selector:
+    {{- include "varnish-controller-router.selectorLabels" . | nindent 4 }}
+{{- end }}

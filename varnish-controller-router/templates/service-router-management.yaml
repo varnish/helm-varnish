@@ -1,0 +1,43 @@
+{{- $tp := kindOf .Values.router.managementService.enabled }}
+{{- $tpManagement := kindOf .Values.router.management.enabled }}
+{{- $isManagementEnabled := .Values.router.management.enabled }}
+{{- if or
+  (and (eq $tp "string") (eq .Values.router.managementService.enabled "-") $isManagementEnabled)
+  (and (eq $tp "bool") .Values.router.managementService.enabled) -}}
+{{- if not $isManagementEnabled }}
+{{- fail "Management port must be enabled to enable management service: 'router.management.enabled'" }}
+{{- end }}
+{{- $serviceType := .Values.router.managementService.type | toString }}
+{{- $serviceClusterIP := .Values.router.managementService.clusterIP | toString }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-controller-router.fullname" . }}-management
+  labels:
+    {{- include "varnish-controller-router.labels" (merge (dict "nameSuffix" "management") .) | nindent 4 }}
+    {{- include "varnish-controller-router.serviceLabels" (merge (dict "section" "router.managementService") .) | indent 4 }}
+  {{- include "varnish-controller-router.serviceAnnotations" (merge (dict "section" "router.managementService") .) | indent 2 }}
+spec:
+  {{- if .Values.router.managementService.type }}
+  type: {{ .Values.router.managementService.type }}
+  {{- end }}
+  {{- if .Values.router.managementService.clusterIP }}
+  clusterIP: {{ .Values.router.managementService.clusterIP }}
+  {{- end }}
+  {{- if .Values.router.managementService.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.router.managementService.loadBalancerIP }}
+  {{- end }}
+  ports:
+    - name: management
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.router.management.port }}
+      {{- else }}
+      port: {{ .Values.router.managementService.port }}
+      {{- end }}
+      targetPort: {{ .Values.router.management.port }}
+      {{- if and (.Values.router.managementService.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.router.managementService.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "varnish-controller-router.selectorLabels" . | nindent 4 }}
+{{- end }}
