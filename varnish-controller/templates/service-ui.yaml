@@ -1,0 +1,32 @@
+{{- if and .Values.ui.enabled .Values.ui.service.enabled }}
+{{- $serviceType := .Values.ui.service.type | toString }}
+{{- $serviceClusterIP := .Values.ui.service.clusterIP | toString }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-controller.fullname" . }}-ui
+  labels:
+    {{- include "varnish-controller.labels" (merge (dict "nameSuffix" "ui") .) | nindent 4 }}
+    {{- include "varnish-controller.serviceLabels" (merge (dict "section" "ui") .) | indent 4 }}
+  {{- include "varnish-controller.serviceAnnotations" (merge (dict "section" "ui.service") .) | indent 2 }}
+spec:
+  {{- if .Values.ui.service.type }}
+  type: {{ .Values.ui.service.type }}
+  {{- end }}
+  {{- if .Values.ui.service.clusterIP }}
+  clusterIP: {{ .Values.ui.service.clusterIP }}
+  {{- end }}
+  ports:
+    - name: ui
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: 8080
+      {{- else }}
+      port: {{ .Values.ui.service.port }}
+      {{- end }}
+      targetPort: 8080
+      {{- if and (.Values.ui.service.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.ui.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "varnish-controller.selectorLabels" (merge (dict "nameSuffix" "ui") .) | nindent 4 }}
+{{- end }}
