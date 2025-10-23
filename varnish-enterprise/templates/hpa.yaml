@@ -1,0 +1,45 @@
+{{- if .Values.server.autoscaling.enabled }}
+{{- $kubeVersion := $.Capabilities.KubeVersion.Version }}
+{{- $apiVersions := $.Capabilities.APIVersions }}
+{{- if $kubeVersion | semverCompare ">=1.26.0-0" -}}
+apiVersion: autoscaling/v2
+{{- else if $kubeVersion | semverCompare ">=1.23.0-0" | and ($apiVersions.Has "autoscaling/v2") -}}
+apiVersion: autoscaling/v2
+{{- else if $kubeVersion | semverCompare ">=1.12.0-0" | and ($apiVersions.Has "autoscaling/v2beta2") -}}
+apiVersion: autoscaling/v2beta2
+{{- else if $apiVersions.Has "autoscaling/v2beta1" }}
+apiVersion: autoscaling/v2beta1
+{{- else }}
+apiVersion: autoscaling/v1
+{{- end }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: {{ .Values.server.kind }}
+    name: {{ include "varnish-enterprise.fullname" . }}
+  minReplicas: {{ if and (eq (kindOf .Values.server.autoscaling.minReplicas) "string") (eq .Values.server.autoscaling.minReplicas "-") }}{{ .Values.server.replicas }}{{ else }}{{ .Values.server.autoscaling.minReplicas }}{{ end }}
+  maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
+  {{- if not (empty .Values.server.autoscaling.behavior) }}
+  {{- $tp := kindOf .Values.server.autoscaling.behavior }}
+  behavior:
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.server.autoscaling.behavior . | trim | nindent 4 }}
+  {{- else }}
+    {{- toYaml .Values.server.autoscaling.behavior | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- if not (empty .Values.server.autoscaling.metrics) }}
+  metrics:
+  {{- $tp := kindOf .Values.server.autoscaling.metrics }}
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.server.autoscaling.metrics . | trim | nindent 4 }}
+  {{- else }}
+    {{- toYaml .Values.server.autoscaling.metrics | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}
