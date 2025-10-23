@@ -1,0 +1,644 @@
+---
+# Override the name of the the Varnish Controller Router chart and its components.
+nameOverride: ""
+
+# Override the full name of the Varnish Controller Router chart and its components.
+fullnameOverride: ""
+
+global:
+  # Sets the secret to use to pull images.
+  imagePullSecrets: []
+  #imagePullSecrets:
+  #  - name: quay.io-varnish-software
+
+  # Sets the securityContext of the Pod.
+  podSecurityContext:
+    fsGroup: 999
+
+  # Sets the securityContext for all containers.
+  securityContext:
+    runAsUser: 999
+    runAsNonRoot: true
+
+  # Sets the annotations for all workload resources.
+  annotations: {}
+
+  # Sets the annotations for all pod templates.
+  podAnnotations: {}
+
+  # Sets the labels for all workload resources.
+  labels: {}
+
+  # Sets the labels for all pod templates.
+  podLabels: {}
+
+  # Configures a resource limits for all containers.
+  resources: {}
+  #resources:
+  #  limits:
+  #    cpu: 100m
+  #    memory: 128Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+
+  controller:
+    # Configures Varnish Controller image for all components.
+    image:
+      pullPolicy: IfNotPresent
+      tag: ""
+
+  # Configures NATS discovery. Note that this is *not* for deploying internal NATS server
+  # but instead for other components to discover NATS server.
+  natsServer:
+    # Configures Varnish Controller Router to use external NATS server.
+    # Ignored if `global.natsServer.internal.enabled` is set to `true`.
+    externalAddress: ""
+
+    internal:
+      # Configures Varnish Controller Router to use internal NATS server.
+      enabled: true
+
+      # Configures the namespace internal NATS is deployed to. If left blank, the
+      # current namespace is used instead.
+      namespace: ""
+
+      # Configures the release name for NATS is deployed to. Use "varnish-controller"
+      # if left blank.
+      releaseName: ""
+
+      # Configures NATS password from a Kubernetes secret. By default, it uses an
+      # auto-generated password from a "varnish-controller-credentials" secret.
+      passwordFrom:
+        name: varnish-controller-credentials
+        key: nats-varnish-password
+
+      # Configures the NATS internal cluster domain name. Only change if NATS is deployed
+      # on a separate cluster.
+      clusterDomain: "cluster.local"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+
+  # Labels to add to the service account. Can be set as a templated string.
+  labels: {}
+
+  # Annotations to add to the service account. Can be set as a templated string.
+  annotations: {}
+
+  # The name of the service account to use. If not set and create is true, a name
+  # is generated using the fullname template
+  name: ""
+
+# Configures Varnish Controller Router.
+router:
+  enabled: true
+  replicas: 1
+
+  # Sets the extra labels for the deployment. Can be set as a templated string.
+  labels: {}
+
+  # Sets the extra annotations for the deployment. Can be set as a templated string.
+  annotations: {}
+
+  # Sets the deployment strategy. Can be set as a templated string.
+  # See also: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+  strategy: {}
+
+  # Enables HTTP routing.
+  http:
+    enabled: true
+    port: 6081
+
+  # Enables HTTPS routing.
+  https:
+    enabled: false
+    port: 6443
+
+  # Configures management port.
+  management:
+    enabled: false
+
+    # Sets the port for management
+    port: 8092
+
+    # Enables TLS for management port.
+    tls: false
+
+  # Enables or disables DNS routing. When `router.dns.enabled` is set to "-", it will inherit the
+  # value of `powerdns.enabled`, effectively automatically activates DNS routing if PowerDNS
+  # is enabled.
+  dns:
+    enabled: "-"
+
+    # Sets the port for DNS
+    port: 8091
+
+  # Enables or disables autoscaling
+  autoscaling:
+    enabled: false
+
+    # Sets the minimum number of replicas to keep active at all time.
+    minReplicas: 1
+
+    # Sets the maximum number of replicas to spawn.
+    maxReplicas: 100
+
+    # Configures the autoscaling metrics. Can be set as a templated string
+    # or a YAML map.
+    metrics: ""
+    #metrics: |
+    #  - type: Resource
+    #    resource:
+    #      name: cpu
+    #      targetAverageUtilization: 80
+
+  # Sets the image and tag to use to deploy Varnish Controller Router.
+  # If tag is blank, it will be inherited from appVersion.
+  image:
+    repository: "quay.io/varnish-software/varnish-controller-router"
+    pullPolicy: "-"
+    tag: "-"
+
+  # Configures the Varnish Controller Router HTTP service. When `router.httpService.enabled`
+  # is set to "-", it will inherit from the value of `router.http.enabled`.
+  httpService:
+    enabled: "-"
+
+    # Sets the extra labels for Varnish Controller Router services. Can be set as a templated string.
+    labels: {}
+
+    # Sets the extra annotations for Varnish Controller Router services. Can be set as a templated string.
+    annotations: {}
+
+    # Type of the service. Can be ClusterIP or NodePort.
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/
+    type: NodePort
+
+    # Sets whether to attach a Cluster IP address to the service. Services have Cluster IP
+    # associated to it by default. Setting this to "None" will create a headless service,
+    # which will allow the service IP to be resolved directly via DNS resolution (i.e. skipping
+    # kube-proxy load-balancing).
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+    clusterIP: ""
+
+    # Sets a static load balancer IP address. Only applicable when `router.httpService.type`
+    # is "LoadBalancer".
+    loadBalancerIP: ""
+
+    # Enables or disables the Varnish Controller Router HTTP service. When
+    # `router.httpService.http.enabled` is set to "-", it will inherit from the value of
+    # `router.http.enabled`.
+    http:
+      enabled: "-"
+
+      # Sets the port to listen HTTP routing service to.
+      #
+      # Note that when headless service is used (router.httpService.type set to "ClusterIP" and
+      # router.httpService.clusterIP set to "None") the port defined here won't be used. Instead,
+      # Varnish Controller Router must be connected via the port defined in the pod
+      # (i.e., router.http.port).
+      port: 80
+
+      # Expose the service directly at the Node IP address at a specific port. Only applicable
+      # when service type is set to "NodePort". Note that this port must be within the
+      # Kubernetes' service-node-port-range (default: 30000-32767)
+      #
+      # See also https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+      #nodePort: 30080
+
+    # Enables or disables the Varnish Controller Router HTTPS service. When
+    # `router.httpService.https.enabled` is set to "-", it will inherit from the value of
+    # `router.https.enabled`.
+    https:
+      enabled: "-"
+
+      # Sets the port to listen HTTPS routing service to.
+      #
+      # Note that when headless service is used (router.httpService.type set to "ClusterIP" and
+      # router.httpService.clusterIP set to "None") the port defined here won't be used. Instead,
+      # Varnish Controller Router must be connected via the port defined in the pod
+      # (i.e., router.https.port).
+      port: 443
+
+      # Expose the service directly at the Node IP address at a specific port. Only applicable
+      # when service type is set to "NodePort". Note that this port must be within the
+      # Kubernetes' service-node-port-range (default: 30000-32767)
+      #
+      # See also https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+      #nodePort: 30443
+
+  # Configures the Varnish Controller Router DNS service. When `router.dnsService.enabled`
+  # is set to "-", it will inherit from the effective value of `router.dns.enabled`
+  # (which, by default, inherited from `powerdns.enabled`)
+  dnsService:
+    enabled: "-"
+
+    # Sets the extra labels for Varnish Controller Router DNS services. Can be set as a templated string.
+    labels: {}
+
+    # Sets the extra annotations for Varnish Controller Router DNS services. Can be set as a templated string.
+    annotations: {}
+
+    # Type of the service. Can be ClusterIP or NodePort.
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/
+    type: NodePort
+
+    # Sets whether to attach a Cluster IP address to the service. Services have Cluster IP
+    # associated to it by default. Setting this to "None" will create a headless service,
+    # which will allow the service IP to be resolved directly via DNS resolution (i.e. skipping
+    # kube-proxy load-balancing).
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+    clusterIP: ""
+
+    # Sets a static load balancer IP address. Only applicable when `router.dnsService.type`
+    # is "LoadBalancer".
+    loadBalancerIP: ""
+
+    # Sets the port to listen DNS service to.
+    #
+    # Note that when headless service is used (router.dnsService.type set to "ClusterIP" and
+    # router.dnsService.clusterIP set to "None") the port defined here won't be used. Instead,
+    # Varnish Controller Router must be connected via the port defined in the pod
+    # (i.e., router.dns.port).
+    port: 8091
+
+    # Expose the service directly at the Node IP address at a specific port. Only applicable
+    # when service type is set to "NodePort". Note that this port must be within the
+    # Kubernetes' service-node-port-range (default: 30000-32767)
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    #nodePort: 30443
+
+  # Configures the Varnish Controller Router management service.
+  managementService:
+    enabled: "-"
+
+    # Sets the extra labels for Varnish Controller Router management services. Can be set as a templated string.
+    labels: {}
+
+    # Sets the extra annotations for Varnish Controller Router management services. Can be set as a templated string.
+    annotations: {}
+
+    # Type of the service. Can be ClusterIP or NodePort.
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/
+    type: NodePort
+
+    # Sets whether to attach a Cluster IP address to the service. Services have Cluster IP
+    # associated to it by default. Setting this to "None" will create a headless service,
+    # which will allow the service IP to be resolved directly via DNS resolution (i.e. skipping
+    # kube-proxy load-balancing).
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+    clusterIP: ""
+
+    # Sets a static load balancer IP address. Only applicable when `router.managementService.type`
+    # is "LoadBalancer".
+    loadBalancerIP: ""
+
+    # Sets the port to listen management service to.
+    #
+    # Note that when headless service is used (router.managementService.type set to "ClusterIP" and
+    # router.managementService.clusterIP set to "None") the port defined here won't be used. Instead,
+    # Varnish Controller Router must be connected via the port defined in the pod
+    # (i.e., router.management.port).
+    port: 8092
+
+    # Expose the service directly at the Node IP address at a specific port. Only applicable
+    # when service type is set to "NodePort". Note that this port must be within the
+    # Kubernetes' service-node-port-range (default: 30000-32767)
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    #nodePort: 30443
+
+  # Sets the extra environment variables for Varnish Controller Router.
+  # Can be set as either an object, a list, or a templated string.
+  extraEnvs: {}
+  #extraEnvs:
+  #  MY_ENV_VAR: value
+  #  MY_OTHER_ENV_VAR: other_value
+  #
+  #extraEnvs:
+  #  - name: MY_ENV_VAR
+  #    value: value
+  #  - name: MY_OTHER_ENV_VAR
+  #    valueFrom:
+  #      configMapRef:
+  #        name: my-config-map
+  #        value: my-key
+  #
+  #extraEnvs: |
+  #  - name: RELEASE_NAMESPACE
+  #    value: {{ .Release.Namespace }}
+
+  # Sets the extra configuration args for Varnish Controller Router.
+  extraArgs: []
+
+  # Sets the extra annotations for Varnish Controller Router pod template. Can be set as a templated string.
+  podAnnotations: {}
+  #podAnnotations:
+  #  prometheus.io/scrape: "true"
+  #  prometheus.io/path: "/metrics"
+  #  prometheus.io/port: "9273"
+  #  prometheus.io/scheme: "http"
+
+  # Sets the extra labels for Varnish Controller Router pod template. Can be set as a templated string.
+  podLabels: {}
+  #podLabels:
+  #  varnish-software.com/tier: "edge"
+
+  # Sets the securityContext of the Varnish Controller Router container.
+  securityContext: {}
+
+  # Whether to make Varnish Controller Router keep an endpoint active after Varnish Controller Agent is
+  # stopped, as long as the Varnish Enterprise instance keeps responding to a health check.
+  grace: true
+
+  # When router.replicas is set to 1, use the Helm release name as Agent Name instead
+  # of relying on Pod name.
+  useReleaseName: false
+
+  # Configures a probe for checking if a Pod has started.
+  startupProbe: {}
+  #startupProbe:
+  #  initialDelaySeconds: 5
+  #  periodSeconds: 10
+  #  timeoutSeconds: 1
+  #  successThreshold: 1
+  #  failureThreshold: 3
+
+  # Configures a probe for checking if a Pod is ready to receive a connection.
+  readinessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 5
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 1
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a probe for checking if a Pod can continue to receive a connection.
+  livenessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 30
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 5
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a node selector to assign a Pod. Can be set as a templated string
+  # or a YAML map.
+  nodeSelector: {}
+  #nodeSelector:
+  #  beta.kubernetes.io/arch: amd64
+
+  # Configures toleration settings for a Pod. Can be set as a templated string
+  # or a YAML list.
+  tolerations: []
+
+  # Configures an affinity for a Pod. Can be set as a templated string or
+  # a YAML map. By default, require Varnish to be deployed only on a node
+  # it was not already deployed on.
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "varnish-controller-router.name" . }}
+              app.kubernetes.io/instance: {{ .Release.Name }}
+          topologyKey: kubernetes.io/hostname
+
+# Configures Internal PowerDNS.
+powerdns:
+  enabled: false
+  replicas: 1
+
+  # Sets the extra labels for the deployment. Can be set as a templated string.
+  labels: {}
+
+  # Sets the extra annotations for the deployment. Can be set as a templated string.
+  annotations: {}
+
+  # Sets the deployment strategy. Can be set as a templated string.
+  # See also: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+  strategy: {}
+
+  # Enables or disables autoscaling
+  autoscaling:
+    enabled: false
+
+    # Sets the minimum number of replicas to keep active at all time.
+    minReplicas: 1
+
+    # Sets the maximum number of replicas to spawn.
+    maxReplicas: 100
+
+    # Configures the autoscaling metrics. Can be set as a templated string
+    # or a YAML map.
+    metrics: ""
+    #metrics: |
+    #  - type: Resource
+    #    resource:
+    #      name: cpu
+    #      targetAverageUtilization: 80
+
+  # Sets the image and tag to use to deploy PowerDNS.
+  image:
+    repository: "docker.io/powerdns/pdns-auth-45"
+    pullPolicy: IfNotPresent
+    tag: "4.5.5"
+
+  # Configures PowerDNS DNS port to listen to.
+  dns:
+    port: 53
+
+  service:
+    enabled: true
+
+    # Sets the extra labels for PowerDNS services. Can be set as a templated string.
+    labels: {}
+
+    # Sets the extra annotations for PowerDNS services. Can be set as a templated string.
+    annotations: {}
+
+    # Type of the service. Can be ClusterIP or NodePort.
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/
+    type: NodePort
+
+    # Sets whether to attach a Cluster IP address to the service. Services have Cluster IP
+    # associated to it by default. Setting this to "None" will create a headless service,
+    # which will allow the service IP to be resolved directly via DNS resolution (i.e. skipping
+    # kube-proxy load-balancing).
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+    clusterIP: ""
+
+    # Sets a static load balancer IP address. Only applicable when `powerdns.service.type`
+    # is "LoadBalancer".
+    loadBalancerIP: ""
+
+    # Sets the port to listen for DNS queries.
+    #
+    # Note that when headless service is used (router.httpService.type set to "ClusterIP" and
+    # router.httpService.clusterIP set to "None") the port defined here won't be used. Instead,
+    # PowerDNS must be connected via the port defined in the pod (i.e., powerdns.dns.port).
+    port: 53
+
+    # Expose the service directly at the Node IP address at a specific port. Only applicable
+    # when service type is set to "NodePort". Note that this port must be within the
+    # Kubernetes' service-node-port-range (default: 30000-32767)
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    #nodePort: 30053
+
+  # Sets the extra environment variables for PowerDNS.
+  # Can be set as either an object, a list, or a templated string.
+  extraEnvs: {}
+  #extraEnvs:
+  #  MY_ENV_VAR: value
+  #  MY_OTHER_ENV_VAR: other_value
+  #
+  #extraEnvs:
+  #  - name: MY_ENV_VAR
+  #    value: value
+  #  - name: MY_OTHER_ENV_VAR
+  #    valueFrom:
+  #      configMapRef:
+  #        name: my-config-map
+  #        value: my-key
+  #
+  #extraEnvs: |
+  #  - name: RELEASE_NAMESPACE
+  #    value: {{ .Release.Namespace }}
+
+  # Sets the extra configuration args for PowerDNS.
+  extraArgs: []
+
+  # Sets the extra annotations for PowerDNS pod template. Can be set as a templated string.
+  podAnnotations: {}
+  #podAnnotations:
+  #  prometheus.io/scrape: "true"
+  #  prometheus.io/path: "/metrics"
+  #  prometheus.io/port: "9273"
+  #  prometheus.io/scheme: "http"
+
+  # Sets the extra labels for PowerDNS pod template. Can be set as a templated string.
+  podLabels: {}
+  #podLabels:
+  #  varnish-software.com/tier: "edge"
+
+  # Sets the securityContext of the PowerDNS container.
+  securityContext: {}
+
+  # Configures PowerDNS.
+  #
+  # These configuration keys are passed in pdns.conf by converting from
+  # CamelCase into kebab-case, e.g. negqueryCacheTtl would be turned into
+  # negquery-cache-ttl.
+  config:
+    # These configuration forces PowerDNS to not cache, as caching would bypass
+    # Traffic Router. For optimal usage, please leave these at the default.
+    negqueryCacheTtl: 0
+    queryCacheTtl: 0
+    cacheTtl: 0
+    zoneCacheRefreshInterval: 0
+
+    # Configures PowerDNS logging.
+    loglevel: 4
+    logDnsQueries: true
+    queryLogging: true
+
+    # Configures PowerDNS.
+    maxTcpConnections: 20000
+    maxQueueLength: 50000
+    distributorThreads: 50
+
+    ednsSubnetProcessing: true
+    consistentBackends: true
+
+  # Configures a probe for checking if a Pod has started.
+  startupProbe: {}
+  #startupProbe:
+  #  initialDelaySeconds: 5
+  #  periodSeconds: 10
+  #  timeoutSeconds: 1
+  #  successThreshold: 1
+  #  failureThreshold: 3
+
+  # Configures a probe for checking if a Pod is ready to receive a connection.
+  readinessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 5
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 1
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a probe for checking if a Pod can continue to receive a connection.
+  livenessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 30
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 5
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a node selector to assign a Pod. Can be set as a templated string
+  # or a YAML map.
+  nodeSelector: {}
+  #nodeSelector:
+  #  beta.kubernetes.io/arch: amd64
+
+  # Configures toleration settings for a Pod. Can be set as a templated string
+  # or a YAML list.
+  tolerations: []
+
+  # Configures an affinity for a Pod. Can be set as a templated string or
+  # a YAML map. By default, require PowerDNS to be deployed only on a node
+  # it was not already deployed on.
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "varnish-controller-router.name" . }}-powerdns
+              app.kubernetes.io/instance: {{ .Release.Name }}
+          topologyKey: kubernetes.io/hostname

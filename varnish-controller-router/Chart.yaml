@@ -1,0 +1,10 @@
+---
+apiVersion: v2
+name: varnish-controller-router
+description: Varnish Traffic Router Helm chart
+type: application
+version: 0.1.0
+appVersion: 6.6.9
+maintainers:
+  - email: containers@varnish-software.com
+    name: Varnish Software
