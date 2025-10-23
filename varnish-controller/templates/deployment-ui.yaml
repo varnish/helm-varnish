@@ -1,0 +1,93 @@
+{{- if .Values.ui.enabled }}
+{{- $selectorLabels := include "varnish-controller.selectorLabels" (merge (dict "nameSuffix" "ui") .) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "varnish-controller.fullname" . }}-ui
+  {{- include "varnish-controller.serverLabels" (merge (dict "section" "ui") .) | nindent 2 }}
+  {{- include "varnish-controller.serverAnnotations" (merge (dict "section" "ui") .) | nindent 2 }}
+spec:
+  {{- if not .Values.ui.autoscaling.enabled }}
+  replicas: {{ .Values.ui.replicas }}
+  {{- end }}
+  {{- include "varnish-controller.strategy" (merge (dict "section" "ui") .) | indent 2 }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+  template:
+    metadata:
+      {{- include "varnish-controller.podLabels" (merge (dict "section" "ui") .) | nindent 6 }}
+      {{- include "varnish-controller.podAnnotations" (merge (dict "section" "ui") .) | nindent 6 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "varnish-controller.serviceAccountName" . }}
+      {{- if not (empty .Values.global.podSecurityContext) }}
+      securityContext:
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ui
+          {{- include "varnish-controller.securityContext" (merge (dict "section" "ui") .) | nindent 10 }}
+          {{- include "varnish-controller.image" (merge (dict "base" .Values.global.controller.image "image" .Values.ui.image) .) | nindent 10 }}
+          {{- if and .Values.ui.startupProbe (not (empty .Values.ui.startupProbe)) }}
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            {{- toYaml .Values.ui.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.ui.readinessProbe (not (empty .Values.ui.readinessProbe)) }}
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            {{- toYaml .Values.ui.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.ui.livenessProbe (not (empty .Values.ui.livenessProbe)) }}
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            {{- toYaml .Values.ui.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- include "varnish-controller.resources" (merge (dict "section" "ui") .) | nindent 10 }}
+          command: ["/usr/bin/varnish-controller-ui"]
+          {{- if and .Values.ui.extraArgs (not (empty .Values.ui.extraArgs)) }}
+          args: {{- toYaml .Values.ui.extraArgs | nindent 12 }}
+          {{- end }}
+          env:
+            - name: VARNISH_UI_SERVER_API_HOSTS
+              value: "http://{{ .Release.Name }}-apigw.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.apigw.service.port }}"
+            {{- include "varnish-controller.toEnv" (merge (dict "envs" .Values.ui.extraEnvs) .) | nindent 12 }}
+          ports:
+            - name: ui
+              containerPort: 8080
+              protocol: TCP
+      {{- if .Values.ui.nodeSelector }}
+      nodeSelector:
+        {{- $tp := kindOf .Values.ui.nodeSelector }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.ui.nodeSelector . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.ui.nodeSelector | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.ui.affinity }}
+      affinity:
+        {{- $tp := kindOf .Values.ui.affinity }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.ui.affinity . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.ui.affinity | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.ui.tolerations }}
+      tolerations:
+        {{- $tp := kindOf .Values.ui.tolerations }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.ui.tolerations . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.ui.tolerations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+{{- end }}
