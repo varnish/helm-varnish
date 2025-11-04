@@ -1,12 +1,13 @@
 # Varnish Helm Charts
 
-This repository hosts a Helm chart for Varnish Cache.
+This repository hosts Helm charts for Varnish Cache and related projects.
 
 ## Documentation
 
 For documentation, please see README.md in each chart's directory.
 
 - [varnish-cache](varnish-cache/README.md)
+- [varnish-orca](varnish-orca/README.md)
 
 ## Enterprise Customers
 

@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm.fullname" . }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "helm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "helm.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helm.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/bin/varnish-supervisor","--config","/etc/varnish-supervisor/config.yaml"]
+          ports:
+            {{- $httpPorts := .Values.orca.varnish.http }}
+            {{- $numHttpPorts := len $httpPorts }}
+            {{- range $index, $portConfig := $httpPorts }}
+            - name: {{- if eq $numHttpPorts 1 }} http {{- else }} http-{{ $portConfig.port }} {{- end }}
+              containerPort: {{ $portConfig.port | default 80 }}
+              protocol: TCP
+            {{- end }}
+            {{- if .Values.orca.varnish.https }}
+            {{- $httpsPorts := .Values.orca.varnish.https }}
+            {{- $numHttpsPorts := len $httpsPorts }}
+            {{- range $index, $portConfig := $httpsPorts }}
+            - name: {{- if eq $numHttpsPorts 1 }} https {{- else }} https-{{ $portConfig.port }} {{- end }}
+              containerPort: {{ $portConfig.port | default 443 }}
+              protocol: TCP
+            {{- end }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - name: orca-config
+            mountPath: /etc/varnish-supervisor/config.yaml
+            subPath: config.yaml
+          {{- $cfg := include "orca.config" . | fromYaml -}}
+          {{- if and (not (empty $cfg.license.secret)) (not (empty $cfg.license.file)) }}
+          - name: orca-license
+            readOnly: true
+            mountPath: "{{ $cfg.license.file }}"
+            subPath: "{{ base $cfg.license.file }}"
+          {{- end }}
+          {{- range $httpId, $https := $cfg.varnish.https -}}
+            {{- range $certId, $cert := $https.certificates -}}
+              {{- if not (empty $cert.cert) }}
+          - name: orca-https-{{ $httpId }}-cert-{{ $certId }}
+            readOnly: true
+            mountPath: "{{ $cert.cert }}"
+            subPath: "{{ base $cert.cert }}"
+              {{- end -}}
+              {{- if not (empty $cert.cert) }}
+          - name: orca-https-{{ $httpId }}-private-key-{{ $certId }}
+            readOnly: true
+            mountPath: "{{ $cert.private_key }}"
+            subPath: "{{ base $cert.private_key }}"
+              {{- end -}}
+            {{- end -}}
+          {{- end -}}
+          {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+      - name: orca-config
+        configMap:
+          name: {{ include "helm.fullname" . }}-orca-config
+      {{- if and (not (empty $cfg.license.secret)) (not (empty $cfg.license.file)) }}
+      - name: orca-license
+        secret:
+          secretName: {{ $cfg.license.secret }}
+          items:
+          - key: license.lic
+            path: {{ base $cfg.license.file }}
+      {{- end }}
+      {{- range $httpId, $https := $cfg.varnish.https -}}
+        {{- range $certId, $cert := $https.certificates -}}
+          {{- if not (empty $cert.secret) }}
+      - name: orca-https-{{ $httpId }}-cert-{{ $certId }}
+        secret:
+          secretName: {{ $cert.secret }}
+          items:
+          - key: tls.crt
+            path: {{ base $cert.cert }}
+      - name: orca-https-{{ $httpId }}-private-key-{{ $certId }}
+        secret:
+          secretName: {{ $cert.secret }}
+          items:
+          - key: tls.key
+            path: {{ base $cert.private_key }}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+      {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

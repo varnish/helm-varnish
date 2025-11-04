@@ -1,0 +1,23 @@
+{{- if .Values.service.http.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm.fullname" . }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.http.port | default 80 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    {{- if .Values.service.https.enabled }}
+    - port: {{ .Values.service.https.port | default 443 }}
+      targetPort: https
+      protocol: TCP
+      name: https
+    {{- end }}
+  selector:
+    {{- include "helm.selectorLabels" . | nindent 4 }}
+{{- end -}}
