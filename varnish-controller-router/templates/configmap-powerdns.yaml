@@ -1,0 +1,23 @@
+{{- if .Values.powerdns.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-controller-router.fullname" . }}-powerdns
+  labels:
+    {{- include "varnish-controller-router.labels" . | nindent 4 }}
+data:
+  pdns.conf: |
+    {{- range $key, $value := .Values.powerdns.config }}
+    {{- $tp := kindOf $value }}
+    {{- if eq $tp "bool" }}
+    {{- $value = (include "varnish-controller-router.boolYesNo" $value) }}
+    {{- end }}
+    {{ $key | kebabcase }}={{ $value }}
+    {{- end }}
+    {{- if or (not (hasKey .Values.powerdns.config "launch")) (empty .Values.powerdns.config.launch) }}
+    launch=remote
+    {{- end }}
+    {{- if or (not (hasKey .Values.powerdns.config "remoteConnectionString")) (empty .Values.powerdns.config.remoteConnectionString) }}
+    remote-connection-string=http:url=http{{ if .Values.router.dns.tls }}s{{ end }}://{{ include "varnish-controller-router.fullname" . }}-dns-backend.{{ .Release.Namespace }}.svc.cluster.local{{ if or (and .Values.router.dns.tls (not (eq (toString .Values.router.dnsService.port) "443"))) (and (not .Values.router.dns.tls) (not (eq (toString .Values.router.dnsService.port) "80"))) }}:{{ .Values.router.dnsService.port }}{{ end }},post_json=1,post=1
+    {{- end }}
+{{- end }}

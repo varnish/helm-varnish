@@ -1,0 +1,184 @@
+{{- if .Values.brainz.enabled }}
+{{- $selectorLabels := include "varnish-controller.selectorLabels" (merge (dict "nameSuffix" "brainz") .) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "varnish-controller.fullname" . }}-brainz
+  {{- include "varnish-controller.serverLabels" (merge (dict "section" "brainz") .) | nindent 2 }}
+  {{- include "varnish-controller.serverAnnotations" (merge (dict "section" "brainz") .) | nindent 2 }}
+spec:
+  {{- if not .Values.brainz.autoscaling.enabled }}
+  replicas: {{ .Values.brainz.replicas }}
+  {{- end }}
+  {{- include "varnish-controller.strategy" (merge (dict "section" "brainz") .) | indent 2 }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+  template:
+    metadata:
+      {{- include "varnish-controller.podLabels" (merge (dict "section" "brainz") .) | nindent 6 }}
+      {{- include "varnish-controller.podAnnotations" (merge (dict "section" "brainz") .) | nindent 6 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "varnish-controller.serviceAccountName" . }}
+      {{- if not (empty .Values.global.podSecurityContext) }}
+      securityContext:
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: brainz
+          {{- include "varnish-controller.securityContext" (merge (dict "section" "brainz") .) | nindent 10 }}
+          {{- include "varnish-controller.image" (merge (dict "base" .Values.global.controller.image "image" .Values.brainz.image) .) | nindent 10 }}
+          {{- include "varnish-controller.resources" (merge (dict "section" "brainz") .) | nindent 10 }}
+          command: ["/usr/bin/varnish-controller-brainz"]
+          {{- if or .Values.brainz.modAdminUser.enabled (and .Values.brainz.extraArgs (not (empty .Values.brainz.extraArgs))) }}
+          args:
+            {{- if .Values.brainz.modAdminUser.enabled }}
+            - -mod-admin-user
+            {{- end }}
+            {{- if and .Values.brainz.extraArgs (not (empty .Values.brainz.extraArgs)) }}
+            {{- toYaml .Values.brainz.extraArgs | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          env:
+            - name: VARNISH_CONTROLLER_LICENSE
+              value: /etc/varnish-controller/license.lic
+            {{- include "varnish-controller.natsServer" . | indent 12 }}
+            {{- if .Values.postgresql.enabled }}
+            - name: VARNISH_CONTROLLER_DB_NAME
+              value: "{{ .Values.postgresql.auth.database }}"
+            - name: VARNISH_CONTROLLER_DB_SERVER
+              value: "{{ .Release.Name }}-postgresql.{{ .Release.Namespace }}.svc.cluster.local"
+            - name: VARNISH_CONTROLLER_DB_USER
+              value: "{{ .Values.postgresql.auth.username }}"
+            - name: VARNISH_CONTROLLER_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.postgresql.auth.existingSecret }}"
+                  key: "{{ .Values.postgresql.auth.secretKeys.userPasswordKey }}"
+            - name: VARNISH_CONTROLLER_DB_SSL
+              value: "{{ if .Values.postgresql.tls.enabled }}require{{ else }}disable{{ end }}"
+            {{- else if .Values.brainz.externalPostgresql }}
+            {{- if and (hasKey .Values.brainz.externalPostgresql "database") (not (eq .Values.brainz.externalPostgresql.database "")) }}
+            - name: VARNISH_CONTROLLER_DB_NAME
+              value: "{{ tpl .Values.brainz.externalPostgresql.database . }}"
+            {{- else }}
+            {{ fail "External PostgreSQL database name must be set: 'brainz.externalPostgresql.database'" }}
+            {{- end }}
+            {{- if and (hasKey .Values.brainz.externalPostgresql "host") (not (eq .Values.brainz.externalPostgresql.host "")) }}
+            - name: VARNISH_CONTROLLER_DB_SERVER
+              value: "{{ .Values.brainz.externalPostgresql.host }}"
+            {{- else }}
+            {{ fail "External PostgreSQL host must be set: 'brainz.externalPostgresql.host'" }}
+            {{- end }}
+            {{- if and (hasKey .Values.brainz.externalPostgresql "user") (not (eq .Values.brainz.externalPostgresql.user "")) }}
+            - name: VARNISH_CONTROLLER_DB_USER
+              value: "{{ .Values.brainz.externalPostgresql.user }}"
+            {{- else }}
+            {{ fail "External PostgreSQL user must be set: 'brainz.externalPostgresql.user'" }}
+            {{- end }}
+            {{- if and (hasKey .Values.brainz.externalPostgresql "passwordFrom") (hasKey .Values.brainz.externalPostgresql "password") (not (empty .Values.brainz.externalPostgresql.passwordFrom)) (not (eq .Values.brainz.externalPostgresql.password "")) }}
+            {{- fail "Either 'brainz.externalPostgresql.password' or 'brainz.externalPostgresql.passwordFrom' can be set." }}
+            {{- else if and (hasKey .Values.brainz.externalPostgresql "passwordFrom") (not (empty .Values.brainz.externalPostgresql.passwordFrom)) }}
+            {{- if or (not (hasKey .Values.brainz.externalPostgresql.passwordFrom "name")) (eq .Values.brainz.externalPostgresql.passwordFrom.name "") }}
+            {{- fail "'brainz.externalPostgresql.passwordFrom' must contain a 'name' key." }}
+            {{- end }}
+            {{- if or (not (hasKey .Values.brainz.externalPostgresql.passwordFrom "key")) (eq .Values.brainz.externalPostgresql.passwordFrom.key "") }}
+            {{- fail "'brainz.externalPostgresql.passwordFrom' must contain a 'key' key." }}
+            {{- end }}
+            - name: VARNISH_CONTROLLER_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.brainz.externalPostgresql.passwordFrom.name | quote }}
+                  key: {{ .Values.brainz.externalPostgresql.passwordFrom.key | quote }}
+            {{- else if and (hasKey .Values.brainz.externalPostgresql "password") (not (eq .Values.brainz.externalPostgresql.password "")) }}
+            - name: VARNISH_CONTROLLER_DB_PASS
+              value: {{ .Values.brainz.externalPostgresql.password | quote }}
+            {{- else }}
+            {{ fail "External PostgreSQL password must be set: 'brainz.externalPostgresql.password'" }}
+            {{- end }}
+            - name: VARNISH_CONTROLLER_DB_SSL
+              value: "{{ if and (hasKey .Values.brainz.externalPostgresql "tls") .Values.brainz.externalPostgresql.tls }}require{{ else }}disable{{ end }}"
+            {{- else }}
+            {{ fail "Either 'postgresql.enabled' or 'brainz.externalPostgresql' must be set" }}
+            {{- end }}
+            {{- if .Values.brainz.modAdminUser.enabled }}
+            {{- if .Values.brainz.modAdminUser.username }}
+            - name: VARNISH_CONTROLLER_SYSTEM_ADMIN_USER
+              value: "{{ .Values.brainz.modAdminUser.username }}"
+            {{- end }}
+            {{- if and (not (empty .Values.brainz.modAdminUser.passwordFrom)) (not (eq .Values.brainz.modAdminUser.password "")) }}
+            {{- fail "Either 'brainz.modAdminUser.password' or 'brainz.modAdminUser.passwordFrom' can be set." }}
+            {{- else if and (not (empty .Values.brainz.modAdminUser.passwordFrom)) }}
+            {{- if or (not (hasKey .Values.brainz.modAdminUser.passwordFrom "name")) (eq .Values.brainz.modAdminUser.passwordFrom.name "") }}
+            {{- fail "'brainz.modAdminUser.passwordFrom' must contain a 'name' key." }}
+            {{- end }}
+            {{- if or (not (hasKey .Values.brainz.modAdminUser.passwordFrom "key")) (eq .Values.brainz.modAdminUser.passwordFrom.key "") }}
+            {{- fail "'brainz.modAdminUser.passwordFrom' must contain a 'key' key." }}
+            {{- end }}
+            - name: VARNISH_CONTROLLER_SYSTEM_ADMIN_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.brainz.modAdminUser.passwordFrom.name | quote }}
+                  key: {{ .Values.brainz.modAdminUser.passwordFrom.key | quote }}
+            {{- else if eq .Values.brainz.modAdminUser.password "" }}
+            - name: VARNISH_CONTROLLER_SYSTEM_ADMIN_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: varnish-controller-credentials
+                  key: varnish-admin-password
+            {{- else }}
+            - name: VARNISH_CONTROLLER_SYSTEM_ADMIN_PASS
+              value: "{{ .Values.brainz.modAdminUser.password }}"
+            {{- end }}
+            {{- end }}
+            {{- include "varnish-controller.toEnv" (merge (dict "envs" .Values.brainz.extraEnvs) .) | nindent 12 }}
+          volumeMounts:
+          - name: {{ .Release.Name }}-data
+            mountPath: /var/lib/varnish-controller
+          - name: {{ .Release.Name }}-license
+            mountPath: /etc/varnish-controller/license.lic
+            subPath: license.lic
+      volumes:
+      - name: {{ .Release.Name }}-data
+        emptyDir: {}
+      - name: {{ .Release.Name }}-license
+        secret:
+          {{- if not (eq .Values.brainz.licenseFile "") }}
+          secretName: {{ include "varnish-controller.fullname" . }}-license
+          {{- else if .Values.brainz.licenseSecret }}
+          secretName: {{ .Values.brainz.licenseSecret }}
+          {{- else }}
+          {{ fail "Either 'brainz.licenseFile' or 'brainz.licenseSecret' must be set" }}
+          {{- end }}
+      {{- if .Values.brainz.nodeSelector }}
+      nodeSelector:
+        {{- $tp := kindOf .Values.brainz.nodeSelector }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.brainz.nodeSelector . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.brainz.nodeSelector | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.brainz.affinity }}
+      affinity:
+        {{- $tp := kindOf .Values.brainz.affinity }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.brainz.affinity . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.brainz.affinity | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.brainz.tolerations }}
+      tolerations:
+        {{- $tp := kindOf .Values.brainz.tolerations }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.brainz.tolerations . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.brainz.tolerations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+{{- end }}

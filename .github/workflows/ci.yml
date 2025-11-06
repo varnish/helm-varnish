@@ -11,6 +11,8 @@ on:
         options:
           - varnish-cache
           - varnish-enterprise
+          - varnish-controller
+          - varnish-controller-router
 
 jobs:
   build_and_push:
@@ -18,6 +20,9 @@ jobs:
       matrix:
         chart:
           - varnish-cache
+          - varnish-enterprise
+          - varnish-controller
+          - varnish-controller-router
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

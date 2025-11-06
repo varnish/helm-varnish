@@ -1,0 +1,789 @@
+---
+# Override the name of the the Varnish Controller chart and its components.
+nameOverride: ""
+
+# Override the full name of the Varnish Controller chart and its components.
+fullnameOverride: ""
+
+global:
+  # Sets the secret to use to pull images.
+  imagePullSecrets: []
+  #imagePullSecrets:
+  #  - name: quay.io-varnish-software
+
+  # Sets the securityContext of the Pod.
+  podSecurityContext:
+    fsGroup: 999
+
+  # Sets the securityContext for all containers.
+  securityContext:
+    runAsUser: 999
+    runAsNonRoot: true
+
+  # Sets the annotations for all workload resources.
+  annotations: {}
+
+  # Sets the annotations for all pod templates.
+  podAnnotations: {}
+
+  # Sets the labels for all workload resources.
+  labels: {}
+
+  # Sets the labels for all pod templates.
+  podLabels: {}
+
+  # Configures a resource limits for all containers.
+  resources: {}
+  #resources:
+  #  limits:
+  #    cpu: 100m
+  #    memory: 128Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+
+  controller:
+    # Configures Varnish Controller image for all components.
+    image:
+      pullPolicy: IfNotPresent
+      tag: ""
+
+  # Configures NATS discovery. Note that this is *not* for deploying internal NATS server
+  # but instead for other components to discover NATS server.
+  natsServer:
+    # Configures Varnish Controller to use external NATS server.
+    # Ignored if `global.natsServer.internal.enabled` is set to `true`.
+    externalAddress: ""
+
+    internal:
+      # Configures Varnish Controller to use internal NATS server. When set to "-" the
+      # value is inherited from `nats.enabled`.
+      enabled: "-"
+
+      # Configures the namespace internal NATS is deployed to. If left blank, the
+      # current namespace is used instead.
+      #
+      # Note that this is *not* the namespace to deploy to, but the namespace to use for
+      # other components to discover internal NATS cluster. If left blank, it is set to
+      # the same namespace as the Varnish Controller.
+      namespace: ""
+
+      # Configures the release name for NATS is deployed to. Use the current release name
+      # if left blank.
+      releaseName: ""
+
+      # Configures NATS password from custom secret or ConfigMap. Will utilizes
+      # password from a "varnish-controller-credentials" secret if not set.
+      #
+      # Note: it is necessary to configure NATS subchart to use custom secret
+      # i.e., `nats.container.env.VARNISH_CONTROLLER_NATS_PASSWORD.valueFrom.secretKeyRef`
+      # to the same value as `global.natsServer.internal.passwordFrom`.
+      passwordFrom:
+        name: varnish-controller-credentials
+        key: nats-varnish-password
+
+      # Configures the NATS internal cluster domain name. Only change if NATS is deployed
+      # on a separate cluster.
+      clusterDomain: "cluster.local"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+
+  # Labels to add to the service account. Can be set as a templated string.
+  labels: {}
+
+  # Annotations to add to the service account. Can be set as a templated string.
+  annotations: {}
+
+  # The name of the service account to use. If not set and create is true, a name
+  # is generated using the fullname template
+  name: ""
+
+secretCredentials:
+  # Whether to create a shared "varnish-controller-credentials" secret.
+  create: true
+
+# Configures Varnish Controller APIGW.
+apigw:
+  enabled: true
+  replicas: 1
+
+  # Sets the extra labels for the deployment. Can be set as a templated string.
+  labels: {}
+
+  # Sets the extra annotations for the deployment. Can be set as a templated string.
+  annotations: {}
+
+  # Sets the deployment strategy. Can be set as a templated string.
+  # See also: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+  strategy: {}
+
+  # Enables or disables autoscaling.
+  autoscaling:
+    enabled: false
+
+    # Sets the minimum number of replicas to keep active at all time.
+    minReplicas: 1
+
+    # Sets the maximum number of replicas to spawn.
+    maxReplicas: 100
+
+    # Configures the behavior. Can be set as a template string or a
+    # YAML map.
+    behavior: ""
+    #behavior: |
+    #  scaleDown:
+    #    stabilizationWindowSeconds: 120
+    #    policies:
+    #      - type: Percent
+    #        value: 50
+    #        periodSeconds: 60
+    #  scaleUp:
+    #    policies:
+    #      - type: Percent
+    #        value: 100
+    #        periodSeconds: 60
+    #      - type: Pods
+    #        value: 4
+    #        periodSeconds: 60
+    #    selectPolicy: Max
+
+    # Configures the autoscaling metrics. Can be set as a templated string
+    # or a YAML map.
+    metrics: ""
+    #metrics: |
+    #  - type: Resource
+    #    resource:
+    #      name: cpu
+    #      targetAverageUtilization: 80
+
+  # Sets the image and tag to use to deploy Varnish Controller APIGW.
+  # If tag is blank, it will be inherited from appVersion.
+  image:
+    repository: "quay.io/varnish-software/varnish-controller-api-gw"
+    pullPolicy: "-"
+    tag: "-"
+
+  service:
+    enabled: true
+
+    # Sets the extra labels for Varnish Controller APIGW services. Can be set as a templated string.
+    labels: {}
+
+    # Sets the extra annotations for Varnish Controller APIGW services. Can be set as a templated string.
+    annotations: {}
+
+    # Type of the service. Can be ClusterIP or NodePort.
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/
+    type: NodePort
+
+    # Sets whether to attach a Cluster IP address to the service. Services have Cluster IP
+    # associated to it by default. Setting this to "None" will create a headless service,
+    # which will allow the service IP to be resolved directly via DNS resolution (i.e. skipping
+    # kube-proxy load-balancing).
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+    clusterIP: ""
+
+    # Sets the port to listen to.
+    #
+    # Note that when headless service is used (apigw.service.type set to "ClusterIP" and
+    # apigw.service.clusterIP set to "None") the port defined here won't be used. Instead,
+    # APIGW must be connected via the port defined in the pod (i.e., 8002).
+    port: 8080
+
+  # Sets the extra environment variables for Varnish Controller APIGW.
+  # Can be set as either an object, a list, or a templated string.
+  extraEnvs: {}
+  #extraEnvs:
+  #  MY_ENV_VAR: value
+  #  MY_OTHER_ENV_VAR: other_value
+  #
+  #extraEnvs:
+  #  - name: MY_ENV_VAR
+  #    value: value
+  #  - name: MY_OTHER_ENV_VAR
+  #    valueFrom:
+  #      configMapRef:
+  #        name: my-config-map
+  #        value: my-key
+  #
+  #extraEnvs: |
+  #  - name: RELEASE_NAMESPACE
+  #    value: {{ .Release.Namespace }}
+
+  # Sets the extra configuration args for Varnish Controller APIGW.
+  extraArgs: []
+
+  # Sets the extra annotations for Varnish Controller APIGW pod template. Can be set as a templated string.
+  podAnnotations: {}
+  #podAnnotations:
+  #  prometheus.io/scrape: "true"
+  #  prometheus.io/path: "/metrics"
+  #  prometheus.io/port: "9273"
+  #  prometheus.io/scheme: "http"
+
+  # Sets the extra labels for Varnish Controller APIGW pod template. Can be set as a templated string.
+  podLabels: {}
+  #podLabels:
+  #  varnish-software.com/tier: "edge"
+
+  # Sets the securityContext of the Varnish Controller APIGW container.
+  securityContext: {}
+
+  # Configures a probe for checking if a Pod has started.
+  startupProbe: {}
+  #startupProbe:
+  #  initialDelaySeconds: 5
+  #  periodSeconds: 10
+  #  timeoutSeconds: 1
+  #  successThreshold: 1
+  #  failureThreshold: 3
+
+  # Configures a probe for checking if a Pod is ready to receive a connection.
+  readinessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 5
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 1
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a probe for checking if a Pod can continue to receive a connection.
+  livenessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 30
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 5
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a node selector to assign a Pod. Can be set as a templated string
+  # or a YAML map.
+  nodeSelector: {}
+  #nodeSelector:
+  #  beta.kubernetes.io/arch: amd64
+
+  # Configures toleration settings for a Pod. Can be set as a templated string
+  # or a YAML list.
+  tolerations: []
+
+  # Configures an affinity for a Pod. Can be set as a templated string or
+  # a YAML map. By default, require Varnish to be deployed only on a node
+  # it was not already deployed on.
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "varnish-controller.name" . }}-apigw
+              app.kubernetes.io/instance: {{ .Release.Name }}
+          topologyKey: kubernetes.io/hostname
+
+# Configures Varnish Controller Brainz.
+brainz:
+  enabled: true
+  replicas: 1
+
+  # Sets the extra labels for the deployment. Can be set as a templated string.
+  labels: {}
+
+  # Sets the extra annotations for the deployment. Can be set as a templated string.
+  annotations: {}
+
+  # Sets the deployment strategy. Can be set as a templated string.
+  # See also: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+  strategy: {}
+
+  # Enables or disables autoscaling.
+  autoscaling:
+    enabled: false
+
+    # Sets the minimum number of replicas to keep active at all time.
+    minReplicas: 1
+
+    # Sets the maximum number of replicas to spawn.
+    maxReplicas: 100
+
+    # Configures the behavior. Can be set as a template string or a
+    # YAML map.
+    behavior: ""
+    #behavior: |
+    #  scaleDown:
+    #    stabilizationWindowSeconds: 120
+    #    policies:
+    #      - type: Percent
+    #        value: 50
+    #        periodSeconds: 60
+    #  scaleUp:
+    #    policies:
+    #      - type: Percent
+    #        value: 100
+    #        periodSeconds: 60
+    #      - type: Pods
+    #        value: 4
+    #        periodSeconds: 60
+    #    selectPolicy: Max
+
+    # Configures the autoscaling metrics. Can be set as a templated string
+    # or a YAML map.
+    metrics: ""
+    #metrics: |
+    #  - type: Resource
+    #    resource:
+    #      name: cpu
+    #      targetAverageUtilization: 80
+
+  # Sets the image and tag to use to deploy Varnish Controller Brainz.
+  # If tag is blank, it will be inherited from appVersion.
+  image:
+    repository: "quay.io/varnish-software/varnish-controller-brainz"
+    pullPolicy: "-"
+    tag: "-"
+
+  # Specifies a Kubernetes secret with a "license.lic" file in it.
+  licenseSecret: ""
+  #licenseSecret: "varnish-controller-secret"
+
+  # Use the content of the given file path as license.lic. Note that
+  # the file must be placed inside the files/ directory in the Helm chart
+  # itself.
+  licenseFile: ""
+
+  # Sets the default username and password for Varnish admin.
+  modAdminUser:
+    enabled: true
+
+    # Sets the admin username.
+    username: admin
+
+    # Sets the admin password. The password will be automatically generated if left blank.
+    password: ""
+
+    # Configures Brainz password from custom secret or ConfigMap. Will utilizes
+    # password from a "varnish-controller-credentials" secret if not set.
+    passwordFrom: {}
+    #passwordFrom:
+    #  name: secret-name
+    #  key: brainz-password
+
+  # Sets the extra environment variables for Varnish Controller Brainz.
+  # Can be set as either an object, a list, or a templated string.
+  extraEnvs: {}
+  #extraEnvs:
+  #  MY_ENV_VAR: value
+  #  MY_OTHER_ENV_VAR: other_value
+  #
+  #extraEnvs:
+  #  - name: MY_ENV_VAR
+  #    value: value
+  #  - name: MY_OTHER_ENV_VAR
+  #    valueFrom:
+  #      configMapRef:
+  #        name: my-config-map
+  #        value: my-key
+  #
+  #extraEnvs: |
+  #  - name: RELEASE_NAMESPACE
+  #    value: {{ .Release.Namespace }}
+
+  # Sets the extra configuration args for Varnish Controller Brainz.
+  extraArgs: []
+
+  # Sets the PostgreSQL server address for Varnish Controller Brainz to connect to.
+  # The variable is ignored if 'postgresql.enabled' is true.
+  externalPostgresql: {}
+  #externalPostgresql:
+  #  database: varnish-controller
+  #  host: vc-postgresql:5432
+  #  user: varnish
+  #  password: varnish
+  #  passwordFrom: {}
+  #  #passwordFrom:
+  #  #  name: varnish-controller-credentials
+  #  #  password: postgresql-password
+  #  tls: true
+
+  # Sets the extra annotations for Varnish Controller Brainz pod template. Can be set as a templated string.
+  podAnnotations: {}
+  #podAnnotations:
+  #  prometheus.io/scrape: "true"
+  #  prometheus.io/path: "/metrics"
+  #  prometheus.io/port: "9273"
+  #  prometheus.io/scheme: "http"
+
+  # Sets the extra labels for Varnish Controller Brainz pod template. Can be set as a templated string.
+  podLabels: {}
+  #podLabels:
+  #  varnish-software.com/tier: "edge"
+
+  # Sets the securityContext of the Varnish Controller Brainz container.
+  securityContext: {}
+
+  # Configures a node selector to assign a Pod. Can be set as a templated string
+  # or a YAML map.
+  nodeSelector: {}
+  #nodeSelector:
+  #  beta.kubernetes.io/arch: amd64
+
+  # Configures toleration settings for a Pod. Can be set as a templated string
+  # or a YAML list.
+  tolerations: []
+
+  # Configures an affinity for a Pod. Can be set as a templated string or
+  # a YAML map. By default, require Varnish to be deployed only on a node
+  # it was not already deployed on.
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "varnish-controller.name" . }}-brainz
+              app.kubernetes.io/instance: {{ .Release.Name }}
+          topologyKey: kubernetes.io/hostname
+
+# Configures Varnish Controller UI.
+ui:
+  enabled: true
+  replicas: 1
+
+  # Sets the extra labels for the deployment. Can be set as a templated string.
+  labels: {}
+
+  # Sets the extra annotations for the deployment. Can be set as a templated string.
+  annotations: {}
+
+  # Sets the deployment strategy. Can be set as a templated string.
+  # See also: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+  strategy: {}
+
+  # Enables or disables autoscaling.
+  autoscaling:
+    enabled: false
+
+    # Sets the minimum number of replicas to keep active at all time.
+    minReplicas: 1
+
+    # Sets the maximum number of replicas to spawn.
+    maxReplicas: 100
+
+    # Configures the behavior. Can be set as a template string or a
+    # YAML map.
+    behavior: ""
+    #behavior: |
+    #  scaleDown:
+    #    stabilizationWindowSeconds: 120
+    #    policies:
+    #      - type: Percent
+    #        value: 50
+    #        periodSeconds: 60
+    #  scaleUp:
+    #    policies:
+    #      - type: Percent
+    #        value: 100
+    #        periodSeconds: 60
+    #      - type: Pods
+    #        value: 4
+    #        periodSeconds: 60
+    #    selectPolicy: Max
+
+    # Configures the autoscaling metrics. Can be set as a templated string
+    # or a YAML map.
+    metrics: ""
+    #metrics: |
+    #  - type: Resource
+    #    resource:
+    #      name: cpu
+    #      targetAverageUtilization: 80
+
+  # Sets the image and tag to use to deploy Varnish Controller UI.
+  # If tag is blank, it will be inherited from appVersion.
+  image:
+    repository: "quay.io/varnish-software/varnish-controller-ui"
+    pullPolicy: "-"
+    tag: "-"
+
+  service:
+    enabled: true
+
+    # Sets the extra labels for Varnish Controller UI services. Can be set as a templated string.
+    labels: {}
+
+    # Sets the extra annotations for Varnish Controller UI services. Can be set as a templated string.
+    annotations: {}
+
+    # Type of the service. Can be ClusterIP or NodePort.
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/
+    type: NodePort
+
+    # Sets whether to attach a Cluster IP address to the service. Services have Cluster IP
+    # associated to it by default. Setting this to "None" will create a headless service,
+    # which will allow the service IP to be resolved directly via DNS resolution (i.e. skipping
+    # kube-proxy load-balancing).
+    #
+    # See also https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+    clusterIP: ""
+
+    # Sets the port to listen to.
+    #
+    # Note that when headless service is used (apigw.service.type set to "ClusterIP" and
+    # apigw.service.clusterIP set to "None") the port defined here won't be used. Instead,
+    # UI must be connected via the port defined in the pod (i.e., 8080).
+    port: 80
+
+  ingress:
+    enabled: false
+
+    # Sets the extra labels for Varnish Controller UI ingress. Can be set as a templated string.
+    labels: {}
+
+    # Sets the extra annotations for Varnish Controller UI ingress. Can be set as a templated string.
+    annotations: {}
+
+    # Sets the class name for ingress.
+    # See also https://kubernetes.io/docs/concepts/services-networking/ingress/#default-ingress-class
+    ingressClassName: ""
+
+    # Sets the pathType for Kubernetes 1.19+. "Prefix" should be sufficient for most cases.
+    # See also https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types
+    pathType: Prefix
+
+    # Configures the hostname the Varnish Enterprise instance should respond to.
+    hosts:
+      - host: chart-example.local
+        paths: []
+
+    # Configures TLS certificates for Ingress.
+    tls: []
+    #tls:
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  # Sets the extra environment variables for Varnish Controller UI.
+  # Can be set as either an object, a list, or a templated string.
+  extraEnvs: {}
+  #extraEnvs:
+  #  MY_ENV_VAR: value
+  #  MY_OTHER_ENV_VAR: other_value
+  #
+  #extraEnvs:
+  #  - name: MY_ENV_VAR
+  #    value: value
+  #  - name: MY_OTHER_ENV_VAR
+  #    valueFrom:
+  #      configMapRef:
+  #        name: my-config-map
+  #        value: my-key
+  #
+  #extraEnvs: |
+  #  - name: RELEASE_NAMESPACE
+  #    value: {{ .Release.Namespace }}
+
+  # Sets the extra configuration args for Varnish Controller UI.
+  extraArgs: []
+
+  # Sets the extra annotations for Varnish Controller UI pod template. Can be set as a templated string.
+  podAnnotations: {}
+  #podAnnotations:
+  #  prometheus.io/scrape: "true"
+  #  prometheus.io/path: "/metrics"
+  #  prometheus.io/port: "9273"
+  #  prometheus.io/scheme: "http"
+
+  # Sets the extra labels for Varnish Controller UI pod template. Can be set as a templated string.
+  podLabels: {}
+  #podLabels:
+  #  varnish-software.com/tier: "edge"
+
+  # Sets the securityContext of the Varnish Controller UI container.
+  securityContext: {}
+
+  # Configures a probe for checking if a Pod has started.
+  startupProbe: {}
+  #startupProbe:
+  #  initialDelaySeconds: 5
+  #  periodSeconds: 10
+  #  timeoutSeconds: 1
+  #  successThreshold: 1
+  #  failureThreshold: 3
+
+  # Configures a probe for checking if a Pod is ready to receive a connection.
+  readinessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 5
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 1
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a probe for checking if a Pod can continue to receive a connection.
+  livenessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 30
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 5
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a node selector to assign a Pod. Can be set as a templated string
+  # or a YAML map.
+  nodeSelector: {}
+  #nodeSelector:
+  #  beta.kubernetes.io/arch: amd64
+
+  # Configures toleration settings for a Pod. Can be set as a templated string
+  # or a YAML list.
+  tolerations: []
+
+  # Configures an affinity for a Pod. Can be set as a templated string or
+  # a YAML map. By default, require Varnish to be deployed only on a node
+  # it was not already deployed on.
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "varnish-controller.name" . }}-ui
+              app.kubernetes.io/instance: {{ .Release.Name }}
+          topologyKey: kubernetes.io/hostname
+
+# Configures NATS subchart. Only deployed if `nats.enabled` is true.
+# Refer to https://artifacthub.io/packages/helm/nats/nats/0.13.2 for documentation.
+nats:
+  enabled: true
+
+  # Override default NATS configurations for Varnish Controller.
+  config:
+    merge:
+      max_payload: 104857600
+      max_pending: 104857600
+      debug: false
+
+      authorization:
+        user: varnish-controller
+        password: "<< $VARNISH_CONTROLLER_NATS_PASSWORD >>"
+
+  container:
+    env:
+      VARNISH_CONTROLLER_NATS_PASSWORD:
+        valueFrom:
+          secretKeyRef:
+            name: varnish-controller-credentials
+            key: nats-varnish-password
+
+  # Configures NATS configuration reload Sidecar. In general, Varnish Controller doesn't
+  # need this and can be safely disabled.
+  reloader:
+    enabled: false
+
+  # Configures NATS Exporter Prometheus exporter sidecar.
+  promExporter:
+    enabled: false
+
+  # Configures NATS and NATS Streaming utilities.
+  natsBox:
+    enabled: false
+
+# Configures PostgreSQL subchart. Only deployed if `postgresql.enabled` is true.
+# Refer to https://artifacthub.io/packages/helm/bitnami/postgresql/12.2.4 for documentation.
+postgresql:
+  enabled: true
+
+  # Sets if debug value should be set.
+  image:
+    debug: true
+
+  # Configures PostgreSQL to use TLS.
+  tls:
+    enabled: false
+    certificatesSecret: ""
+    certFilename: "cert.pem"
+    certKeyFilename: "cert.key"
+
+  auth:
+    # Enables password for the "postgres" admin user.
+    enablePostgresUser: true
+
+    existingSecret: varnish-controller-credentials
+
+    secretKeys:
+      adminPasswordKey: postgresql-admin-password
+      userPasswordKey: postgresql-varnish-password
+      replicationPasswordKey: postgresql-replication-password
+
+    # The username to create
+    username: varnish-controller
+
+    # Workaround for https://github.com/bitnami/charts/issues/17839
+    # (though the forementioned issue; it also applies for PostgreSQL)
+    password: dummyPasswordIgnoredByExistingSecret
+
+    # The database to create
+    database: varnish_controller
+
+  # Enable data persistency using PVC.
+  primary:
+    persistence:
+      enabled: true
+
+  # Enables audit logs.
+  audit:
+    logConnections: true
+
+  # Enable init container that changes the owner and group of the PV.
+  volumePermissions:
+    enabled: true
+
+# A list of extra manifests to be deployed alongside with Helm chart.
+#
+#     name        The name of each manifest (will be used when checksum is true)
+#
+#     checksum    A boolean flag whether to include this manifest as part of the
+#                 checksum in workload manifests. Useful for ConfigMaps.
+#
+#     data        The data of each manifest. Can be set as templated string.
+#
+extraManifests: []
+#  - name: clusterrole
+#    data: |
+#      apiVersion: rbac.authorization.k8s.io/v1
+#      kind: ClusterRole
+#      metadata:
+#        name: {{ .Release.Name }}-clusterrole
+#      # ...
