@@ -1,0 +1,18 @@
+{{- $cfg := include "orca.config" . | fromYaml -}}
+{{- $_ := unset ($cfg.license) "secret" -}}
+{{- range $httpId, $https := $cfg.varnish.https -}}
+  {{- range $certId, $cert := $https.certificates -}}
+    {{- if not (empty $cert.secret) -}}
+    {{- $_ := unset $cert "secret" -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "helm.fullname" . }}-orca-config
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    {{- toYaml $cfg | nindent 4 }}
