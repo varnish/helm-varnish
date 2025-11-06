@@ -10,7 +10,7 @@ on:
         type: choice
         options:
           - varnish-cache
-          - varnish-orca
+          - orca-chart
 
 jobs:
   build_and_push:
@@ -18,7 +18,7 @@ jobs:
       matrix:
         chart:
           - varnish-cache
-          - varnish-orca
+          - orca-chart
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
