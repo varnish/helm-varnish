@@ -11,6 +11,7 @@ on:
         options:
           - varnish-cache
           - orca-chart
+          - varnish-enterprise
 
 jobs:
   build_and_push:

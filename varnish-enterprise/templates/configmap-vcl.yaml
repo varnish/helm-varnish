@@ -1,0 +1,68 @@
+{{- $vclConfig := include "varnish-enterprise.vclConfig" . }}
+{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
+{{- if not (eq $vclConfig "") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}-vcl
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+data:
+  {{ $defaultVcl }}: |
+    {{- $vclConfig | nindent 4 }}
+{{- end }}
+{{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
+{{- if not (empty $vclConfigs) }}
+{{- range $k, $v := $vclConfigs }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
+  labels:
+    {{- include "varnish-enterprise.labels" $ | nindent 4 }}
+data:
+  {{ $k }}: |
+    {{- tpl $v $ | nindent 4 }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.cluster.enabled }}
+{{- if not .Values.server.http.enabled }}
+{{- fail "'server.http.enabled must be true for clustering to work" }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}-vcl-wrapped-default-vcl
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+data:
+  wrapped-default.vcl: |
+    vcl 4.1;
+
+    import activedns;
+
+    include "cluster.vcl";
+
+    sub vcl_init {
+      # Turn on trace headers for debug (optional)
+      {{- if and .Values.cluster.trace }}
+      cluster_opts.set("trace", "true");
+      {{- end }}
+      # For dynamic cluster, create a DNS group with the domain name for headless service
+      new cluster_group = activedns.dns_group(
+        {{- if .Values.cluster.headlessServiceName }}
+        "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
+        {{- else}}
+        "{{ include "varnish-enterprise.fullname" . }}-peers:{{ .Values.server.http.port }}"
+        {{- end }}
+      );
+      # Subscribe the cluster director to the DNS group
+      cluster.subscribe(cluster_group.get_tag());
+      # Set the cluster token
+      cluster_opts.set("token", "${VARNISH_CLUSTER_TOKEN}");
+    }
+    include {{ .Values.server.vclConfigPath | quote }};
+{{- end }}

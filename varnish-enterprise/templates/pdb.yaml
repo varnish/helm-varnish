@@ -1,0 +1,21 @@
+{{- if .Values.server.pdb.enabled }}
+{{- if and (not .Values.server.pdb.minAvailable) (not .Values.server.pdb.maxUnavailable) }}
+{{ fail "'server.pdb.minAvailable' or 'server.pdb.maxUnavailable' must be set when PDB is enabled: 'server.pdb.enabled'" }}
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{ include "varnish-enterprise.selectorLabels" . | nindent 6 }}
+{{- if .Values.server.pdb.minAvailable }}
+  minAvailable: {{ .Values.server.pdb.minAvailable }}
+{{- end }}
+{{- if .Values.server.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.server.pdb.maxUnavailable }}
+{{- end }}
+{{- end }}
