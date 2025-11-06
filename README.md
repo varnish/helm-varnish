@@ -7,7 +7,7 @@ This repository hosts Helm charts for Varnish Cache and related projects.
 For documentation, please see README.md in each chart's directory.
 
 - [varnish-cache](varnish-cache/README.md)
-- [varnish-orca](varnish-orca/README.md)
+- [orca-chart](orca-chart/README.md)
 
 ## Enterprise Customers
 
