@@ -62,7 +62,7 @@ data:
       # Subscribe the cluster director to the DNS group
       cluster.subscribe(cluster_group.get_tag());
       # Set the cluster token
-      cluster_opts.set("token", "${VARNISH_CLUSTER_TOKEN}");
+      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
     }
     include {{ .Values.server.vclConfigPath | quote }};
 {{- end }}
