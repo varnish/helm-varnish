@@ -1,0 +1,120 @@
+name: Chart version bumper
+
+# This job opens a PR to bump the appVersion in Helm charts when a new version
+# of the underlying application is detected.
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  version_bump:
+    name: Chart appVersion bump
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    strategy:
+      matrix:
+        chart_details:
+          - chart_dir: 'orca-chart'
+            docker_image: 'varnish/orca:latest'
+            version_command: 'varnish-supervisor --version'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check and Compare Version for ${{ matrix.chart_details.chart_dir }}
+        id: version_check
+        run: |
+          set -ex
+          CHART_NAME="${{ matrix.chart_details.chart_dir }}"
+          CHART_PATH="${{ matrix.chart_details.chart_dir }}/Chart.yaml"
+          DOCKER_IMAGE="${{ matrix.chart_details.docker_image }}"
+          VERSION_CMD="${{ matrix.chart_details.version_command }}"
+
+          if [ ! -f "$CHART_PATH" ]; then
+            echo "::warning file=$CHART_PATH::Chart.yaml not found at $CHART_PATH. Skipping."
+            echo "version_match=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Get current appVersion and chart version using yq
+          CURRENT_APP_VERSION=$(yq '.appVersion' "$CHART_PATH")
+          CURRENT_CHART_VERSION=$(yq '.version' "$CHART_PATH")
+
+          # Get latest app version
+          LATEST_APP_VERSION=$(docker run --rm "$DOCKER_IMAGE" sh -c "$VERSION_CMD" | xargs)
+
+          # Clean up any leading/trailing whitespace from the version strings
+          CURRENT_APP_VERSION=$(echo "$CURRENT_APP_VERSION" | xargs)
+
+          echo "Processing Chart: $CHART_NAME (${{ matrix.chart_details.chart_dir }})"
+          echo "Current appVersion: $CURRENT_APP_VERSION"
+          echo "Current Chart Version: $CURRENT_CHART_VERSION"
+          echo "Latest Docker Version: $LATEST_APP_VERSION"
+
+          # Set environment variables for the next steps
+          echo "LATEST_APP_VERSION=$LATEST_APP_VERSION" >> "$GITHUB_ENV"
+          echo "CURRENT_CHART_VERSION=$CURRENT_CHART_VERSION" >> "$GITHUB_ENV"
+          echo "CHART_PATH=$CHART_PATH" >> "$GITHUB_ENV"
+          echo "CHART_NAME=$CHART_NAME" >> "$GITHUB_ENV"
+
+          if [ "$LATEST_APP_VERSION" != "$CURRENT_APP_VERSION" ]; then
+            echo "New appVersion $LATEST_APP_VERSION available. A PR will be created for $CHART_NAME."
+            echo "version_match=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Chart $CHART_NAME is already up-to-date with appVersion $CURRENT_APP_VERSION. No action needed."
+            echo "version_match=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create PR to update appVersion and Chart Version in ${{ env.CHART_PATH }}
+        if: steps.version_check.outputs.version_match == 'false'
+        run: |
+          set -ex
+
+          # 1. Calculate New Chart Patch Version
+          # Split version (X.Y.Z), increment Z (patch), then join back.
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ env.CURRENT_CHART_VERSION }}"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_CHART_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          echo "New chart version calculated: $NEW_CHART_VERSION"
+          echo "NEW_CHART_VERSION=$NEW_CHART_VERSION" >> "$GITHUB_ENV"
+
+          BRANCH=auto-pr-${{ env.CHART_NAME }}-appversion-${{ env.LATEST_APP_VERSION }}
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+          if git ls-remote --exit-code origin $BRANCH; then
+            echo "Branch $BRANCH already exists, bailing out."
+            exit 0
+          fi
+
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          git switch main
+          git switch -c $BRANCH
+
+          # 2. Use yq to safely update appVersion and Chart version
+          # yq is more reliable than sed for YAML files.
+          yq -i ".appVersion = \"${{ env.LATEST_APP_VERSION }}\"" "${{ env.CHART_PATH }}"
+          yq -i ".version = \"$NEW_CHART_VERSION\"" "${{ env.CHART_PATH }}"
+
+          if [ -z "$(git diff "${{ env.CHART_PATH }}")" ]; then
+            echo "${{ env.CHART_PATH }} seems up-to-date. Skipping PR creation."
+            exit 0
+          fi
+
+          git add "${{ env.CHART_PATH }}"
+          git commit -m "Bump ${{ env.CHART_NAME }} appVersion to ${{ env.LATEST_APP_VERSION }} and chart version to $NEW_CHART_VERSION"
+          git push origin $BRANCH
+
+          gh pr create \
+            --title "[${{ env.CHART_NAME }}] Bump appVersion to ${{ env.LATEST_APP_VERSION }} (Chart $NEW_CHART_VERSION)" \
+            --body "Automated PR to update the Helm Chart's \`appVersion\` to \`${{ env.LATEST_APP_VERSION }}\` and bump the chart \`version\` to \`$NEW_CHART_VERSION\` in \`${{ env.CHART_PATH }}\`." \
+            --base main \
+            --head $BRANCH
