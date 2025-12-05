@@ -33,7 +33,7 @@ jobs:
           pip install yq
 
           sudo apt-get update
-          sudo apt-get install bats -y
+          sudo apt-get install -y --no-install-recommends bats parallel
       - name: "Add Helm dependencies"
         # See also: https://circleci.com/docs/env-vars/#alpine-linux
         run: |
@@ -47,7 +47,7 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
-          ${{ matrix.chart }}/test/unit_common/run.sh
+          ${{ matrix.chart }}/test/unit_common/run.sh -j $(( $(nproc) * 4))
       - name: Create package
         run: |
           helm package "${{ matrix.chart }}"
@@ -62,6 +62,7 @@ jobs:
         if: ${{ github.event.inputs.publish == matrix.chart }}
         uses: computology/packagecloud-github-action@v0.8
         with:
-          PACKAGE-NAME: "${{ matrix.chart }}-*.tgz"
-          PACKAGECLOUD-USERNAME: varnishplus
-          PACKAGECLOUD-REPONAME: helm-staging
+          package-name: /tmp/artifacts/${{ matrix.chart }}-*.tgz
+          packagecloud-distro: helm/v1
+          packagecloud-username: varnishplus
+          packagecloud-reponame: helm-staging
