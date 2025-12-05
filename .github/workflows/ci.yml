@@ -33,7 +33,7 @@ jobs:
           pip install yq
 
           sudo apt-get update
-          sudo apt-get install bats -y
+          sudo apt-get install -y --no-install-recommends bats parallel
       - name: "Add Helm dependencies"
         # See also: https://circleci.com/docs/env-vars/#alpine-linux
         run: |
@@ -47,7 +47,7 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
-          ${{ matrix.chart }}/test/unit_common/run.sh
+          ${{ matrix.chart }}/test/unit_common/run.sh -j $(nproc)
       - name: Create package
         run: |
           helm package "${{ matrix.chart }}"
