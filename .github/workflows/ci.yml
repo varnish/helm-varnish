@@ -20,6 +20,7 @@ jobs:
         chart:
           - varnish-cache
           - orca-chart
+          - varnish-enterprise
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
