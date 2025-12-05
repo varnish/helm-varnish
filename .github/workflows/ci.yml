@@ -47,7 +47,7 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
-          ${{ matrix.chart }}/test/unit_common/run.sh -j $(nproc)
+          ${{ matrix.chart }}/test/unit_common/run.sh -j $(( $(nproc) * 4))
       - name: Create package
         run: |
           helm package "${{ matrix.chart }}"
