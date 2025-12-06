@@ -422,7 +422,13 @@ Declares the Varnish Enterprise container
     - name: {{ .Release.Name }}-varnish-vsm
       mountPath: /var/lib/varnish
     - name: {{ .Release.Name }}-config-shared
-      mountPath: /etc/varnish/shared
+      mountPath: /etc/varnish/shared 
+    {{- if .Values.server.licenseSecret }}
+    - name: license-volume
+      mountPath: /etc/varnish/varnish-enterprise.lic  
+      readOnly: true
+      subPath: varnish-enterprise.lic
+    {{- end}}
     {{- if not (eq (include "varnish-enterprise.mseConfig" .) "") }}
     - name: {{ .Release.Name }}-config-mse
       mountPath: /etc/varnish/mse.conf
