@@ -124,6 +124,11 @@ volumes:
 - name: {{ .Release.Name }}-config-shared
   emptyDir:
     medium: "Memory"
+{{- if .Values.server.licenseSecret }}
+- name: license-volume
+  secret:
+    secretName: varnish-license-secret 
+    {{- end}}
 {{- if not (eq (include "varnish-enterprise.mseConfig" .) "") }}
 - name: {{ .Release.Name }}-config-mse
   configMap:
