@@ -2,18 +2,20 @@ chart_dir() {
   echo "${BATS_TEST_DIRNAME}"/../..
 }
 
-helm_template_compare {
+helm_template_compare() {
   local valuefile="${BATS_TMPDIR}/values-${BATS_TEST_NUMBER}"
   echo "$1" > "$valuefile"
   local templatefile="$2"
   local jqpattern="$3"
   local expected_result="$4"
+
   local result=$(helm template --namespace default\
     --values "$valuefile" \
-    --show-only "$templatefile" |
+    --show-only "$templatefile" "$(chart_dir)" |
     yq -c "$jqpattern" 
-  )"
-  [ "$result" == "$expected_result ]
+  )
+
+  [ "$result" == "$expected_result" ]
 }
 
 app_version() {
