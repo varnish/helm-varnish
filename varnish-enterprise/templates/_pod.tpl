@@ -127,8 +127,8 @@ volumes:
 {{- if .Values.server.licenseSecret }}
 - name: varnish-license-volume
   secret:
-    secretName: {{ .Values.server.licenseSecret }}
-    {{- end}}
+    secretName: {{ .Values.server.licenseSecret }} 
+{{- end}}
 {{- if not (eq (include "varnish-enterprise.mseConfig" .) "") }}
 - name: {{ .Release.Name }}-config-mse
   configMap:
