@@ -152,3 +152,76 @@ rollingUpdate:
 
     [[ "${actual}" == *"'server.extraVolumeClaimTemplates' cannot be enabled"* ]]
 }
+
+@test "Deployment/licenseSecret: creates a license volume" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.licenseSecret=test-value' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "varnish-license-volume")' |
+        tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"varnish-license-volume","secret":{"secretName":"test-value"}}' ]
+}
+
+@test "Deployment/licenseSecret: creates license volumeMount (simplified)" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.licenseSecret=test-value' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .volumeMounts[]? | select(.name == "varnish-license-volume") |
+            .mountPath' |
+        tee -a /dev/stderr)
+
+    # Check if the extracted mountPath is the one we expect
+    [ "${actual}" == "/etc/varnish/varnish-enterprise.lic" ]
+}
+
+@test "Deployment/licenseSecret: license volume does not exist by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.volumes[]? | select(.name == "varnish-license-volume")' |
+        tee -a /dev/stderr)
+
+    [ -z "${actual}" ]
+}
+
+@test "Deployment/licenseSecret: license volumeMount does not exist by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .volumeMounts[]? | select(.name == "varnish-license-volume")' |
+        tee -a /dev/stderr)
+
+    [ -z "${actual}" ]
+}
