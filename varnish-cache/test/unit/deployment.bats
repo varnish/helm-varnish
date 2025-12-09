@@ -119,7 +119,7 @@ rollingUpdate:
     [ "${actual}" == "Cluster" ]
 }
 
-@test "Service/externalTrafficPolicy: can be configured to Local" {
+@test "Service/externalTrafficPolicy: can be changed by user, for example Local" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
