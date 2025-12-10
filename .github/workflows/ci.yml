@@ -73,6 +73,7 @@ jobs:
       matrix:
         chart:
           - varnish-enterprise
+    steps:
       - name: Download artifact package
         uses: actions/download-artifact@v4
         with:
