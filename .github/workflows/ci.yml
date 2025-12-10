@@ -52,17 +52,17 @@ jobs:
         run: |
           helm package "${{ matrix.chart }}"
           mkdir -p /tmp/artifacts
-          mv "${{ matrix.chart }}"-*.tgz /tmp/artifacts
+          cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
       - name: "Push chart"
         if: ${{ github.event.inputs.publish == matrix.chart }}
         run: |
           echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
-          helm push /tmp/artifacts/"${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
+          helm push "${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
       - name: "Push chart to packagecloud"
         if: ${{ github.event.inputs.publish == matrix.chart }}
         uses: computology/packagecloud-github-action@v0.8
         with:
-          package-name: /tmp/artifacts/${{ matrix.chart }}-*.tgz
+          package-name: ${{ matrix.chart }}-*.tgz
           packagecloud-distro: helm/v1
           packagecloud-username: varnishplus
           packagecloud-reponame: helm-staging
