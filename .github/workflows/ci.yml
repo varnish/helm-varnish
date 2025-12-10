@@ -86,7 +86,7 @@ jobs:
         if: ${{ github.event.inputs.publish == matrix.chart }}
         uses: computology/packagecloud-github-action@v0.8
         with:
-          package-name: ${{ matrix.chart }}-*.tgz
+          package-name: ${{ matrix.chart }}/${{ matrix.chart }}-*.tgz
           packagecloud-distro: helm/v1
           packagecloud-username: varnishplus
           packagecloud-reponame: helm-staging
