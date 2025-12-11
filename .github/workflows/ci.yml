@@ -87,7 +87,7 @@ jobs:
         uses: computology/packagecloud-github-action@v0.8
         with:
           package-name: ${{ matrix.chart }}/*.tgz
-          packagecloud-distro: helm/v1
+          packagecloud-distro: helm/v1/
           packagecloud-username: varnishplus
           packagecloud-reponame: helm-staging
           packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
