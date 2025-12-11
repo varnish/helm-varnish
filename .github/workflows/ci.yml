@@ -77,17 +77,11 @@ jobs:
       - name: Download artifact package
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.package_dir }}
-          path: ${{ matrix.package_dir }}
-      - name: Find
+          name: ${{ matrix.chart }}
+          path: ${{ matrix.chart }}
+      - name: Push to packagecloud
         run: |
-          find . -ls
-      - name: "Push chart to packagecloud"
-        if: ${{ github.event.inputs.publish == matrix.chart }}
-        uses: computology/packagecloud-github-action@v0.8
-        with:
-          package-name: ${{ matrix.chart }}/*.tgz
-          packagecloud-distro: helm/v1/
-          packagecloud-username: varnishplus
-          packagecloud-reponame: helm-staging
-          packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
+          apt-get update
+          apt-get install --no-install-recommends -y ruby-rubygems  ruby-dev make g++
+          gem install package_cloud
+          PACKAGECLOUD_TOKEN=${{ secrets.PACAKGECLOUD_TOKEN }} package_cloud push  varnishplus/helm-staging/helm/v1 {{ matrix.chart }}/*.tgz
