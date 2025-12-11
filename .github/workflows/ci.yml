@@ -58,29 +58,8 @@ jobs:
         run: |
           echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
           helm push "${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
-      - name: "Upload artifact package"
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.chart }}
-          path: ${{ matrix.chart }}-*.tgz
-          if-no-files-found: error
-
-  packagecloud:
-    needs: 
-      - build_and_push
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        chart:
-          - varnish-enterprise
-    steps:
-      - name: Download artifact package
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.chart }}
-          path: ${{ matrix.chart }}
       - name: Push to packagecloud
+        if: ${{ github.event.inputs.publish == matrix.chart }}
         run: |
           sudo gem install package_cloud
-          find -ls
-          PACKAGECLOUD_TOKEN=${{ secrets.PACAKGECLOUD_TOKEN }} package_cloud push  varnishplus/helm-staging/helm/v1 {{ matrix.chart }}/*.tgz
+          PACKAGECLOUD_TOKEN=${{ secrets.PACAKGECLOUD_TOKEN }} package_cloud push  varnishplus/helm-staging/helm/v1 "${{ matrix.chart }}"-*.tgz
