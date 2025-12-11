@@ -81,7 +81,6 @@ jobs:
           path: ${{ matrix.chart }}
       - name: Push to packagecloud
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y ruby-rubygems  ruby-dev make g++
           sudo gem install package_cloud
+          find -ls
           PACKAGECLOUD_TOKEN=${{ secrets.PACAKGECLOUD_TOKEN }} package_cloud push  varnishplus/helm-staging/helm/v1 {{ matrix.chart }}/*.tgz
