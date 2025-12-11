@@ -90,3 +90,4 @@ jobs:
           packagecloud-distro: helm/v1
           packagecloud-username: varnishplus
           packagecloud-reponame: helm-staging
+          packagecloud-token: ${{ secrets.PACKAGECLOUD_TOKEN }}
