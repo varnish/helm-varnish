@@ -15,7 +15,7 @@ load _helpers
 @test "extraManifests: can be enabled as templated string" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     data: |
@@ -44,7 +44,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/extra.yaml \
@@ -61,7 +61,7 @@ EOF
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"release-name-clusterrolebinding"},"roleRef":{"kind":"ClusterRole","name":"release-name-clusterrole","apiGroup":"rbac.authorization.k8s.io"},"subjects":[{"kind":"ServiceAccount","name":"release-name","namespace":"default"}]}' ]
 
     local objects=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
@@ -91,7 +91,7 @@ EOF
 @test "extraManifests: can be enabled as templated string with checksum" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     checksum: true
@@ -122,7 +122,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/extra.yaml \
@@ -139,7 +139,7 @@ EOF
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"release-name-clusterrolebinding"},"roleRef":{"kind":"ClusterRole","name":"release-name-clusterrole","apiGroup":"rbac.authorization.k8s.io"},"subjects":[{"kind":"ServiceAccount","name":"release-name","namespace":"default"}]}' ]
 
     local objects=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
@@ -169,7 +169,7 @@ EOF
 @test "extraManifests: can be enabled as yaml object" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     data:
@@ -198,7 +198,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/extra.yaml \
@@ -215,7 +215,7 @@ EOF
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"varnish-controller-clusterrolebinding"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"varnish-controller-clusterrole"},"subjects":[{"kind":"ServiceAccount","name":"varnish-controller","namespace":"default"}]}' ]
 
     local objects=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
@@ -245,7 +245,7 @@ EOF
 @test "extraManifests: can be enabled as yaml object with checksum" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     checksum: true
@@ -276,7 +276,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/extra.yaml \
@@ -293,7 +293,7 @@ EOF
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"varnish-controller-clusterrolebinding"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"varnish-controller-clusterrole"},"subjects":[{"kind":"ServiceAccount","name":"varnish-controller","namespace":"default"}]}' ]
 
     local objects=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set 'brainz.licenseSecret=brainz-license-secret' \
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
