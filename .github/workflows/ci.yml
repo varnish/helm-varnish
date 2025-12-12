@@ -33,7 +33,7 @@ jobs:
           pip install yq
 
           sudo apt-get update
-          sudo apt-get install bats -y
+          sudo apt-get install -y --no-install-recommends bats parallel
       - name: "Add Helm dependencies"
         # See also: https://circleci.com/docs/env-vars/#alpine-linux
         run: |
@@ -47,21 +47,19 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
-          ${{ matrix.chart }}/test/unit_common/run.sh
+          ${{ matrix.chart }}/test/unit_common/run.sh -j 50
       - name: Create package
         run: |
           helm package "${{ matrix.chart }}"
           mkdir -p /tmp/artifacts
-          mv "${{ matrix.chart }}"-*.tgz /tmp/artifacts
+          cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
       - name: "Push chart"
         if: ${{ github.event.inputs.publish == matrix.chart }}
         run: |
           echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
-          helm push /tmp/artifacts/"${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
-      - name: "Push chart to packagecloud"
+          helm push "${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
+      - name: Push to packagecloud
         if: ${{ github.event.inputs.publish == matrix.chart }}
-        uses: computology/packagecloud-github-action@v0.8
-        with:
-          PACKAGE-NAME: "${{ matrix.chart }}-*.tgz"
-          PACKAGECLOUD-USERNAME: varnishplus
-          PACKAGECLOUD-REPONAME: helm-staging
+        run: |
+          sudo gem install package_cloud
+          PACKAGECLOUD_TOKEN=${{ secrets.PACKAGECLOUD_TOKEN }} package_cloud push  varnishplus/helm-staging/helm/v1 "${{ matrix.chart }}"-*.tgz
