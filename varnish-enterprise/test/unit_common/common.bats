@@ -5965,3 +5965,57 @@ EOF
             tee -a /dev/stderr)
     [ "${actual}" = '52e43eed97374991f0ca4fd84283acbbf54134898bb5b36c4dc70a03ce595805' ]
 }
+
+@test "${kind}/licenseSecret: creates a license volume and volumeMounts" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.licenseSecret=test-value' \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "varnish-license-volume")' |
+        tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"varnish-license-volume","secret":{"secretName":"test-value"}}' ]
+
+    local actual=$(echo "$object" |
+        yq -r '
+        .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+        .volumeMounts[]? | select(.name == "varnish-license-volume") |
+        .mountPath' |
+        tee -a /dev/stderr)
+
+    # Check if the extracted mountPath is the one we expect
+    [ "${actual}" == "/etc/varnish/varnish-enterprise.lic" ]
+}
+
+@test "${kind}/licenseSecret: license volume and volumeMounts does not exist by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.volumes[]? | select(.name == "varnish-license-volume")' |
+        tee -a /dev/stderr)
+
+    [ -z "${actual}" ]
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .volumeMounts[]? | select(.name == "varnish-license-volume")' |
+        tee -a /dev/stderr)
+
+    [ -z "${actual}" ]
+}
