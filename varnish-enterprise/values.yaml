@@ -680,6 +680,13 @@ server:
     #    port: 8088
     #    nodePort: 30888
 
+    # Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service
+    # traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and
+    # LoadBalancer IPs). Can be set to "Local" or "Cluster" (default)
+    #
+    # See also https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+    externalTrafficPolicy: Cluster
+
   ingress:
     enabled: false
 
