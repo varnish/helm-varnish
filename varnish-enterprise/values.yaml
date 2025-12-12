@@ -70,6 +70,9 @@ global:
       # Configures the NATS internal cluster domain name. Only change if NATS is deployed
       # on a separate cluster.
       clusterDomain: "cluster.local"
+  
+  # Sets the option of a different repo than the quay.io image
+  repoType: "private-enterprise"
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -544,7 +547,7 @@ server:
   # Sets the image and tag to use to deploy Varnish Enterprise.
   # If tag is blank, appVersion is used.
   image:
-    repository: "quay.io/varnish-software/varnish-plus"
+    repository: "-"
     pullPolicy: IfNotPresent
     tag: ""
 
@@ -908,6 +911,9 @@ server:
   # Configures Varnish Controller Agent sidecar for integration with Varnish Controller.
   agent:
     enabled: false
+
+    # Sets the option of a different repo than the quay.io image below.
+    # repoType: "private-enterprise"
 
     # Sets the image and tag to use to deploy Varnish Controller Agent sidecar. The image
     # should be the same version as varnish-controller.
