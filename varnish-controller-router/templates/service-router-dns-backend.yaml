@@ -1,0 +1,42 @@
+{{- $tp := kindOf .Values.router.dnsService.enabled }}
+{{- $tpDns := kindOf .Values.router.dns.enabled }}
+{{- $isPowerDnsEnabled := .Values.powerdns.enabled }}
+{{- $isDnsEnabled := (or (and (eq $tpDns "string") (eq .Values.router.dns.enabled "-") $isPowerDnsEnabled) (and (eq $tpDns "bool") .Values.router.dns.enabled)) }}
+{{- if or (and (eq $tp "string") (eq .Values.router.dnsService.enabled "-") $isDnsEnabled) (and (eq $tp "bool") .Values.router.dnsService.enabled) -}}
+{{- if not $isDnsEnabled }}
+{{ fail "DNS support must be enabled in values to enable DNS service: 'router.dns.enabled'" }}
+{{- end }}
+{{- $serviceType := .Values.router.dnsService.type | toString }}
+{{- $serviceClusterIP := .Values.router.dnsService.clusterIP | toString }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-controller-router.fullname" . }}-dns-backend
+  labels:
+    {{- include "varnish-controller-router.labels" (merge (dict "nameSuffix" "dns") .) | nindent 4 }}
+    {{- include "varnish-controller-router.serviceLabels" (merge (dict "section" "router.dnsService") .) | indent 4 }}
+  {{- include "varnish-controller-router.serviceAnnotations" (merge (dict "section" "router.dnsService") .) | indent 2 }}
+spec:
+  {{- if .Values.router.dnsService.type }}
+  type: {{ .Values.router.dnsService.type }}
+  {{- end }}
+  {{- if .Values.router.dnsService.clusterIP }}
+  clusterIP: {{ .Values.router.dnsService.clusterIP }}
+  {{- end }}
+  {{- if .Values.router.dnsService.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.router.dnsService.loadBalancerIP }}
+  {{- end }}
+  ports:
+    - name: dns-backend
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.router.dns.port }}
+      {{- else }}
+      port: {{ .Values.router.dnsService.port }}
+      {{- end }}
+      targetPort: {{ .Values.router.dns.port }}
+      {{- if and (.Values.router.dnsService.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.router.dnsService.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "varnish-controller-router.selectorLabels" . | nindent 4 }}
+{{- end }}
