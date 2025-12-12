@@ -926,6 +926,10 @@ server:
     # See also https://docs.varnish-software.com/varnish-controller/concepts/privateshared/
     privateToken: ""
 
+    # Sets the secret for using a varnish-enterprise.lic file.
+    # See https://docs.varnish-software.com/varnish-helm/varnish-enterprise/installation/
+    licenseSecret:
+
     # Sets the extra environment variables for Varnish Controller Agent.
     # Can be set as either an object, a list, or a templated string.
     extraEnvs: {}

@@ -124,6 +124,11 @@ volumes:
 - name: {{ .Release.Name }}-config-shared
   emptyDir:
     medium: "Memory"
+{{- if .Values.server.licenseSecret }}
+- name: varnish-license-volume
+  secret:
+    secretName: {{ .Values.server.licenseSecret }}
+{{- end}}
 {{- if not (eq (include "varnish-enterprise.mseConfig" .) "") }}
 - name: {{ .Release.Name }}-config-mse
   configMap:
@@ -423,6 +428,12 @@ Declares the Varnish Enterprise container
       mountPath: /var/lib/varnish
     - name: {{ .Release.Name }}-config-shared
       mountPath: /etc/varnish/shared
+    {{- if .Values.server.licenseSecret }}
+    - name: varnish-license-volume
+      mountPath: /etc/varnish/varnish-enterprise.lic
+      readOnly: true
+      subPath: varnish-enterprise.lic
+    {{- end}}
     {{- if not (eq (include "varnish-enterprise.mseConfig" .) "") }}
     - name: {{ .Release.Name }}-config-mse
       mountPath: /etc/varnish/mse.conf
