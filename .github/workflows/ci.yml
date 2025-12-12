@@ -12,6 +12,8 @@ on:
           - varnish-cache
           - orca-chart
           - varnish-enterprise
+          - varnish-controller
+          - varnish-controller-router
 
 jobs:
   build_and_push:
@@ -21,6 +23,8 @@ jobs:
           - varnish-cache
           - orca-chart
           - varnish-enterprise
+          - varnish-controller
+          - varnish-controller-router
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
