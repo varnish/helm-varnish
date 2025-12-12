@@ -253,7 +253,15 @@ release-namespace: to-be-override
         yq -r -c '.spec.template.metadata.annotations' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '{"checksum/release-name-varnish-controller-router":"9114563c0f36aa21058c3cf6412d0ff28ac1df7ec2b06eb5922defd32a63bec3"}' ]
+    # The checksum in the annotation is of
+    # the rendered configmap, without comments or ---, and with a newline at the start.
+    checksum="$( (echo; helm template \
+        --set 'powerdns.enabled=true' \
+        --namespace default \
+        --show-only templates/configmap-powerdns.yaml . | grep -v -e '^#'  -e '^---$' ) | sha256sum | grep -o '^[^ ]*' )"
+
+    echo Checksum: $checksum
+    [ "${actual}" == "{\"checksum/release-name-varnish-controller-router\":\"${checksum}\"}" ]
 }
 
 @test "Deployment/powerdns: inherits podLabels from global and powerdns" {
