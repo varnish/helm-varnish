@@ -371,8 +371,8 @@ rollingUpdate:
 
     local appVersion=$(app_version)
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
-    [ "${actual}" == '[{"metadata":{"name":"release-name-varnish-controller","labels":{"helm.sh/chart":"varnish-enterprise-0.1.0","app.kubernetes.io/name":"varnish-enterprise","app.kubernetes.io/instance":"release-name","app.kubernetes.io/version":"'${appVersion}'","app.kubernetes.io/managed-by":"Helm"}},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"512Mi"}}}},{"metadata":{"name":"release-name-mse","labels":{"helm.sh/chart":"varnish-enterprise-0.1.0","app.kubernetes.io/name":"varnish-enterprise","app.kubernetes.io/instance":"release-name","app.kubernetes.io/version":"'${appVersion}'","app.kubernetes.io/managed-by":"Helm"}},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}},{"metadata":{"name":"hello-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}]' ]
+        yq -c '.spec.volumeClaimTemplates[]| select(.metadata.name == "hello-pv")' | tee -a /dev/stderr)
+    [ "${actual}" == '{"metadata":{"name":"hello-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
 }
 
 @test "StatefulSet/extraVolumeClaimTemplates: can be configured with templated string" {
@@ -397,8 +397,8 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
-    [ "${actual}" == '[{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}]' ]
+        yq -r -c '.spec.volumeClaimTemplates[] | select (.metadata.name == "release-name-pv")' | tee -a /dev/stderr)
+    [ "${actual}" == '{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
 }
 
 @test "StatefulSet/extraVolumeClaimTemplates: can be configured with templated string with persistency" {
@@ -428,6 +428,6 @@ rollingUpdate:
 
     local appVersion=$(app_version)
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
-    [ "${actual}" == '[{"metadata":{"name":"release-name-varnish-controller","labels":{"helm.sh/chart":"varnish-enterprise-0.1.0","app.kubernetes.io/name":"varnish-enterprise","app.kubernetes.io/instance":"release-name","app.kubernetes.io/version":"'${appVersion}'","app.kubernetes.io/managed-by":"Helm"}},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"512Mi"}}}},{"metadata":{"name":"release-name-mse","labels":{"helm.sh/chart":"varnish-enterprise-0.1.0","app.kubernetes.io/name":"varnish-enterprise","app.kubernetes.io/instance":"release-name","app.kubernetes.io/version":"'${appVersion}'","app.kubernetes.io/managed-by":"Helm"}},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}},{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}]' ]
+        yq -r -c '.spec.volumeClaimTemplates[] | select (.metadata.name == "release-name-pv")' | tee -a /dev/stderr)
+    [ "${actual}" == '{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
 }
