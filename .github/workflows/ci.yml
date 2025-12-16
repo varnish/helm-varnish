@@ -51,6 +51,9 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
+          if [ -x ${{ matrix.chart }}/test/unit/run.sh ]; then 
+            ${{ matrix.chart }}/test/unit/run.sh -j 50
+          fi
           if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then 
             ${{ matrix.chart }}/test/unit_common/run.sh -j 50
           fi
