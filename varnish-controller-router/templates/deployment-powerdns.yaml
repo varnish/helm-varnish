@@ -1,0 +1,120 @@
+{{- if .Values.powerdns.enabled }}
+{{- if not .Values.router.dnsService.enabled }}
+{{- fail "DNS service must be enabled to enable PowerDNS: 'router.dnsService.enabled'" }}
+{{- end }}
+{{- $selectorLabels := include "varnish-controller-router.selectorLabels" (merge (dict "nameSuffix" "powerdns") .) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "varnish-controller-router.fullname" . }}-powerdns
+  {{- include "varnish-controller-router.serverLabels" (merge (dict "section" "powerdns") .) | nindent 2 }}
+  {{- include "varnish-controller-router.serverAnnotations" (merge (dict "section" "powerdns" ) .) | nindent 2 }}
+spec:
+  {{- if not .Values.powerdns.autoscaling.enabled }}
+  replicas: {{ .Values.powerdns.replicas }}
+  {{- end }}
+  {{- include "varnish-controller-router.strategy" (merge (dict "section" "powerdns") .) | indent 2 }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+  template:
+    metadata:
+      {{- include "varnish-controller-router.podLabels" (merge (dict "section" "powerdns") .) | nindent 6 }}
+      {{- include "varnish-controller-router.podAnnotations" (merge
+        (dict
+          "section" "powerdns"
+          "extraAnnotations"
+          (dict
+            (print "checksum/" (include "varnish-controller-router.fullname" (merge (dict "nameSuffix" "powerdns") .)))
+            (sha256sum (include (print $.Template.BasePath "/configmap-powerdns.yaml") .)))) .) | nindent 6 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "varnish-controller-router.serviceAccountName" . }}
+      {{- if not (empty .Values.global.podSecurityContext) }}
+      securityContext:
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: powerdns
+          {{- include "varnish-controller-router.securityContext" (merge (dict "section" "powerdns") .) | nindent 10 }}
+          {{- include "varnish-controller-router.image" (merge (dict "image" .Values.powerdns.image) .) | nindent 10 }}
+          {{- if and .Values.powerdns.startupProbe (not (empty .Values.powerdns.startupProbe)) }}
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.powerdns.dns.port }}
+            {{- toYaml .Values.powerdns.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.powerdns.readinessProbe (not (empty .Values.powerdns.readinessProbe)) }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.powerdns.dns.port }}
+            {{- toYaml .Values.powerdns.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.powerdns.livenessProbe (not (empty .Values.powerdns.livenessProbe)) }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.powerdns.dns.port }}
+            {{- toYaml .Values.powerdns.livenessProbe | nindent 12 }}
+          {{- end }}
+          command: ["/usr/bin/tini", "--", "/usr/local/sbin/pdns_server-startup"]
+          {{- if and .Values.powerdns.extraArgs (not (empty .Values.powerdns.extraArgs)) }}
+          args: {{- toYaml .Values.powerdns.extraArgs | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.powerdns.resources (not (empty .Values.powerdns.resources)) }}
+          resources: {{- toYaml .Values.powerdns.resources | nindent 12 }}
+          {{- end }}
+          {{- include "varnish-controller-router.resources" (merge (dict "section" "powerdns") .) | nindent 10 }}
+          {{- if and .Values.powerdns.extraEnvs (not (empty .Values.powerdns.extraEnvs)) }}
+          env:
+            {{- include "varnish-controller-router.toEnv" (merge (dict "envs" .Values.powerdns.extraEnvs) .) | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: dns-udp
+              containerPort: {{ .Values.powerdns.dns.port }}
+              protocol: UDP
+            - name: dns-tcp
+              containerPort: {{ .Values.powerdns.dns.port }}
+              protocol: TCP
+          volumeMounts:
+            - name: {{ .Release.Name }}-config-volume
+              mountPath: /etc/powerdns
+            - name: {{ .Release.Name }}-pdns
+              mountPath: /var/run/pdns
+      volumes:
+        - name: {{ .Release.Name }}-config-volume
+          configMap:
+            name: {{ include "varnish-controller-router.fullname" . }}-powerdns
+        - name: {{ .Release.Name }}-pdns
+          emptyDir:
+            medium: "Memory"
+      {{- if .Values.powerdns.nodeSelector }}
+      nodeSelector:
+        {{- $tp := kindOf .Values.powerdns.nodeSelector }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.powerdns.nodeSelector . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.powerdns.nodeSelector | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.powerdns.affinity }}
+      affinity:
+        {{- $tp := kindOf .Values.powerdns.affinity }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.powerdns.affinity . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.powerdns.affinity | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.powerdns.tolerations }}
+      tolerations:
+        {{- $tp := kindOf .Values.powerdns.tolerations }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.powerdns.tolerations . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.powerdns.tolerations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+{{- end }}

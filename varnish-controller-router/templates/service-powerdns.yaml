@@ -1,0 +1,47 @@
+{{- if .Values.powerdns.service.enabled -}}
+{{- $serviceType := .Values.powerdns.service.type | toString }}
+{{- $serviceClusterIP := .Values.powerdns.service.clusterIP | toString }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "varnish-controller-router.fullname" . }}-powerdns
+  labels:
+    {{- include "varnish-controller-router.labels" (merge (dict "nameSuffix" "powerdns") .) | nindent 4 }}
+    {{- include "varnish-controller-router.serviceLabels" (merge (dict "section" "powerdns.service") .) | indent 4 }}
+  {{- include "varnish-controller-router.serviceAnnotations" (merge (dict "section" "powerdns.service") .) | indent 2 }}
+spec:
+  {{- if .Values.powerdns.service.type }}
+  type: {{ .Values.powerdns.service.type }}
+  {{- end }}
+  {{- if .Values.powerdns.service.clusterIP }}
+  clusterIP: {{ .Values.powerdns.service.clusterIP }}
+  {{- end }}
+  {{- if .Values.powerdns.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.powerdns.service.loadBalancerIP }}
+  {{- end }}
+  ports:
+    - name: dns-udp
+      protocol: UDP
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.powerdns.dns.port }}
+      {{- else }}
+      port: {{ .Values.powerdns.service.port }}
+      {{- end }}
+      targetPort: {{ .Values.powerdns.dns.port }}
+      {{- if and (.Values.powerdns.service.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.powerdns.service.nodePort }}
+      {{- end }}
+    - name: dns-tcp
+      protocol: TCP
+      {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
+      port: {{ .Values.powerdns.dns.port }}
+      {{- else }}
+      port: {{ .Values.powerdns.service.port }}
+      {{- end }}
+      targetPort: {{ .Values.powerdns.dns.port }}
+      {{- if and (.Values.powerdns.service.nodePort) (eq $serviceType "NodePort") }}
+      nodePort: {{ .Values.powerdns.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "varnish-controller-router.selectorLabels" (merge (dict "nameSuffix" "powerdns") .) | nindent 4 }}
+{{- end }}

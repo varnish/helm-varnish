@@ -1,0 +1,193 @@
+{{- if .Values.router.enabled }}
+{{- $selectorLabels := include "varnish-controller-router.selectorLabels" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "varnish-controller-router.fullname" . }}
+  {{- include "varnish-controller-router.serverLabels" (merge (dict "section" "router" "nameSuffix" "") .) | nindent 2 }}
+  {{- include "varnish-controller-router.serverAnnotations" (merge (dict "section" "router") .) | nindent 2 }}
+spec:
+  {{- if not .Values.router.autoscaling.enabled }}
+  replicas: {{ .Values.router.replicas }}
+  {{- end }}
+  {{- include "varnish-controller-router.strategy" (merge (dict "section" "router") .) | indent 2 }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+  template:
+    metadata:
+      {{- include "varnish-controller-router.podLabels" (merge (dict "section" "router" "nameSuffix" "") .) | nindent 6 }}
+      {{- include "varnish-controller-router.podAnnotations" (merge (dict "section" "router") .) | nindent 6 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "varnish-controller-router.serviceAccountName" . }}
+      {{- if not (empty .Values.global.podSecurityContext) }}
+      securityContext:
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: router
+          {{- include "varnish-controller-router.securityContext" (merge (dict "section" "router") .) | nindent 10 }}
+          {{- include "varnish-controller-router.image" (merge (dict "base" .Values.global.controller.image "image" .Values.router.image) .) | nindent 10 }}
+          {{- if and .Values.router.startupProbe (not (empty .Values.router.startupProbe)) }}
+          {{- if not .Values.router.http.enabled }}
+          {{- fail (print "HTTP support must be enabled to enable startupProbe: 'router.http.enabled'") }}
+          {{- end }}
+          startupProbe:
+            tcpSocket:
+              port: {{ .Values.router.http.port }}
+            {{- toYaml .Values.router.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.router.readinessProbe (not (empty .Values.router.readinessProbe)) }}
+          {{- if not .Values.router.http.enabled }}
+          {{- fail (print "HTTP support must be enabled to enable readinessProbe: 'router.http.enabled'") }}
+          {{- end }}
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.router.http.port }}
+            {{- toYaml .Values.router.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.router.livenessProbe (not (empty .Values.router.livenessProbe)) }}
+          {{- if not .Values.router.http.enabled }}
+          {{- fail (print "HTTP support must be enabled to enable livenessProbe: 'router.http.enabled'") }}
+          {{- end }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.router.http.port }}
+            {{- toYaml .Values.router.livenessProbe | nindent 12 }}
+          {{- end }}
+          command: ["/usr/bin/varnish-controller-router"]
+          {{- if and .Values.router.extraArgs (not (empty .Values.router.extraArgs)) }}
+          args: {{- toYaml .Values.router.extraArgs | nindent 12 }}
+          {{- end }}
+          {{- include "varnish-controller-router.resources" (merge (dict "section" "router") .) | nindent 10 }}
+          env:
+            {{- include "varnish-controller-router.natsServer" . | indent 12 }}
+            {{- if .Values.router.http.enabled }}
+            - name: VARNISH_CONTROLLER_HTTP_ROUTING
+              value: "true"
+            - name: VARNISH_CONTROLLER_HTTP_PORT
+              value: {{ .Values.router.http.port | quote }}
+            - name: VARNISH_CONTROLLER_HTTP_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            {{- else }}
+            - name: VARNISH_CONTROLLER_HTTP_ROUTING
+              value: "false"
+            {{- end }}
+            {{- if .Values.router.https.enabled }}
+            - name: VARNISH_CONTROLLER_HTTPS_ROUTING
+              value: "true"
+            - name: VARNISH_CONTROLLER_HTTPS_PORT
+              value: {{ .Values.router.https.port | quote }}
+            - name: VARNISH_CONTROLLER_HTTPS_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            {{- else }}
+            - name: VARNISH_CONTROLLER_HTTPS_ROUTING
+              value: "false"
+            {{- end }}
+            {{- $tp := kindOf .Values.router.dns.enabled }}
+            {{- if or (and (eq $tp "bool") .Values.router.dns.enabled) (and (eq $tp "string") (eq .Values.router.dns.enabled "-") .Values.powerdns.enabled) }}
+            - name: VARNISH_CONTROLLER_DNS_ROUTING
+              value: "true"
+            - name: VARNISH_CONTROLLER_DNS_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: VARNISH_CONTROLLER_DNS_PORT
+              value: {{ .Values.router.dns.port | quote }}
+            {{- if .Values.router.dns.tls }}
+            - name: VARNISH_CONTROLLER_DNS_TLS
+              value: "true"
+            {{- else }}
+            - name: VARNISH_CONTROLLER_DNS_TLS
+              value: "false"
+            {{- end }}
+            {{- else }}
+            - name: VARNISH_CONTROLLER_DNS_ROUTING
+              value: "false"
+            {{- end }}
+            {{- if not .Values.router.grace }}
+            - name: VARNISH_CONTROLLER_ENDPOINT_GRACE
+              value: "false"
+            {{- end }}
+            {{- if .Values.router.management.enabled }}
+            - name: VARNISH_CONTROLLER_ENABLE_MGMT
+              value: "false"
+            - name: VARNISH_CONTROLLER_MGMT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: VARNISH_CONTROLLER_MGMT_PORT
+              value: {{ .Values.router.management.port | quote }}
+            {{- if .Values.router.management.tls }}
+            - name: VARNISH_CONTROLLER_MGMT_TLS
+              value: "true"
+            {{- else }}
+            - name: VARNISH_CONTROLLER_MGMT_TLS
+              value: "false"
+            {{- end }}
+            {{- else }}
+            - name: VARNISH_CONTROLLER_ENABLE_MGMT
+              value: "false"
+            {{- end }}
+            {{- include "varnish-controller-router.toEnv" (merge (dict "envs" .Values.router.extraEnvs) .) | nindent 12 }}
+            {{- if and (eq (toString .Values.router.replicas) "1") .Values.router.useReleaseName }}
+            - name: VARNISH_CONTROLLER_ROUTER_NAME
+              value: "{{ .Release.Name }}"
+            {{- else }}
+            - name: VARNISH_CONTROLLER_ROUTER_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{- end }}
+          {{- if or .Values.router.http.enable .Values.router.https.enable }}
+          ports:
+            {{- if .Values.router.http.enable }}
+            - name: http
+              containerPort: {{ .Values.router.http.port }}
+              protocol: TCP
+            {{- end }}
+            {{- if .Values.router.https.enable }}
+            - name: https
+              containerPort: {{ .Values.router.https.port }}
+              protocol: TCP
+            {{- end }}
+            - name: management
+              containerPort: {{ .Values.router.management.port }}
+              protocol: TCP
+          {{- end }}
+      {{- if .Values.router.nodeSelector }}
+      nodeSelector:
+        {{- $tp := kindOf .Values.router.nodeSelector }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.router.nodeSelector . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.router.nodeSelector | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.router.affinity }}
+      affinity:
+        {{- $tp := kindOf .Values.router.affinity }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.router.affinity . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.router.affinity | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.router.tolerations }}
+      tolerations:
+        {{- $tp := kindOf .Values.router.tolerations }}
+        {{- if eq $tp "string" }}
+          {{- tpl .Values.router.tolerations . | trim | nindent 8 }}
+        {{- else }}
+          {{- toYaml .Values.router.tolerations | nindent 8 }}
+        {{- end }}
+      {{- end }}
+{{- end }}
