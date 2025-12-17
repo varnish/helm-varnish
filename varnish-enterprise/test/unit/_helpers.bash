@@ -13,7 +13,7 @@ helm_template_compare {
     --show-only "$templatefile" |
     yq -c "$jqpattern" 
   )"
-  [ "$result" == "$expected_result ]
+  [ "$result" == "$expected_result" ]
 }
 
 app_version() {
