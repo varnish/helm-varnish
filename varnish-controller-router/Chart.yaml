@@ -3,8 +3,8 @@ apiVersion: v2
 name: varnish-controller-router
 description: Varnish Traffic Router Helm chart
 type: application
-version: 1.7.0
-appVersion: 6.6.9
+version: 1.7.2
+appVersion: 7.3.1
 maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software
