@@ -914,7 +914,7 @@ server:
     image:
       repository: "quay.io/varnish-software/varnish-controller-agent"
       pullPolicy: IfNotPresent
-      tag: "7.1.4-6.0.15r1"
+      tag: "7.3.1-6.0.16r8"
 
     # Sets the securityContext of Varnish Controller Agent sidecar.
     securityContext: {}
@@ -1033,7 +1033,7 @@ server:
         image:
           repository: "quay.io/varnish-software/varnish-controller-cli"
           pullPolicy: IfNotPresent
-          tag: "6.6.8"
+          tag: "7.3.1"
 
         # Configures Varnish Controller Agent to use external Varnish Controller endpoint.
         # Ignored if `server.vcli.internal.enabled` is set to `true`.
