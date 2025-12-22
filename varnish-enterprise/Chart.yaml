@@ -4,7 +4,7 @@ name: varnish-enterprise
 description: Varnish Enterprise Helm chart
 type: application
 version: 1.7.2
-appVersion: 6.0.16r8
+appVersion: 6.0.16r9
 maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software
