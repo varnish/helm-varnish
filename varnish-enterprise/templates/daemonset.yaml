@@ -37,6 +37,7 @@ spec:
       containers:
         {{- include "varnish-enterprise.serverContainer" . | indent 8 }}
         {{- include "varnish-enterprise.ncsaContainer" . | indent 8 }}
+        {{- include "varnish-enterprise.otelContainer" . | indent 8 }}
         {{- include "varnish-enterprise.agentContainer" . | indent 8 }}
         {{- include "varnish-enterprise.vcliContainer" . | indent 8 }}
         {{- include "varnish-enterprise.extraContainers" . | indent 8 }}
