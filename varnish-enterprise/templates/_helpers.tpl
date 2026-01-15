@@ -35,12 +35,31 @@ Create chart name and version as used by the chart label.
 {{/*
 Sets up the Varnish Enterprise image and its overrides (if any)
 */}}
-{{- define "varnish-enterprise.image" }}
-{{- $base := .base | default dict }}
-{{- $image := .image | default dict }}
-image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{- if eq $image.tag "-" }}{{ default .Chart.AppVersion $base.tag }}{{ else }}{{ default $.Chart.AppVersion $image.tag }}{{ end }}"
+{{- define "varnish-enterprise.image" -}}
+{{- $base := .base | default dict -}}
+{{- $image := .image | default dict -}}
+
+{{- $repoType := .Values.global.repoType | default "" -}}
+{{- $calculatedRepo := $base.repository -}}
+
+{{- if eq $repoType "public-enterprise" }}
+  {{- $calculatedRepo = "varnish/varnish-enterprise" }}
+{{- else if eq $repoType "private-enterprise" }}
+  {{- $calculatedRepo = "quay.io/varnish-software/varnish-plus" }}
+{{ end }}
+image: "{{- if eq $image.repository "-" -}}
+          {{ $calculatedRepo }}
+        {{- else -}}
+          {{ $image.repository }} y
+        {{- end -}}
+        :
+        {{- if eq $image.tag "-" }}
+          {{ default .Chart.AppVersion $base.tag }}
+        {{- else -}}
+          {{ default $.Chart.AppVersion $image.tag }}
+        {{- end -}}"
 imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else }}{{ $image.pullPolicy }}{{ end }}
-{{- end }}
+{{- end -}}
 
 {{/*
 Converts size string (e.g. 10Mi or 10M) to a number
