@@ -3,7 +3,7 @@ apiVersion: v2
 name: varnish-controller
 description: An intuitive graphical administration platform for managing Varnish clusters
 type: application
-version: 1.7.2
+version: 1.7.3
 appVersion: 7.3.1
 maintainers:
   - email: containers@varnish-software.com
