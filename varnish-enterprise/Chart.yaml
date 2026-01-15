@@ -3,8 +3,8 @@ apiVersion: v2
 name: varnish-enterprise
 description: Varnish Enterprise Helm chart
 type: application
-version: 1.7.3
-appVersion: 6.0.16r9
+version: 1.7.4
+appVersion: 6.0.16r10
 maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software
