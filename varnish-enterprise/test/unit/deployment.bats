@@ -100,6 +100,23 @@ rollingUpdate:
     [ "${actual}" == "false" ]
 }
 
+@test "Deployment/agent: test initContainer image and tag" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'server.kind=Deployment' \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set 'global.initContainer.image=ubuntu' \
+        --set 'global.initContainer.tag=24.04' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
+
+    [ "${actual}" == "ubuntu:24.04" ]
+}
+
 @test "Deployment/agent/persistence: cannot be enabled" {
     cd "$(chart_dir)"
 

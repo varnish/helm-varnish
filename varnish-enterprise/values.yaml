@@ -10,7 +10,10 @@ global:
   imagePullSecrets: []
   #imagePullSecrets:
   #  - name: quay.io-varnish-software
-
+  # Set which container image & tag to use when initContainers are spun up
+  initContainer:
+    image: "busybox"
+    tag: "1.36"
   # Sets the securityContext of the Pod.
   podSecurityContext:
     fsGroup: 999

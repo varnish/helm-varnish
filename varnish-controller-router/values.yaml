@@ -76,7 +76,10 @@ global:
       # Configures the NATS internal cluster domain name. Only change if NATS is deployed
       # on a separate cluster.
       clusterDomain: "cluster.local"
-
+  # Set which container image & tag to use when initContainers are spun up
+  initContainer:
+    image: "busybox"
+    tag: "1.36"
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -339,6 +342,20 @@ router:
 
   # Sets the extra configuration args for Varnish Controller Router.
   extraArgs: []
+
+  # Enable, disable & configure GeoIP support.
+  geoIp:
+    enabled: false
+    # Sets the URL of the MaxMind GeoIP2 database to use.
+    # When set, the database is downloaded from this URL on startup by an init container.
+    mmdb_url: ""
+
+  # Enable, disable & configure ASN support.
+  asn:
+    enabled: false
+    # Sets the URL of the MaxMind ASN database to use.
+    # When set, the database is downloaded from this URL on startup by an init container.
+    mmdb_url: ""
 
   # Sets the extra annotations for Varnish Controller Router pod template. Can be set as a templated string.
   podAnnotations: {}

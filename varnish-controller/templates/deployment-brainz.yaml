@@ -28,6 +28,26 @@ spec:
       securityContext:
         {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
       {{- end }}
+      {{- if .Values.brainz.geoIp.enabled }}
+        {{- $csvUrl := .Values.brainz.geoIp.mmdb_csv_url | trim -}}
+        {{- $u := urlParse $csvUrl   -}}
+        {{- if not (and
+              (not (empty $csvUrl))
+              (not (empty $u.scheme))
+              (not (empty $u.host))
+              (regexMatch "^(http|https)$" $u.scheme)
+            )
+        }}
+          {{- fail (printf "Invalid URL for .Values.brainz.geoIp.mmdb_csv_url: %q" $csvUrl) -}}
+        {{- end}}
+      initContainers:
+        - name: brainz-download-geoip
+          image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ .Values.global.initContainer.tag | default "1.36"}}
+          command: ['sh', '-c', 'wget -O /etc/varnish-controller/geoip/geoip.csv {{ .Values.brainz.geoIp.mmdb_csv_url }}']
+          volumeMounts:
+          - name: {{ .Release.Name }}-geoip
+            mountPath: /etc/varnish-controller/geoip
+      {{- end }}
       containers:
         - name: brainz
           {{- include "varnish-controller.securityContext" (merge (dict "section" "brainz") .) | nindent 10 }}
@@ -135,16 +155,28 @@ spec:
               value: "{{ .Values.brainz.modAdminUser.password }}"
             {{- end }}
             {{- end }}
+            {{- if and .Values.brainz.geoIp.enabled (not (eq .Values.brainz.geoIp.mmdb_csv_url "")) }}
+            - name: VARNISH_CONTROLLER_MMDB_FILE_CSV
+              value: /etc/varnish-controller/geoip/geoip.csv
+            {{- end }}
             {{- include "varnish-controller.toEnv" (merge (dict "envs" .Values.brainz.extraEnvs) .) | nindent 12 }}
           volumeMounts:
           - name: {{ .Release.Name }}-data
             mountPath: /var/lib/varnish-controller
+          {{- if and .Values.brainz.geoIp.enabled (not (eq .Values.brainz.geoIp.mmdb_csv_url "")) }}
+          - name: {{ .Release.Name }}-geoip
+            mountPath: /etc/varnish-controller/geoip
+          {{- end }}
           - name: {{ .Release.Name }}-license
             mountPath: /etc/varnish-controller/license.lic
             subPath: license.lic
       volumes:
       - name: {{ .Release.Name }}-data
         emptyDir: {}
+      {{- if and .Values.brainz.geoIp.enabled (not (eq .Values.brainz.geoIp.mmdb_csv_url "")) }}
+      - name: {{ .Release.Name }}-geoip
+        emptyDir: {}
+      {{- end }}
       - name: {{ .Release.Name }}-license
         secret:
           {{- if not (eq .Values.brainz.licenseFile "") }}

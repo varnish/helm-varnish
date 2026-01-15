@@ -86,6 +86,10 @@ global:
       # on a separate cluster.
       clusterDomain: "cluster.local"
 
+  # Set which container image & tag to use when initContainers are spun up
+  initContainer:
+    image: "busybox"
+    tag: "1.36"
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -368,6 +372,12 @@ brainz:
   # itself.
   licenseFile: ""
 
+  # Enable, disable & configure GeoIP support.
+  geoIp:
+    enabled: false
+    # Sets the URL of the CSV version of the MaxMind GeoIP2 database to use.
+    # When set, the database is downloaded from this URL on startup by an init container.
+    mmdb_csv_url: ""
   # Sets the default username and password for Varnish admin.
   modAdminUser:
     enabled: true
