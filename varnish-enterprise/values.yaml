@@ -818,7 +818,7 @@ server:
               app.kubernetes.io/name: {{ include "varnish-enterprise.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
-
+  
   # Configures the Varnish NCSA sidecar.
   varnishncsa:
     enabled: true
@@ -881,6 +881,27 @@ server:
     #    cpu: 100m
     #    memory: 128Mi
 
+  # Configures the Varnish Otel sidecar.
+  otel:
+    enabled: false
+
+    # Sets the image and tag to use to deploy Varnish OTEL sidecar. Setting this to "-"
+    # will inherit the same image as with server.image.
+    image:
+      repository: "-"
+      pullPolicy: "-"
+      tag: "-"
+
+    # Sets the securityContext of the Varnish OTEL sidecar.
+    securityContext: {}
+
+    # Configures a resource limits for Varnish OTEL container.
+    resources: {}
+
+    # Environment variables for OTEL configuration
+    env:
+      # OTEL_LOGS_EXPORTER: "otlp"
+      # OTEL_METRICS_EXPORTER: "otlp"
   # Configures the init container for Varnish Controller Agent.
   initAgent:
     # Whether to use init container to initialize Varnish Controller directory, or use

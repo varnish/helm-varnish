@@ -590,6 +590,29 @@ Declares the Varnish NCSA container
 {{- end }}
 {{- end }}
 
+
+{{/*
+Declares the Varnish Otel container
+*/}}
+{{- define "varnish-enterprise.otelContainer" -}}
+{{- if .Values.server.otel.enabled }}
+- name: {{ .Chart.Name }}-otel
+  {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server.otel") .) | nindent 2 }}
+  {{- include "varnish-enterprise.image" (merge (dict "base" .Values.server.image "image" .Values.server.otel.image) .) | nindent 2 }}
+  {{- include "varnish-enterprise.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
+  command: ["/usr/bin/varnish-otel"]
+  {{- if .Values.server.otel.env }}
+  env:
+    {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.otel.env) .) | nindent 4 }}
+  {{- end }}
+  volumeMounts:
+    - name: {{ .Release.Name }}-varnish-vsm
+      mountPath: /var/lib/varnish
+    - name: {{ .Release.Name }}-config-shared
+      mountPath: /etc/varnish/shared
+{{- end }}
+{{- end }}
+
 {{/*
 Declares the Varnish Controller Agent container
 */}}
