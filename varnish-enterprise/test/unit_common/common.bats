@@ -6019,3 +6019,30 @@ EOF
 
     [ -z "${actual}" ]
 }
+
+@test "${kind}/extraEnvs: can be configured for varnishncsa" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.extraEnvs.FOO=bar' \
+        --set 'server.varnishncsa.extraEnvs.BAZ=bax' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
+            .env[]? | select(.name == "FOO")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
+            .env[]? | select(.name == "BAZ")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"BAZ","value":"bax"}' ]
+}
