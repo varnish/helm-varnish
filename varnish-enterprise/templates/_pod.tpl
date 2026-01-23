@@ -547,6 +547,13 @@ Declares the Varnish NCSA container
   {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
   args: {{- toYaml .Values.server.varnishncsa.extraArgs | nindent 4 }}
   {{- end }}
+  {{- if and .Values.server.varnishncsa.extraEnvs (not (empty .Values.server.varnishncsa.extraEnvs)) }}
+  env:
+  {{- range $k, $v := .Values.server.varnishncsa.extraEnvs }}
+    - name: {{ $k | quote }}
+      value: {{ $v | quote }}
+  {{- end }}
+  {{- end }}
   {{- if and .Values.server.varnishncsa.startupProbe (not (empty .Values.server.varnishncsa.startupProbe)) }}
   startupProbe:
     exec:
