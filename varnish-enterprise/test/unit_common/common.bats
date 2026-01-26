@@ -400,14 +400,69 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == "8090" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_ADDRESS") | .valueFrom' |
+        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_ADDRESS") | .value' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"fieldRef":{"fieldPath":"status.podIP"}}' ]
+    [ "${actual}" == '0.0.0.0' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_PORT") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == "8090" ]
+}
+
+@test "${kind}/http: listen address can be configured" {
+   cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.http.enabled=true' \
+        --set 'server.http.port=8090' \
+        --set 'server.http.address=127.0.0.2' \
+        --set 'server.startupProbe.initialDelaySeconds=5' \
+        --set 'server.readinessProbe.initialDelaySeconds=5' \
+        --set 'server.livenessProbe.initialDelaySeconds=5' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -y '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_ADDRESS") | .value' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '127.0.0.2' ]
+}
+
+
+@test "${kind}/http: listen address can be configured to podIP" {
+   cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.http.enabled=true' \
+        --set 'server.http.port=8090' \
+        --set 'server.http.podIP=true' \
+        --set 'server.startupProbe.initialDelaySeconds=5' \
+        --set 'server.readinessProbe.initialDelaySeconds=5' \
+        --set 'server.livenessProbe.initialDelaySeconds=5' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_ADDRESS") | .valueFrom' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"fieldRef":{"fieldPath":"status.podIP"}}' ]
 }
 
 @test "${kind}/http: can be disabled" {
