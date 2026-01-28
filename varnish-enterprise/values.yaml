@@ -123,6 +123,9 @@ server:
   http:
     enabled: true
     port: 6081
+    address: "0.0.0.0"
+    # Set this to true to listen on podIP instead of above address (valueFrom.fieldRef.fieldPath: status.podIP)
+    podIP: false 
 
   tls:
     enabled: false

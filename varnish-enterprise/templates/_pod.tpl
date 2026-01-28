@@ -332,9 +332,13 @@ Declares the Varnish Enterprise container
   {{- include "varnish-enterprise.resources" (merge (dict "section" "server") .) | nindent 2 }}
   env:
     - name: VARNISH_LISTEN_ADDRESS
+    {{- if .Values.server.http.podIP }}
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
+    {{- else }}
+      value: {{ .Values.server.http.address | quote }}
+    {{- end }}
     {{- if .Values.server.http.enabled }}
     - name: VARNISH_LISTEN_PORT
       value: {{ .Values.server.http.port | quote }}
