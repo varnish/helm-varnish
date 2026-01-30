@@ -74,6 +74,11 @@ global:
       # on a separate cluster.
       clusterDomain: "cluster.local"
 
+  # Defines which repository to use by default
+  # Options are public-enterprise or private-enterprise
+  # Check server.image.repository for more information
+  repoType: "private-enterprise"
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -549,8 +554,11 @@ server:
 
   # Sets the image and tag to use to deploy Varnish Enterprise.
   # If tag is blank, appVersion is used.
+  # If repository is "-", check global.repoType
+  # - private-enterprise: repository will be "quay.io/varnish-software/varnish-plus"
+  # - public-enterprise: repository will be "varnish/varnish-enterprise"
   image:
-    repository: "quay.io/varnish-software/varnish-plus"
+    repository: "-"
     pullPolicy: IfNotPresent
     tag: ""
 
