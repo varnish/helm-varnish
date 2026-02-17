@@ -237,7 +237,11 @@ Declares the Varnish Enterprise container
 {{/*
 Composing the $varnishArgs list or arguments
 */}}
-{{- $varnishArgs := list "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
+{{- $varnishArgs := list "-F"}}
+{{/*
+Set admin interface via "-T"
+*/}}
+{{- $varnishArgs = append $varnishArgs (printf "-T %s:%v" (.Values.server.admin.address | default "127.0.0.1") (.Values.server.admin.port | default "6082")) }}
 {{/*
 Set working directory via "-n"
 */}}
