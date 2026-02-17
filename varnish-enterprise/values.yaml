@@ -231,6 +231,11 @@ server:
   # See also https://varnish-cache.org/docs/6.0/reference/varnishd.html#thread-pool-timeout
   threadTimeout: 120
 
+  # Sets the command for Varnish Enterprise
+  # Note that by overriding this, you will also override parameters, listening ports, etc.
+  # See: https://varnish-cache.org/docs/6.0/reference/varnishd.html
+  command: []
+
   # Sets the extra configuration args for Varnish Enterprise.
   extraArgs: []
 

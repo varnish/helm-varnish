@@ -215,7 +215,7 @@ Declares the probe for Varnish Enterprise pod
     port: {{ .Values.server.http.port }}
   {{- else if hasKey $probe "httpGet" }}
   httpGet:
-    port: {{ .Values.server.http.port }}
+     port: {{ .Values.server.http.port }}
     {{- if or (empty $probe.httpGet) (not (hasKey $probe.httpGet "path")) }}
     path: /
     {{- else }}
@@ -234,24 +234,25 @@ Declares the Varnish Enterprise container
 {{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
 {{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $tp := kindOf .Values.server.extraArgs }}
-{{- $varnishExtraArgs := list }}
+{{- $varnishArgs := list "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
-{{- if eq $tp "string" }}
-{{- $varnishExtraArgs = append $varnishExtraArgs .Values.server.extraArgs }}
+{{- if eq (kindOf .Values.server.extraArgs) "string" }}
+  {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
+{{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
+  {{- $varnishArgs = concat $varnishArgs .Values.server.extraArgs }}
 {{- else }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs .Values.server.extraArgs }}
+  {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
 {{- end }}
 {{- if and .Values.server.agent.enabled (not (eq $cmdfileConfig "")) }}
 {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
 {{- else if .Values.server.agent.enabled }}
 {{- if .Values.server.initAgent.enabled }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
+{{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
 {{- else }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
+{{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
 {{- end }}
 {{- else if not (eq $cmdfileConfig "") }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs (list "-I" .Values.server.cmdfileConfigPath) }}
+{{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
 {{- end }}
 {{- range .Values.server.extraListens }}
 {{- $extraArg := "-a " }}
@@ -279,7 +280,7 @@ Declares the Varnish Enterprise container
 {{- if .proto }}
 {{- $extraArg = print $extraArg "," .proto }}
 {{- end }}
-{{- $varnishExtraArgs = append $varnishExtraArgs $extraArg }}
+{{- $varnishArgs = append $varnishArgs $extraArg }}
 {{- end }}
 {{- $varnishParams := .Values.server.parameters | default dict }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
@@ -290,9 +291,9 @@ Declares the Varnish Enterprise container
 {{- range $pKey, $pValue := $varnishParams }}
 {{- $pTp := kindOf $pValue }}
 {{- if eq $pTp "slice" }}
-{{- $varnishExtraArgs = append $varnishExtraArgs (print "-p " (snakecase $pKey) "=" (join "," $pValue)) }}
+{{- $varnishArgs = append $varnishArgs (print "-p " (snakecase $pKey) "=" (join "," $pValue)) }}
 {{- else }}
-{{- $varnishExtraArgs = append $varnishExtraArgs (print "-p " (snakecase $pKey) "=" (toString $pValue)) }}
+{{- $varnishArgs = append $varnishArgs (print "-p " (snakecase $pKey) "=" (toString $pValue)) }}
 {{- end }}
 {{- end }}
 - name: {{ .Chart.Name }}
@@ -411,10 +412,6 @@ Declares the Varnish Enterprise container
           fieldPath: metadata.name
     {{- end }}
     {{- end }}
-    {{- if (not (empty $varnishExtraArgs)) }}
-    - name: VARNISH_EXTRA
-      value: {{ $varnishExtraArgs | join " " | quote }}
-    {{- end }}
     {{- if .Values.cluster.enabled }}
     - name: VARNISH_CLUSTER_TOKEN
       valueFrom:
@@ -427,6 +424,13 @@ Declares the Varnish Enterprise container
           key: token
     {{- end }}
     {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
+  {{- if gt (len .Values.server.command) 0 }}
+  command:
+    {{- .Values.server.command | toYaml | nindent 4 }}
+  {{- else }}
+  command:
+    {{- $varnishArgs | toYaml | nindent 4 }}
+  {{- end }}
   volumeMounts:
     - name: {{ .Release.Name }}-varnish-vsm
       mountPath: /var/lib/varnish
