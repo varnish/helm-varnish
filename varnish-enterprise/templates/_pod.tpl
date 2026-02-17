@@ -251,6 +251,17 @@ Set vcl file location via "-f"
 {{- else }}
 {{- $varnishArgs = append $varnishArgs (print "-f " (.Values.server.vclConfigPath )) }}
 {{- end}}
+{{/*
+set HTTP listening port via "-a"
+*/}}
+{{- if .Values.server.http.enabled }}
+  {{- if .Values.server.http.podIP }}
+  {{- $varnishArgs = append $varnishArgs (print "-a " "$(POD_IP):" (.Values.server.http.port)) }}
+  {{- else }}
+  {{- $varnishArgs = append $varnishArgs (print "-a " (.Values.server.http.address | default "0.0.0.0") ":" (.Values.server.http.port | default "80")) }}
+  {{- end }}
+{{- end }}
+
 
 {{- if eq (kindOf .Values.server.extraArgs) "string" }}
   {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
