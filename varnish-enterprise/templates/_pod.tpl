@@ -234,7 +234,7 @@ Declares the Varnish Enterprise container
 {{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
 {{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $varnishArgs := list "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
+{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 {{- if eq (kindOf .Values.server.extraArgs) "string" }}
   {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
@@ -350,10 +350,6 @@ Declares the Varnish Enterprise container
       {{- else }}
       value: {{ .Values.server.vclConfigPath | quote }}
       {{- end}}
-    - name: VARNISH_ADMIN_LISTEN_ADDRESS
-      value: {{ .Values.server.admin.address | quote }}
-    - name: VARNISH_ADMIN_LISTEN_PORT
-      value: {{ .Values.server.admin.port | quote }}
     - name: VARNISH_TTL
       value: {{ .Values.server.ttl | quote }}
     - name: VARNISH_MIN_THREADS
