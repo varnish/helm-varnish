@@ -314,11 +314,12 @@ Composing the $varnishArgs list or arguments
 {{/*
     Working directory
 */}}
-{{- $varnishArgs = append $varnishArgs (print "-n " (.Values.server.workDir | default "varnish")) }}
+{{- $varnishArgs = concat $varnishArgs (list "-n" (.Values.server.workDir | default "varnish")) }}
 {{/*
     TTL
 */}}
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
+{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 {{- if .Values.cluster.enabled }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
 {{- else }}
@@ -576,7 +577,7 @@ Declares the Varnish NCSA container
   {{- include "varnish-enterprise.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
   {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
-  args: {{- toYaml .Values.server.varnishncsa.extraArgs | nindent 4 }}
+  args: {{- toYaml ( concat (list "-n"  (.Values.server.workDir | default "varnish") ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.extraEnvs (not (empty .Values.server.varnishncsa.extraEnvs)) }}
   env:
@@ -591,7 +592,9 @@ Declares the Varnish NCSA container
       command:
         - /usr/bin/varnishncsa
         - -d
-        - -t 3
+        - -t3
+        - -n
+        - {{ (.Values.server.workDir | default "varnish") }}
     {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
@@ -600,7 +603,9 @@ Declares the Varnish NCSA container
       command:
         - /usr/bin/varnishncsa
         - -d
-        - -t 3
+        - -t3
+        - -n
+        - {{ (.Values.server.workDir | default "varnish") }}
     {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
@@ -609,7 +614,9 @@ Declares the Varnish NCSA container
       command:
         - /usr/bin/varnishncsa
         - -d
-        - -t 3
+        - -t3
+        - -n
+        - {{ (.Values.server.workDir | default "varnish") }}
     {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
