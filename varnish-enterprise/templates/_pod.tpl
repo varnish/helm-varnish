@@ -249,38 +249,6 @@ Composing the $varnishArgs list or arguments
 {{- else if not (eq $cmdfileConfig "") }}
   {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
 {{- end }}
-
-{{/*
-    Extra Listeners
-*/}}
-{{- range .Values.server.extraListens }}
-  {{- $extraArg := "" }}
-  {{- if .name }}
-    {{- $extraArg = print $extraArg .name "=" }}
-  {{- end }}
-  {{- if and .address .port }}
-    {{- $extraArg = print $extraArg .address ":" .port }}
-  {{- else if .port }}
-    {{- $extraArg = print $extraArg ":" .port }}
-  {{- else if .path }}
-    {{- $extraArg = print $extraArg .path }}
-    {{- if .user }}
-      {{- $extraArg = print $extraArg ",user=" .user }}
-    {{- end }}
-    {{- if .group }}
-      {{- $extraArg = print $extraArg ",group=" .group }}
-    {{- end }}
-    {{- if .mode }}
-      {{- $extraArg = print $extraArg ",mode=" .mode }}
-    {{- end }}
-  {{- else }}
-    {{ fail "Extra listens require either port or path: 'server.extraListens[].port' or 'server.extraListens[].path'" }}
-  {{- end }}
-  {{- if .proto }}
-    {{- $extraArg = print $extraArg "," .proto }}
-  {{- end }}
-  {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
-{{- end }}
 {{/*
     Parameter list
 */}}
@@ -383,6 +351,37 @@ Composing the $varnishArgs list or arguments
   {{- $varnishArgs = concat $varnishArgs .Values.server.extraArgs }}
 {{- else }}
   {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
+{{- end }}
+{{/*
+    Extra Listeners
+*/}}
+{{- range .Values.server.extraListens }}
+  {{- $extraArg := "" }}
+  {{- if .name }}
+    {{- $extraArg = print $extraArg .name "=" }}
+  {{- end }}
+  {{- if and .address .port }}
+    {{- $extraArg = print $extraArg .address ":" .port }}
+  {{- else if .port }}
+    {{- $extraArg = print $extraArg ":" .port }}
+  {{- else if .path }}
+    {{- $extraArg = print $extraArg .path }}
+    {{- if .user }}
+      {{- $extraArg = print $extraArg ",user=" .user }}
+    {{- end }}
+    {{- if .group }}
+      {{- $extraArg = print $extraArg ",group=" .group }}
+    {{- end }}
+    {{- if .mode }}
+      {{- $extraArg = print $extraArg ",mode=" .mode }}
+    {{- end }}
+  {{- else }}
+    {{ fail "Extra listens require either port or path: 'server.extraListens[].port' or 'server.extraListens[].path'" }}
+  {{- end }}
+  {{- if .proto }}
+    {{- $extraArg = print $extraArg "," .proto }}
+  {{- end }}
+  {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
 {{- end }}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
