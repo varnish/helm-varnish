@@ -120,12 +120,15 @@ server:
   # https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
   shareProcessNamespace: false
 
+  # The working directory of Varnish inside /var/lib/varnish.
+  workDir: "varnish"
+
   http:
     enabled: true
     port: 6081
     address: "0.0.0.0"
     # Set this to true to listen on podIP instead of above address (valueFrom.fieldRef.fieldPath: status.podIP)
-    podIP: false 
+    podIP: false
 
   tls:
     enabled: false
@@ -826,7 +829,7 @@ server:
               app.kubernetes.io/name: {{ include "varnish-enterprise.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
-  
+
   # Configures the Varnish NCSA sidecar.
   varnishncsa:
     enabled: true
