@@ -1139,11 +1139,11 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$object" |
         yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise").command |
+            .[4:8]' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "-p backend_idle_timeout=60 -p feature=+http2,+validate_headers" ]
+    [ "${actual}" == "[\"-p\",\"backend_idle_timeout=60\",\"-p\",\"feature=+http2,+validate_headers\"]" ]
 }
 
 @test "${kind}/extraArgs: not configured by default" {
@@ -1326,9 +1326,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_SECRET_FILE") | .value' |
+        yq -r -c '.command | index(["-S", "/etc/varnish/secret"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/secret" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-secret")' |
@@ -1365,9 +1365,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_SECRET_FILE") | .value' |
+        yq -r -c '.command | index(["-S", "/etc/varnish/secret"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/secret" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-secret")' |
@@ -1515,9 +1515,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/default.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = '/etc/varnish/default.vcl' ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-shared")' |
@@ -1578,9 +1578,9 @@ backend release-name {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/default.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/default.vcl" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-shared")' |
@@ -1642,9 +1642,9 @@ backend release-name {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/default.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/default.vcl" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-shared")' |
@@ -1732,9 +1732,9 @@ backend release-name {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/default.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/default.vcl" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-shared")' |
@@ -1828,9 +1828,9 @@ backend release-name {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/default.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/default.vcl" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-shared")' |
@@ -1925,9 +1925,9 @@ backend release-name {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/varnish.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/varnish.vcl" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-shared")' |
@@ -2032,9 +2032,9 @@ backend default {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/varnish.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/varnish.vcl" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -2071,9 +2071,9 @@ backend default {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/varnish.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = '/etc/varnish/varnish.vcl' ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -2108,9 +2108,9 @@ backend default {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_VCL_CONF") | .value' |
+        yq -r -c '.command | index(["-f", "/etc/varnish/varnish.vcl"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/varnish.vcl" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "varnish-vcl-tenant1")' |
@@ -2152,9 +2152,9 @@ vcl.use vcl_main
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+        yq -r -c '.command | index(["-I", "/etc/varnish/cmds.cli"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "-I /etc/varnish/cmds.cli" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
@@ -2187,9 +2187,9 @@ vcl.use vcl_main
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+        yq -r -c '.command | index(["-I", "/etc/varnish/cmdfile"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "-I /etc/varnish/cmdfile" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
@@ -3300,8 +3300,10 @@ env: {
     local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
     [ "${actual}" = "null" ]
 
-    local actual=$(echo "$container" | yq -r -c '.env[]? | select(.name == "VARNISH_EXTRA") | .value' | tee -a /dev/stderr)
-    [ "${actual}" == "-p shutdown_close=off -p shutdown_delay=120" ]
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "shutdown_close=off", "-p", "shutdown_delay=120"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != "null" ]
 }
 
 @test "${kind}/terminationGracePeriodSeconds: not enabled by default" {
@@ -3487,9 +3489,9 @@ env: {
     [ "${actual}" == '' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+        yq -r -c '.command | index(["-I", "/etc/varnish/shared/agent/cmds.cli"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = '-I /etc/varnish/shared/agent/cmds.cli' ]
+    [ "${actual}" != "null" ]
 
     local container=$(echo "$object" |
         yq -r -c '
@@ -3530,9 +3532,9 @@ env: {
     [ "${actual}" == '{"fieldRef":{"fieldPath":"metadata.name"}}' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+        yq -r -c '.command | index(["-I", "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = '-I /var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli' ]
+    [ "${actual}" != "null" ]
 
     local container=$(echo "$object" |
         yq -r -c '
@@ -3575,9 +3577,9 @@ env: {
     [ "${actual}" == 'release-name' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+        yq -r -c '.command | index(["-I", "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli"])' |
             tee -a /dev/stderr)
-    [ "${actual}" = '-I /var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli' ]
+    [ "${actual}" != "null" ]
 
     local container=$(echo "$object" |
         yq -r -c '
@@ -5561,10 +5563,10 @@ release-namespace: to-be-override
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
-            .args' |
+            .args| index(["--help])' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '["--help"]' ]
+    [ "${actual}" != "null" ]
 }
 
 @test "${kind}/varnishncsa/extraArgs: can be configured as string" {
@@ -5581,10 +5583,10 @@ release-namespace: to-be-override
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
-            .args' |
+            .args| index(["--help])' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '--help' ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/varnishncsa/image: inherit from varnish-enterprise by default" {
@@ -5663,7 +5665,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t 3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t3","-n","varnish"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be configured" {
@@ -5683,7 +5685,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t 3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t3","-n","varnish"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be disabled" {
@@ -5719,7 +5721,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t 3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t3","-n","varnish"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/livenessProbe: can be disabled" {
