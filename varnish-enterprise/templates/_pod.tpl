@@ -320,6 +320,9 @@ Declares the Varnish Enterprise container
 {{- if .Values.server.http.enabled }}
     {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
 {{- end}}
+{{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
+{{- end }}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
@@ -366,10 +369,6 @@ Declares the Varnish Enterprise container
       value: {{ .Values.server.http.address | quote }}
       {{- end }}
     {{- end }}
-   {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
-    - name: VARNISH_SECRET_FILE
-      value: /etc/varnish/secret
-   {{- end }}
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
