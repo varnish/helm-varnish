@@ -321,6 +321,7 @@ Composing the $varnishArgs list or arguments
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 {{- if .Values.cluster.enabled }}
+    {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
 {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
@@ -504,6 +505,7 @@ Composing the $varnishArgs list or arguments
     {{- end }}
     {{- end }}
     {{- if .Values.cluster.enabled }}
+    {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
     - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
       mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
       subPath: {{ $wrappedDefaultVCL | quote }}
