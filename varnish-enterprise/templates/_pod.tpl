@@ -290,11 +290,11 @@ Declares the Varnish Enterprise container
 {{/*
     Parameter list
 */}}
-{{- $varnishParams := merge (dict 
+{{- $varnishParams := merge (dict
     "thread_pool_min" (toString .Values.server.minThreads)
     "thread_pool_max" (toString .Values.server.maxThreads)
     "thread_pool_timeout" (toString .Values.server.threadTimeout)
-    ) 
+    )
     .Values.server.parameters
  }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
