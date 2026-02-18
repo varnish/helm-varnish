@@ -234,8 +234,24 @@ Declares the Varnish Enterprise container
 {{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
 {{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-n" "varnish" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
+{{/*
+Composing the $varnishArgs list or arguments
+*/}}
+{{- $varnishArgs := list "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
+{{/*
+Set working directory via "-n"
+*/}}
+{{- $varnishArgs = append $varnishArgs (print "-n " (.Values.server.workDir | default "varnish")) }}
+{{/*
+Set vcl file location via "-f"
+*/}}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
+{{- if .Values.cluster.enabled }}
+{{- $varnishArgs = append $varnishArgs (print "-f " (list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
+{{- else }}
+{{- $varnishArgs = append $varnishArgs (print "-f " (.Values.server.vclConfigPath )) }}
+{{- end}}
+
 {{- if eq (kindOf .Values.server.extraArgs) "string" }}
   {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
 {{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
