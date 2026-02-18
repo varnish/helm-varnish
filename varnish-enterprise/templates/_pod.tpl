@@ -265,8 +265,18 @@ set HTTP listening port via "-a"
   {{- $varnishArgs = append $varnishArgs (print "-a " (.Values.server.http.address | default "0.0.0.0") ":" (.Values.server.http.port | default "80")) }}
   {{- end }}
 {{- end }}
-
-
+{{/*
+set threading parameters via "-p"
+*/}}
+{{- $varnishArgs = append $varnishArgs (print "-p " "thread_pool_min=" (.Values.server.minThreads | default 50)) }}
+{{- $varnishArgs = append $varnishArgs (print "-p " "thread_pool_max=" (.Values.server.maxThreads | default 1000)) }}
+{{- $varnishArgs = append $varnishArgs (print "-p " "thread_pool_timeout=" (.Values.server.threadTimeout | default 120)) }}
+{{/*
+TLS config
+*/}}
+{{/*
+MSE config
+*/}}
 {{- if eq (kindOf .Values.server.extraArgs) "string" }}
   {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
 {{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
