@@ -215,7 +215,7 @@ Declares the probe for Varnish Enterprise pod
     port: {{ .Values.server.http.port }}
   {{- else if hasKey $probe "httpGet" }}
   httpGet:
-     port: {{ .Values.server.http.port }}
+    port: {{ .Values.server.http.port }}
     {{- if or (empty $probe.httpGet) (not (hasKey $probe.httpGet "path")) }}
     path: /
     {{- else }}
@@ -342,12 +342,16 @@ Composing the $varnishArgs list or arguments
 {{/*
     Extra arguments
 */}}
+{{- $varnishExtraEnvVar := ""}}
 {{- if eq (kindOf .Values.server.extraArgs) "string" }}
   {{- $extra := .Values.server.extraArgs | default "" | trim -}}
   {{- if $extra }}
+    {{- $varnishExtraEnvVar = trim (printf "%s %s" $varnishExtraEnvVar $extra) -}}
     {{- $varnishArgs = concat $varnishArgs ( regexSplit "\\s+" $extra -1 ) -}}
   {{- end }}
 {{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
+  {{- $joined := join " " .Values.server.extraArgs -}}
+  {{- $varnishExtraEnvVar = trim (printf "%s %s" $varnishExtraEnvVar $joined) -}}
   {{- $varnishArgs = concat $varnishArgs .Values.server.extraArgs }}
 {{- else }}
   {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
@@ -381,6 +385,7 @@ Composing the $varnishArgs list or arguments
   {{- if .proto }}
     {{- $extraArg = print $extraArg "," .proto }}
   {{- end }}
+  {{- $varnishExtraEnvVar = trim (printf "%s -a %s" $varnishExtraEnvVar $extraArg) -}}
   {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
 {{- end }}
 - name: {{ .Chart.Name }}
@@ -428,8 +433,21 @@ Composing the $varnishArgs list or arguments
       {{- else }}
       value: {{ .Values.server.http.address | quote }}
       {{- end }}
+    - name: VARNISH_LISTEN_PORT
+      value: {{ .Values.server.http.port | quote }}
     {{- end }}
-
+    - name: VARNISH_ADMIN_LISTEN_ADDRESS
+      value: {{ .Values.server.admin.address | quote }}
+    - name: VARNISH_ADMIN_LISTEN_PORT
+      value: {{ .Values.server.admin.port | quote }}
+    - name: VARNISH_TTL
+      value: {{ .Values.server.ttl | quote }}
+    - name: VARNISH_MIN_THREADS
+      value: {{ .Values.server.minThreads | quote }}
+    - name: VARNISH_MAX_THREADS
+      value: {{ .Values.server.maxThreads | quote }}
+    - name: VARNISH_THREAD_TIMEOUT
+      value: {{ .Values.server.threadTimeout | quote }}
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
@@ -466,7 +484,10 @@ Composing the $varnishArgs list or arguments
       value: "true"
     {{- end }}
     {{- end }}
-
+    {{- if and $varnishExtraEnvVar (not (eq $varnishExtraEnvVar "")) }}
+    - name: VARNISH_EXTRA
+      value: {{ $varnishExtraEnvVar | quote }}
+    {{- end }}
     {{- if and .Values.server.agent.enabled (not .Values.server.initAgent.enabled) }}
     {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
