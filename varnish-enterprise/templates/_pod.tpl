@@ -244,44 +244,52 @@ Declares the Varnish Enterprise container
   {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
 {{- end }}
 {{- if and .Values.server.agent.enabled (not (eq $cmdfileConfig "")) }}
-{{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
+  {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
 {{- else if .Values.server.agent.enabled }}
-{{- if .Values.server.initAgent.enabled }}
-{{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
-{{- else }}
-{{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
-{{- end }}
+  {{- if .Values.server.initAgent.enabled }}
+    {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
+  {{- end }}
 {{- else if not (eq $cmdfileConfig "") }}
-{{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
+  {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
 {{- end }}
+
+{{/*
+    Extra Listeners
+*/}}
 {{- range .Values.server.extraListens }}
-{{- $extraArg := "-a " }}
-{{- if .name }}
-{{- $extraArg = print $extraArg .name "=" }}
+  {{- $extraArg := "" }}
+  {{- if .name }}
+    {{- $extraArg = print $extraArg .name "=" }}
+  {{- end }}
+  {{- if and .address .port }}
+    {{- $extraArg = print $extraArg .address ":" .port }}
+  {{- else if .port }}
+    {{- $extraArg = print $extraArg ":" .port }}
+  {{- else if .path }}
+    {{- $extraArg = print $extraArg .path }}
+    {{- if .user }}
+      {{- $extraArg = print $extraArg ",user=" .user }}
+    {{- end }}
+    {{- if .group }}
+      {{- $extraArg = print $extraArg ",group=" .group }}
+    {{- end }}
+    {{- if .mode }}
+      {{- $extraArg = print $extraArg ",mode=" .mode }}
+    {{- end }}
+  {{- else }}
+    {{ fail "Extra listens require either port or path: 'server.extraListens[].port' or 'server.extraListens[].path'" }}
+  {{- end }}
+  {{- if .proto }}
+    {{- $extraArg = print $extraArg "," .proto }}
+  {{- end }}
+  {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
 {{- end }}
-{{- if and .address .port }}
-{{- $extraArg = print $extraArg .address ":" .port }}
-{{- else if .port }}
-{{- $extraArg = print $extraArg ":" .port }}
-{{- else if .path }}
-{{- $extraArg = print $extraArg .path }}
-{{- if .user }}
-{{- $extraArg = print $extraArg ",user=" .user }}
-{{- end }}
-{{- if .group }}
-{{- $extraArg = print $extraArg ",group=" .group }}
-{{- end }}
-{{- if .mode }}
-{{- $extraArg = print $extraArg ",mode=" .mode }}
-{{- end }}
-{{- else }}
-{{ fail "Extra listens require either port or path: 'server.extraListens[].port' or 'server.extraListens[].path'" }}
-{{- end }}
-{{- if .proto }}
-{{- $extraArg = print $extraArg "," .proto }}
-{{- end }}
-{{- $varnishArgs = append $varnishArgs $extraArg }}
-{{- end }}
+
+{{/*
+    Parameter list
+*/}}
 {{- $varnishParams := .Values.server.parameters | default dict }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
 {{- $varnishParams = merge (dict
@@ -296,9 +304,14 @@ Declares the Varnish Enterprise container
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
 {{- end }}
 {{- end }}
+
+{{/*
+    Thread pool parameters
+*/}}
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_min=" (toString .Values.server.minThreads))) }}
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_max=" (toString .Values.server.maxThreads))) }}
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_timeout="  (toString .Values.server.threadTimeout))) }}
+
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
 {{- if .Values.cluster.enabled }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
