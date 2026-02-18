@@ -299,6 +299,7 @@ Declares the Varnish Enterprise container
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_min=" (toString .Values.server.minThreads))) }}
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_max=" (toString .Values.server.maxThreads))) }}
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_timeout="  (toString .Values.server.threadTimeout))) }}
+{{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
 {{- if .Values.cluster.enabled }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote )) }}
 {{- else }}
@@ -353,8 +354,6 @@ Declares the Varnish Enterprise container
       value: {{ .Values.server.http.address | quote }}
       {{- end }}
     {{- end }}
-    - name: VARNISH_TTL
-      value: {{ .Values.server.ttl | quote }}
    {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
     - name: VARNISH_SECRET_FILE
       value: /etc/varnish/secret
