@@ -51,7 +51,7 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -c | wc -l | xargs | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
     local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
@@ -100,7 +100,7 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -c | wc -l | xargs | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
     local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-enterprise-clusterrole")' | tee -a /dev/stderr)
