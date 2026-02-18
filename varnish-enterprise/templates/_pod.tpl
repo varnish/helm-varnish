@@ -342,6 +342,32 @@ Composing the $varnishArgs list or arguments
 {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
     {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
 {{- end }}
+{{/*
+    MSE
+*/}}
+{{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
+  {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+{{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
+  {{- if and .Values.server.mse.memoryTarget (not (eq .Values.server.mse.memoryTarget "")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse.memoryTarget)))}}
+  {{- end }}
+  {{- if (not (empty $mseConfig)) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" (print "mse,/etc/varnish/mse.conf")) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" "mse") }}
+  {{- end }}
+{{- else if .Values.server.mse4.enabled }}
+  {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse4.memoryTarget))) }}
+  {{- end }}
+  {{- if (not (empty $mse4Config)) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" (print "mse4,/etc/varnish/mse4.conf")) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" "mse4") }}
+  {{- end }}
+{{- else }}
+{{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+{{- end }}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
