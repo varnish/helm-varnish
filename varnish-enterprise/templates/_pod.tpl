@@ -290,27 +290,26 @@ Declares the Varnish Enterprise container
 {{/*
     Parameter list
 */}}
-{{- $varnishParams := .Values.server.parameters | default dict }}
+{{- $varnishParams := merge (dict 
+    "thread_pool_min" (toString .Values.server.minThreads)
+    "thread_pool_max" (toString .Values.server.maxThreads)
+    "thread_pool_timeout" (toString .Values.server.threadTimeout)
+    ) 
+    .Values.server.parameters
+ }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
-{{- $varnishParams = merge (dict
+  {{- $varnishParams = merge (dict
     "shutdown_delay" .Values.server.delayedShutdown.shutdownDelay.seconds
     "shutdown_close" "off") $varnishParams }}
 {{- end }}
 {{- range $pKey, $pValue := $varnishParams }}
-{{- $pTp := kindOf $pValue }}
-{{- if eq $pTp "slice" }}
-{{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (join "," $pValue))) }}
-{{- else }}
-{{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
+  {{- $pTp := kindOf $pValue }}
+  {{- if eq $pTp "slice" }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (join "," $pValue))) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
+  {{- end }}
 {{- end }}
-{{- end }}
-
-{{/*
-    Thread pool parameters
-*/}}
-{{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_min=" (toString .Values.server.minThreads))) }}
-{{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_max=" (toString .Values.server.maxThreads))) }}
-{{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_timeout="  (toString .Values.server.threadTimeout))) }}
 
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
 {{- if .Values.cluster.enabled }}
@@ -370,7 +369,7 @@ Declares the Varnish Enterprise container
    {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
     - name: VARNISH_SECRET_FILE
       value: /etc/varnish/secret
-    {{- end }}
+   {{- end }}
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
