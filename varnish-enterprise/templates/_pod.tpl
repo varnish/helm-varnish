@@ -314,7 +314,7 @@ Composing the $varnishArgs list or arguments
 {{/*
     Working directory
 */}}
-{{- $varnishArgs = concat $varnishArgs (list "-n" (.Values.server.workDir | default "varnish")) }}
+{{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir | default "varnish")) }}
 {{/*
     TTL
 */}}
