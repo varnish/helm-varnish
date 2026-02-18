@@ -368,6 +368,16 @@ Composing the $varnishArgs list or arguments
 {{- else }}
 {{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
 {{- end }}
+{{/*
+    TLS
+*/}}
+{{- if .Values.server.tls.enabled }}
+  {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-A" "/etc/varnish/tls.conf") }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "https=$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.tls.port) ",https" )) }}
+  {{- end }}
+{{- end }}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
