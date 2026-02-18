@@ -331,9 +331,9 @@ Composing the $varnishArgs list or arguments
 */}}
 {{- if .Values.server.http.enabled }}
     {{- if .Values.server.http.podIP }}
-      {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(POD_IP)" ":" (toString .Values.server.http.port) )) }}
+      {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "http=$(POD_IP)" ":" (toString .Values.server.http.port) )) }}
     {{- else }}
-      {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
+      {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "http=$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
     {{- end }}
 {{- end}}
 {{/*
