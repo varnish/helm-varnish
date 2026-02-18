@@ -238,13 +238,6 @@ Declares the Varnish Enterprise container
 Composing the $varnishArgs list or arguments
 */}}
 {{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
-{{- if eq (kindOf .Values.server.extraArgs) "string" }}
-  {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
-{{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
-  {{- $varnishArgs = concat $varnishArgs .Values.server.extraArgs }}
-{{- else }}
-  {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
-{{- end }}
 {{- if and .Values.server.agent.enabled (not (eq $cmdfileConfig "")) }}
   {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
 {{- else if .Values.server.agent.enabled }}
@@ -377,6 +370,19 @@ Composing the $varnishArgs list or arguments
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "https=$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.tls.port) ",https" )) }}
   {{- end }}
+{{- end }}
+{{/*
+    Extra arguments
+*/}}
+{{- if eq (kindOf .Values.server.extraArgs) "string" }}
+  {{- $extra := .Values.server.extraArgs | default "" | trim -}}
+  {{- if $extra }}
+    {{- $varnishArgs = concat $varnishArgs ( regexSplit "\\s+" $extra -1 ) -}}
+  {{- end }}
+{{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
+  {{- $varnishArgs = concat $varnishArgs .Values.server.extraArgs }}
+{{- else }}
+  {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
 {{- end }}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
