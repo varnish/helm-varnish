@@ -234,7 +234,7 @@ Declares the Varnish Enterprise container
 {{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
 {{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
+{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-n" "varnish" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 {{- if eq (kindOf .Values.server.extraArgs) "string" }}
   {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
@@ -369,6 +369,7 @@ Declares the Varnish Enterprise container
       value: {{ .Values.server.http.address | quote }}
       {{- end }}
     {{- end }}
+
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
@@ -395,6 +396,7 @@ Declares the Varnish Enterprise container
     {{- else }}
     {{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- end }}
+
     {{- if .Values.server.tls.enabled }}
     {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
     - name: VARNISH_TLS_CFG
@@ -404,6 +406,7 @@ Declares the Varnish Enterprise container
       value: "true"
     {{- end }}
     {{- end }}
+
     {{- if and .Values.server.agent.enabled (not .Values.server.initAgent.enabled) }}
     {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
