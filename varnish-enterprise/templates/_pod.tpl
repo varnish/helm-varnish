@@ -291,11 +291,14 @@ Declares the Varnish Enterprise container
 {{- range $pKey, $pValue := $varnishParams }}
 {{- $pTp := kindOf $pValue }}
 {{- if eq $pTp "slice" }}
-{{- $varnishArgs = append $varnishArgs (print "-p " (snakecase $pKey) "=" (join "," $pValue)) }}
+{{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (join "," $pValue))) }}
 {{- else }}
-{{- $varnishArgs = append $varnishArgs (print "-p " (snakecase $pKey) "=" (toString $pValue)) }}
+{{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
 {{- end }}
 {{- end }}
+{{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_min=" (toString .Values.server.minThreads))) }}
+{{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_max=" (toString .Values.server.maxThreads))) }}
+{{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_timeout="  (toString .Values.server.threadTimeout))) }}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
@@ -352,13 +355,7 @@ Declares the Varnish Enterprise container
       {{- end}}
     - name: VARNISH_TTL
       value: {{ .Values.server.ttl | quote }}
-    - name: VARNISH_MIN_THREADS
-      value: {{ .Values.server.minThreads | quote }}
-    - name: VARNISH_MAX_THREADS
-      value: {{ .Values.server.maxThreads | quote }}
-    - name: VARNISH_THREAD_TIMEOUT
-      value: {{ .Values.server.threadTimeout | quote }}
-    {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
+   {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
     - name: VARNISH_SECRET_FILE
       value: /etc/varnish/secret
     {{- end }}
