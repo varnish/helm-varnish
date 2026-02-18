@@ -301,9 +301,9 @@ Declares the Varnish Enterprise container
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_timeout="  (toString .Values.server.threadTimeout))) }}
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
 {{- if .Values.cluster.enabled }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote )) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
 {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath | quote )) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
 {{- end}}
 {{- if .Values.server.http.enabled }}
     {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
