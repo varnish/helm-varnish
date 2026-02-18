@@ -299,6 +299,11 @@ Declares the Varnish Enterprise container
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_min=" (toString .Values.server.minThreads))) }}
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_max=" (toString .Values.server.maxThreads))) }}
 {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_timeout="  (toString .Values.server.threadTimeout))) }}
+{{- if .Values.cluster.enabled }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote )) }}
+{{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath | quote )) }}
+{{- end}}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
@@ -347,12 +352,6 @@ Declares the Varnish Enterprise container
     - name: VARNISH_LISTEN_PORT
       value: {{ .Values.server.http.port | quote }}
     {{- end }}
-    - name: VARNISH_VCL_CONF
-      {{- if .Values.cluster.enabled }}
-      value: {{ list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
-      {{- else }}
-      value: {{ .Values.server.vclConfigPath | quote }}
-      {{- end}}
     - name: VARNISH_TTL
       value: {{ .Values.server.ttl | quote }}
    {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
