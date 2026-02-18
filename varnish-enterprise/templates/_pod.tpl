@@ -304,6 +304,9 @@ Declares the Varnish Enterprise container
 {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath | quote )) }}
 {{- end}}
+{{- if .Values.server.http.enabled }}
+    {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
+{{- end}}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
@@ -340,17 +343,15 @@ Declares the Varnish Enterprise container
   {{- include "varnish-enterprise.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
   {{- include "varnish-enterprise.resources" (merge (dict "section" "server") .) | nindent 2 }}
   env:
+    {{- if .Values.server.http.enabled }}
     - name: VARNISH_LISTEN_ADDRESS
-    {{- if .Values.server.http.podIP }}
+      {{- if .Values.server.http.podIP }}
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    {{- else }}
+      {{- else }}
       value: {{ .Values.server.http.address | quote }}
-    {{- end }}
-    {{- if .Values.server.http.enabled }}
-    - name: VARNISH_LISTEN_PORT
-      value: {{ .Values.server.http.port | quote }}
+      {{- end }}
     {{- end }}
     - name: VARNISH_TTL
       value: {{ .Values.server.ttl | quote }}
