@@ -237,46 +237,7 @@ Declares the Varnish Enterprise container
 {{/*
 Composing the $varnishArgs list or arguments
 */}}
-{{- $varnishArgs := list "-F"}}
-{{/*
-Set admin interface via "-T"
-*/}}
-{{- $varnishArgs = append $varnishArgs (printf "-T %s:%v" (.Values.server.admin.address | default "127.0.0.1") (.Values.server.admin.port | default "6082")) }}
-{{/*
-Set working directory via "-n"
-*/}}
-{{- $varnishArgs = append $varnishArgs (print "-n " (.Values.server.workDir | default "varnish")) }}
-{{/*
-Set vcl file location via "-f"
-*/}}
-{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
-{{- if .Values.cluster.enabled }}
-{{- $varnishArgs = append $varnishArgs (print "-f " (list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
-{{- else }}
-{{- $varnishArgs = append $varnishArgs (print "-f " (.Values.server.vclConfigPath )) }}
-{{- end}}
-{{/*
-set HTTP listening port via "-a"
-*/}}
-{{- if .Values.server.http.enabled }}
-  {{- if .Values.server.http.podIP }}
-  {{- $varnishArgs = append $varnishArgs (print "-a " "$(POD_IP):" (.Values.server.http.port)) }}
-  {{- else }}
-  {{- $varnishArgs = append $varnishArgs (print "-a " (.Values.server.http.address | default "0.0.0.0") ":" (.Values.server.http.port | default "80")) }}
-  {{- end }}
-{{- end }}
-{{/*
-set threading parameters via "-p"
-*/}}
-{{- $varnishArgs = append $varnishArgs (print "-p " "thread_pool_min=" (.Values.server.minThreads | default 50)) }}
-{{- $varnishArgs = append $varnishArgs (print "-p " "thread_pool_max=" (.Values.server.maxThreads | default 1000)) }}
-{{- $varnishArgs = append $varnishArgs (print "-p " "thread_pool_timeout=" (.Values.server.threadTimeout | default 120)) }}
-{{/*
-TLS config
-*/}}
-{{/*
-MSE config
-*/}}
+{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
 {{- if eq (kindOf .Values.server.extraArgs) "string" }}
   {{- $varnishArgs = append $varnishArgs ( .Values.server.extraArgs | regexSplit "\\s+" ) }}
 {{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
@@ -327,7 +288,6 @@ MSE config
   {{- end }}
   {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
 {{- end }}
-
 {{/*
     Parameter list
 */}}
@@ -351,16 +311,32 @@ MSE config
     {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
   {{- end }}
 {{- end }}
-
+{{/*
+    Working directory
+*/}}
+{{- $varnishArgs = append $varnishArgs (print "-n " (.Values.server.workDir | default "varnish")) }}
+{{/*
+    TTL
+*/}}
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
 {{- if .Values.cluster.enabled }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
 {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
 {{- end}}
+{{/*
+    Listen address
+*/}}
 {{- if .Values.server.http.enabled }}
-    {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
+    {{- if .Values.server.http.podIP }}
+      {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(POD_IP)" ":" (toString .Values.server.http.port) )) }}
+    {{- else }}
+      {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
+    {{- end }}
 {{- end}}
+{{/*
+    Secret
+*/}}
 {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
     {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
 {{- end }}
