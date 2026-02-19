@@ -696,14 +696,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_ADMIN_LISTEN_ADDRESS") | .value' |
+        yq -r -c '.command | .[ index ("-T") + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "127.0.0.1" ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_ADMIN_LISTEN_PORT") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "6082" ]
+    [ "${actual}" == "127.0.0.1:6082" ]
 }
 
 @test "${kind}/admin: can be configured" {
@@ -724,14 +719,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_ADMIN_LISTEN_ADDRESS") | .value' |
+        yq -r -c '.command | .[ index ("-T") + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "0.0.0.0" ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_ADMIN_LISTEN_PORT") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "9999" ]
+    [ "${actual}" == "0.0.0.0:9999" ]
 }
 
 @test "${kind}/extraListens: can be configured" {
@@ -959,24 +949,24 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_TTL") | .value' |
+        yq -r -c '.command | .[ index ("-t" ) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "120" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_MIN_THREADS") | .value' |
+        yq -r -c '.command | .[ index (["-p", "thread_pool_min=50"] ) + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "50" ]
+    [ "${actual}" == "thread_pool_min=50" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_MAX_THREADS") | .value' |
+        yq -r -c '.command | .[ index (["-p", "thread_pool_max=1000"] ) + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "1000" ]
+    [ "${actual}" == "thread_pool_max=1000" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_THREAD_TIMEOUT") | .value' |
+        yq -r -c '.command | .[ index (["-p", "thread_pool_timeout=120"] ) + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "120" ]
+    [ "${actual}" == "thread_pool_timeout=120" ]
 }
 
 @test "${kind}/settings: can be configured" {
@@ -999,24 +989,24 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_TTL") | .value' |
+        yq -r -c '.command | .[ index ("-t" ) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "240" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_MIN_THREADS") | .value' |
+        yq -r -c '.command | .[ index (["-p", "thread_pool_min=300"] ) + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "300" ]
+    [ "${actual}" == "thread_pool_min=300" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_MAX_THREADS") | .value' |
+        yq -r -c '.command | .[ index (["-p", "thread_pool_max=5000"] ) + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "5000" ]
+    [ "${actual}" == "thread_pool_max=5000" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_THREAD_TIMEOUT") | .value' |
+        yq -r -c '.command | .[ index (["-p", "thread_pool_timeout=500"] ) + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "500" ]
+    [ "${actual}" == "thread_pool_timeout=500" ]
 }
 
 @test "${kind}/extraArgs: can be configured" {
