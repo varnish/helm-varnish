@@ -436,6 +436,43 @@ Composing the $varnishArgs list or arguments
     - name: VARNISH_LISTEN_PORT
       value: {{ .Values.server.http.port | quote }}
     {{- end }}
+    - name: VARNISH_ADMIN_LISTEN_ADDRESS
+      value: {{ .Values.server.admin.address | quote }}
+    - name: VARNISH_ADMIN_LISTEN_PORT
+      value: {{ .Values.server.admin.port | quote }}
+    - name: VARNISH_MIN_THREADS
+      value: {{ .Values.server.minThreads | quote }}
+    - name: VARNISH_MAX_THREADS
+      value: {{ .Values.server.maxThreads | quote }}
+    - name: VARNISH_THREAD_TIMEOUT
+      value: {{ .Values.server.threadTimeout | quote }}
+    {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
+    {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+    {{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
+    {{- if and .Values.server.mse.memoryTarget (not (eq .Values.server.mse.memoryTarget "")) }}
+    - name: MSE_MEMORY_TARGET
+      value: {{ .Values.server.mse.memoryTarget | quote }}
+    {{- end }}
+    {{- if (not (empty $mseConfig)) }}
+    - name: MSE_CONFIG
+      value: /etc/varnish/mse.conf
+    {{- end }}
+    {{- else if .Values.server.mse4.enabled }}
+    {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
+    - name: MSE_MEMORY_TARGET
+      value: {{ .Values.server.mse4.memoryTarget | quote }}
+    {{- end }}
+    {{- if (not (empty $mse4Config)) }}
+    - name: MSE4_CONFIG
+      value: /etc/varnish/mse4.conf
+    {{- else }}
+    - name: VARNISH_STORAGE_BACKEND
+      value: "mse4"
+    {{- end }}
+    {{- else }}
+    {{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+    {{- end }}
+
     {{- if .Values.server.tls.enabled }}
     {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
     - name: VARNISH_TLS_CFG

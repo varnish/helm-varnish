@@ -949,9 +949,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index ("-t" ) + 1]' |
+        yq -r -c '.command | index(["-t", "120"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "120" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.command | .[ index (["-p", "thread_pool_min=50"] ) + 1]' |
@@ -989,9 +989,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index ("-t" ) + 1]' |
+        yq -r -c '.command | index(["-t", "240"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "240" ]
+    [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.command | .[ index (["-p", "thread_pool_min=300"] ) + 1]' |
