@@ -921,21 +921,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
-<<<<<<< HEAD
-        yq -r -c '.command | .[ index (["-p", "thread_pool_min=50"] ) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "thread_pool_min=50" ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index (["-p", "thread_pool_max=1000"] ) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "thread_pool_max=1000" ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index (["-p", "thread_pool_timeout=120"] ) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "thread_pool_timeout=120" ]
-=======
         yq -r -c '.command | index(["-p", "thread_pool_min=50"])' |
             tee -a /dev/stderr)
     [ "${actual}" != 'null' ]
@@ -949,7 +934,6 @@ release-namespace: {{ .Release.Namespace }}
         yq -r -c '.command | index(["-p", "thread_pool_timeout=120"])' |
             tee -a /dev/stderr)
     [ "${actual}" != 'null' ]
->>>>>>> 1c0c661 (Remove a bunch of unncessary env vars)
 }
 
 @test "${kind}/settings: can be configured" {
@@ -977,21 +961,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
-<<<<<<< HEAD
-        yq -r -c '.command | .[ index (["-p", "thread_pool_min=300"] ) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "thread_pool_min=300" ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index (["-p", "thread_pool_max=5000"] ) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "thread_pool_max=5000" ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index (["-p", "thread_pool_timeout=500"] ) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "thread_pool_timeout=500" ]
-=======
         yq -r -c '.command | index(["-p", "thread_pool_min=300"])' |
             tee -a /dev/stderr)
     [ "${actual}" != 'null' ]
@@ -1005,7 +974,6 @@ release-namespace: {{ .Release.Namespace }}
         yq -r -c '.command | index(["-p", "thread_pool_timeout=500"])' |
             tee -a /dev/stderr)
     [ "${actual}" != 'null' ]
->>>>>>> 1c0c661 (Remove a bunch of unncessary env vars)
 }
 
 @test "${kind}/extraArgs: can be configured" {
