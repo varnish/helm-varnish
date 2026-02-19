@@ -400,14 +400,9 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == "8090" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_ADDRESS") | .value' |
+        yq -r -c '.command | index(["-a", "http=0.0.0.0:8090"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == '0.0.0.0' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_PORT") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "8090" ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/http: listen address can be configured" {
@@ -432,9 +427,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_ADDRESS") | .value' |
+        yq -r -c '.command | index(["-a", "http=127.0.0.2:8090"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == '127.0.0.2' ]
+    [ "${actual}" != 'null' ]
 }
 
 
@@ -460,9 +455,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_ADDRESS") | .valueFrom' |
+        yq -r -c '.command | index(["-a", "http=$(POD_IP):8090"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"fieldRef":{"fieldPath":"status.podIP"}}' ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/http: can be disabled" {
@@ -500,9 +495,9 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == "null" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_LISTEN_PORT")' |
+        yq -r -c '.command | index(["-a", "http=0.0.0.0:6081"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "" ]
+    [ "${actual}" == 'null' ]
 }
 
 @test "${kind}/http: cannot be disabled without disabling startupProbe" {
@@ -743,13 +738,10 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
-        yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-a", "proxy=:8088", "-a", "proxy-sock=/tmp/varnish-proxy.sock,user=www,group=www,mode=0700,PROXY"])' |
             tee -a /dev/stderr)
-
-    [ "${actual}" == "-a proxy=:8088,PROXY -a proxy-sock=/tmp/varnish-proxy.sock,user=www,group=www,mode=0700,PROXY" ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraListens: port can be configured partially" {
@@ -764,13 +756,10 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
-        yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-a", "althttp=:8888"])' |
             tee -a /dev/stderr)
-
-    [ "${actual}" == "-a althttp=:8888" ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraListens: path can be configured partially" {
@@ -785,32 +774,10 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
-        yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-a", "althttp=/tmp/varnish.sock"])' |
             tee -a /dev/stderr)
-
-    [ "${actual}" == "-a althttp=/tmp/varnish.sock" ]
-}
-
-@test "${kind}/extraListens: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || echo "---") |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == "" ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraEnvs: can be configured" {
@@ -954,6 +921,7 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
+<<<<<<< HEAD
         yq -r -c '.command | .[ index (["-p", "thread_pool_min=50"] ) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_min=50" ]
@@ -967,6 +935,21 @@ release-namespace: {{ .Release.Namespace }}
         yq -r -c '.command | .[ index (["-p", "thread_pool_timeout=120"] ) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_timeout=120" ]
+=======
+        yq -r -c '.command | index(["-p", "thread_pool_min=50"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "thread_pool_max=1000"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "thread_pool_timeout=120"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
+>>>>>>> 1c0c661 (Remove a bunch of unncessary env vars)
 }
 
 @test "${kind}/settings: can be configured" {
@@ -994,6 +977,7 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" != 'null' ]
 
     local actual=$(echo "$container" |
+<<<<<<< HEAD
         yq -r -c '.command | .[ index (["-p", "thread_pool_min=300"] ) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_min=300" ]
@@ -1007,6 +991,21 @@ release-namespace: {{ .Release.Namespace }}
         yq -r -c '.command | .[ index (["-p", "thread_pool_timeout=500"] ) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_timeout=500" ]
+=======
+        yq -r -c '.command | index(["-p", "thread_pool_min=300"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "thread_pool_max=5000"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "thread_pool_timeout=500"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
+>>>>>>> 1c0c661 (Remove a bunch of unncessary env vars)
 }
 
 @test "${kind}/extraArgs: can be configured" {
@@ -1020,13 +1019,15 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
+    local container=$(echo "$object" |
         yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "-p feature=+http2" ]
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "feature=+http2"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraArgs: can be configured as string" {
@@ -1040,13 +1041,15 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
+    local container=$(echo "$object" |
         yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "-p feature=+http2" ]
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "feature=+http2"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraArgs: can be configured with extraListens" {
@@ -1063,13 +1066,20 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
+    local container=$(echo "$object" |
         yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "-p feature=+http2 -a proxy=:8088,PROXY" ]
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "feature=+http2"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-a", "proxy=:8088,PROXY"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraArgs: can be configured as string with extraListens" {
@@ -1086,32 +1096,20 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
+    local container=$(echo "$object" |
         yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "-p feature=+http2 -a proxy=:8088,PROXY" ]
-}
-
-@test "${kind}/parameters: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || echo "---") |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "feature=+http2"])' |
             tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
 
-    [ "${actual}" == "" ]
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-a", "proxy=:8088,PROXY"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/parameters: can be configured" {
@@ -1127,32 +1125,20 @@ release-namespace: {{ .Release.Namespace }}
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
+    local container=$(echo "$object" |
         yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise").command |
-            .[4:8]' |
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "[\"-p\",\"backend_idle_timeout=60\",\"-p\",\"feature=+http2,+validate_headers\"]" ]
-}
-
-@test "${kind}/extraArgs: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || echo "---") |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -c '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_EXTRA") | .value' |
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "feature=+http2,+validate_headers"])' |
             tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
 
-    [ "${actual}" == "" ]
+    local actual=$(echo "$container" |
+        yq -r -c '.command | index(["-p", "backend_idle_timeout=60"])' |
+            tee -a /dev/stderr)
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraContainers: can be configured" {
@@ -3443,11 +3429,6 @@ env: {
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_EXTRA") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "" ]
 
     local actual=$(echo "$object" |
         yq -r -c '
