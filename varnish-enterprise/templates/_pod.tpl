@@ -348,14 +348,6 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs ( regexSplit "\\s+" $extra -1 ) -}}
   {{- end }}
 {{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
-<<<<<<< HEAD
-  {{- $joined := join " " .Values.server.extraArgs -}}
-  {{- $varnishExtraEnvVar = trim (printf "%s %s" $varnishExtraEnvVar $joined) -}}
-  {{- $varnishArgs = concat $varnishArgs .Values.server.extraArgs }}
-{{- else }}
-  {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
-{{- end -}}
-=======
   {{- range .Values.server.extraArgs }}
     {{- $item := . -}}
     {{- if eq (kindOf $item) "string" }}
@@ -367,7 +359,6 @@ Composing the $varnishArgs list or arguments
 {{- else if .Values.server.extraArgs }}
   {{- fail (printf "Validation failed: .Values.server.extraArgs should be a string or list, not a %s" (kindOf .Values.server.extraArgs)) }}
 {{- end }}
->>>>>>> 1c0c661 (Remove a bunch of unncessary env vars)
 {{/*
     Extra Listeners
 */}}
