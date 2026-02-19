@@ -5822,7 +5822,7 @@ release-namespace: to-be-override
 @test "${kind}/extraManifests: do nothing with templated string without checksum flag" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/extraManifests-1-values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     data: |
@@ -5851,7 +5851,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/extraManifests-1-values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
@@ -5872,7 +5872,7 @@ EOF
 @test "${kind}/extraManifests: can be configured with checksum with templated string" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/extraManifests-2-values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     checksum: true
@@ -5903,7 +5903,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/extraManifests-2-values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
@@ -5924,7 +5924,7 @@ EOF
 @test "${kind}/extraManifests: do nothing with yaml object without checksum flag" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/extraManifests-3-values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     data:
@@ -5953,7 +5953,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/extraManifests-3-values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
@@ -5974,7 +5974,7 @@ EOF
 @test "${kind}/extraManifests: can be configured with checksum with yaml object" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/extraManifests-4-values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     checksum: true
@@ -6005,7 +6005,7 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/extraManifests-4-values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
