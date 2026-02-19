@@ -336,7 +336,7 @@ Composing the $varnishArgs list or arguments
   {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
     {{- $varnishArgs = concat $varnishArgs (list "-A" "/etc/varnish/tls.conf") }}
   {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "https=%s:%s,https" (toString .Values.server.tls.address) (toString .Values.server.tls.port) )) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-a" ( printf "https=%s:%s,https" (toString .Values.server.tls.address) (toString .Values.server.tls.port) )) }}
   {{- end }}
 {{- end -}}
 {{/*
