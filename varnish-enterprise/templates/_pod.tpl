@@ -436,18 +436,6 @@ Composing the $varnishArgs list or arguments
     - name: VARNISH_LISTEN_PORT
       value: {{ .Values.server.http.port | quote }}
     {{- end }}
-    - name: VARNISH_ADMIN_LISTEN_ADDRESS
-      value: {{ .Values.server.admin.address | quote }}
-    - name: VARNISH_ADMIN_LISTEN_PORT
-      value: {{ .Values.server.admin.port | quote }}
-    - name: VARNISH_TTL
-      value: {{ .Values.server.ttl | quote }}
-    - name: VARNISH_MIN_THREADS
-      value: {{ .Values.server.minThreads | quote }}
-    - name: VARNISH_MAX_THREADS
-      value: {{ .Values.server.maxThreads | quote }}
-    - name: VARNISH_THREAD_TIMEOUT
-      value: {{ .Values.server.threadTimeout | quote }}
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
