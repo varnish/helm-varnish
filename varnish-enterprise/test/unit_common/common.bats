@@ -696,9 +696,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index ("-T") + 1]' |
+        yq -r -c '.command | index(["-T", "127.0.0.1:6082"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "127.0.0.1:6082" ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/admin: can be configured" {
@@ -719,9 +719,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index ("-T") + 1]' |
+        yq -r -c '.command | index(["-T", "0.0.0.0:9999"])' |
             tee -a /dev/stderr)
-    [ "${actual}" == "0.0.0.0:9999" ]
+    [ "${actual}" != 'null' ]
 }
 
 @test "${kind}/extraListens: can be configured" {
