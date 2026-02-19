@@ -132,7 +132,7 @@ server:
 
   tls:
     enabled: false
-
+    address: "0.0.0.0"
     # Sets the port to listen to. Must be the same port as in config (see below).
     # Use the default TLS port 6443 if no config is provided.
     port: 6443
