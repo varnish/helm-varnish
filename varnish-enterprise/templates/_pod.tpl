@@ -922,8 +922,38 @@ Declares the Varnish extra container
 Declares the Varnish init containers
 */}}
 {{- define "varnish-enterprise.initContainers" -}}
-{{- if or (and .Values.server.agent.enabled .Values.server.initAgent.enabled) .Values.server.extraInitContainers }}
+{{- if or (and .Values.server.agent.enabled .Values.server.initAgent.enabled) .Values.server.extraInitContainers .Values.server.mse.persistence.enabled .Values.server.mse4.persistence.enabled}}
 initContainers:
+{{- if .Values.server.mse.persistence.enabled }}
+  - name: mse-config
+    {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    command:
+     - /bin/busybox
+     - sh
+     - -c
+     - mkfs.mse -c /etc/varnish/mse.conf || mkfs.mse -c /etc/varnish/mse.conf -r
+    volumeMounts:
+     - name: {{ .Release.Name }}-mse
+       mountPath: {{ .Values.server.mse.persistence.mountPath }}
+     - name: {{ .Release.Name }}-config-mse
+       mountPath: /etc/varnish/mse.conf
+       subPath: mse.conf
+{{- end }}
+{{- if .Values.server.mse4.persistence.enabled }}
+  - name: mse4-config
+    {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    command:
+     - mkfs.mse4
+     - -c
+     - /etc/varnish/mse4.conf
+     - configure
+    volumeMounts:
+     - name: {{ .Release.Name }}-mse4
+       mountPath: {{ .Values.server.mse4.persistence.mountPath }}
+     - name: {{ .Release.Name }}-config-mse4
+       mountPath: /etc/varnish/mse4.conf
+       subPath: mse4.conf
+{{- end }}
 {{- if and .Values.server.agent.enabled .Values.server.initAgent.enabled }}
   - name: init-agent
     image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ .Values.global.initContainer.tag | default "1.36"}}
