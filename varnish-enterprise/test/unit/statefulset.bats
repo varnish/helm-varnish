@@ -146,6 +146,42 @@ rollingUpdate:
     [ "${actual}" = '{"name":"release-name-mse","mountPath":"/var/lib/mse"}' ]
 }
 
+@test "StatefulSet/mse/persistence: initContainer is not defined by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.kind=StatefulSet' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
+              .name'  | tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+}
+
+@test "StatefulSet/mse/persistence: initContainer is defined when persistence is configured" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.kind=StatefulSet' \
+        --set 'server.mse.enabled=true' \
+        --set 'server.mse.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
+              .name'  | tee -a /dev/stderr)
+    [ "${actual}" = 'mse-config' ]
+}
+
 @test "StatefulSet/mse/persistence: can be enabled with custom values" {
     cd "$(chart_dir)"
 
@@ -235,6 +271,43 @@ rollingUpdate:
             .volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-mse4","mountPath":"/var/lib/mse4"}' ]
+}
+
+@test "StatefulSet/mse4/persistence: initContainer is not defined by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.kind=StatefulSet' \
+        --set 'server.mse4.enabled=true' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
+              .name'  | tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+}
+
+@test "StatefulSet/mse4/persistence: initContainer is defined when persistence is configured" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.kind=StatefulSet' \
+        --set 'server.mse4.enabled=true' \
+        --set 'server.mse4.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
+              .name'  | tee -a /dev/stderr)
+    [ "${actual}" = 'mse4-config' ]
 }
 
 @test "StatefulSet/mse4/persistence: can be enabled with custom values" {
