@@ -233,7 +233,7 @@ Declares the Varnish Enterprise container
 {{- $mseConfig := include "varnish-enterprise.mseConfig" . }}
 {{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
 {{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
+{{- $defaultVcl := osBase .Values.server.vclConfigPath -}}
 {{/*
 Composing the $varnishArgs list or arguments
 */}}
@@ -248,7 +248,7 @@ Composing the $varnishArgs list or arguments
   {{- end }}
 {{- else if not (eq $cmdfileConfig "") }}
   {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
-{{- end }}
+{{- end -}}
 {{/*
     Parameter list
 */}}
@@ -263,7 +263,7 @@ Composing the $varnishArgs list or arguments
   {{- $varnishParams = merge (dict
     "shutdown_delay" .Values.server.delayedShutdown.shutdownDelay.seconds
     "shutdown_close" "off") $varnishParams }}
-{{- end }}
+{{- end -}}
 {{- range $pKey, $pValue := $varnishParams }}
   {{- $pTp := kindOf $pValue }}
   {{- if eq $pTp "slice" }}
@@ -271,7 +271,7 @@ Composing the $varnishArgs list or arguments
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
   {{- end }}
-{{- end }}
+{{- end -}}
 {{/*
     Working directory
 */}}
@@ -286,7 +286,7 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
 {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
-{{- end}}
+{{- end -}}
 {{/*
     Listen address
 */}}
@@ -296,13 +296,13 @@ Composing the $varnishArgs list or arguments
     {{- else }}
       {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "http=$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.http.port) )) }}
     {{- end }}
-{{- end}}
+{{- end -}}
 {{/*
     Secret
 */}}
 {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
     {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
-{{- end }}
+{{- end -}}
 {{/*
     MSE
 */}}
@@ -328,7 +328,7 @@ Composing the $varnishArgs list or arguments
   {{- end }}
 {{- else }}
 {{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
-{{- end }}
+{{- end -}}
 {{/*
     TLS
 */}}
@@ -338,7 +338,7 @@ Composing the $varnishArgs list or arguments
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "https=$(VARNISH_LISTEN_ADDRESS)" ":" (toString .Values.server.tls.port) ",https" )) }}
   {{- end }}
-{{- end }}
+{{- end -}}
 {{/*
     Extra arguments
 */}}
@@ -355,7 +355,7 @@ Composing the $varnishArgs list or arguments
   {{- $varnishArgs = concat $varnishArgs .Values.server.extraArgs }}
 {{- else }}
   {{- fail (printf "Validation failed: .Values.server.extraArgs should be a list, not a %s" (kindOf .Values.server.extraArgs)) }}
-{{- end }}
+{{- end -}}
 {{/*
     Extra Listeners
 */}}
@@ -387,7 +387,7 @@ Composing the $varnishArgs list or arguments
   {{- end }}
   {{- $varnishExtraEnvVar = trim (printf "%s -a %s" $varnishExtraEnvVar $extraArg) -}}
   {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
-{{- end }}
+{{- end -}}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
