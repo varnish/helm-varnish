@@ -436,10 +436,6 @@ Composing the $varnishArgs list or arguments
     - name: VARNISH_LISTEN_PORT
       value: {{ .Values.server.http.port | quote }}
     {{- end }}
-    - name: VARNISH_ADMIN_LISTEN_ADDRESS
-      value: {{ .Values.server.admin.address | quote }}
-    - name: VARNISH_ADMIN_LISTEN_PORT
-      value: {{ .Values.server.admin.port | quote }}
     - name: VARNISH_MIN_THREADS
       value: {{ .Values.server.minThreads | quote }}
     - name: VARNISH_MAX_THREADS
