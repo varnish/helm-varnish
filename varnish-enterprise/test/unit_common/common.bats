@@ -3662,6 +3662,16 @@ env: {
         yq -r -c '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_PORT") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == "9999" ]
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | .[ index ("-T") + 1]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "0.0.0.0:9999" ]
 }
 
 @test "${kind}/agent: can be enabled with external secret" {
