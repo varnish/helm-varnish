@@ -2801,7 +2801,7 @@ podAntiAffinity:
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "MSE_MEMORY_TARGET") | .value' |
+            .command[] | select(match("memory_target")) | split("=")[1]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "80%" ]
@@ -2820,7 +2820,7 @@ podAntiAffinity:
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "MSE_MEMORY_TARGET") | .value' |
+            .command[] | select(match("memory_target")) | split("=")[1]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "" ]
@@ -2885,7 +2885,7 @@ env: {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "MSE_CONFIG") | .value' |
+        yq -r -c '.command | .[ index("-s") + 1 ] | split(",")[1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "/etc/varnish/mse.conf" ]
 
@@ -2921,9 +2921,9 @@ env: {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "MSE_CONFIG")' |
+        yq -r -c '.command | .[ index("-s") + 1 ] | split(",")[1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "" ]
+    [ "${actual}" == "null" ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-mse")' |
@@ -2960,7 +2960,7 @@ env: {
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_STORAGE_BACKEND") | .value' |
+             .command | .[ index("-s") + 1 ] | split(",")[0]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "mse4" ]
@@ -2980,7 +2980,7 @@ env: {
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "VARNISH_STORAGE_BACKEND") | .value' |
+             .command | .[ index("-s") + 1 ] | split(",")[0]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "mse4" ]
@@ -3016,7 +3016,7 @@ env: {
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "MSE_MEMORY_TARGET") | .value' |
+            .command[] | select(match("memory_target")) | split("=")[1]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "80%" ]
@@ -3036,7 +3036,7 @@ env: {
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
-            .env[]? | select(.name == "MSE_MEMORY_TARGET") | .value' |
+            .command[] | select(match("memory_target")) | split("=")[1]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "" ]
@@ -3098,7 +3098,7 @@ env: {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "MSE4_CONFIG") | .value' |
+        yq -r -c '.command | .[ index("-s") + 1 ] | split(",")[1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "/etc/varnish/mse4.conf" ]
 
@@ -3135,9 +3135,9 @@ env: {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "MSE4_CONFIG")' |
+        yq -r -c '.command | .[ index("-s") + 1 ] | split(",")[1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == "" ]
+    [ "${actual}" == "null" ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-mse4")' |
