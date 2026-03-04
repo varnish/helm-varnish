@@ -1289,7 +1289,7 @@ server:
       # Sets the tag for the Varnish Controller image for use with varnishncsa. The Varnish
       # Controller image used here must be the same version as the Varnish Controller.
       # Since this is a different image from Varnish Enterprise, using "-" is unsupported.
-      tag: "7.3.1-6.0.16r9"
+      tag: "7.3.3-6.0.16r10"
 
     # An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition
     # of a Container.
@@ -1431,7 +1431,7 @@ server:
         image:
           repository: "quay.io/varnish-software/varnish-controller-cli"
           pullPolicy: IfNotPresent
-          tag: "7.3.1"
+          tag: "7.3.3"
 
         # Configures Varnish Controller Agent to use external Varnish Controller endpoint.
         # Ignored if `server.vcli.internal.enabled` is set to `true`.
