@@ -239,9 +239,17 @@ server:
   secretFile: ""
   #secretFile: "files/secret"
 
-  # Sets the command to execute.
+  # Sets the command executable to use. If provided, the default executable path
+  # will be overridden but the arguments will be preserved unless "server.args" is set.
   command: []
-  #command: ["/entrypoint.sh","-d"]
+  #command: ["/usr/sbin/varnishd"]
+
+  # Sets the command arguments to use. If not set, the generated arguments will be used.
+  #
+  # When `server.command` is set to a custom entrypoint, set this to `args: []` to
+  # prevent generated arguments from being passed (or make sure pass $@ to varnishd
+  # to use generated arguments).
+  #args: []
 
   # Configures the path to the default VCL configuration file. This configuration
   # option also affects the location where `vclConfig` is mounted (if present).

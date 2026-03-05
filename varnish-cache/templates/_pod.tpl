@@ -257,6 +257,11 @@ Declares the Varnish Cache container
     {{- toYaml .Values.server.command | nindent 4 }}
     {{- else }}
     - /usr/sbin/varnishd
+    {{- end }}
+  args:
+    {{- if hasKey .Values.server "args" }}
+    {{- toYaml .Values.server.args | nindent 4 }}
+    {{- else }}
     - -F
     {{- if .Values.server.http.enabled }}
     - -a
