@@ -120,10 +120,10 @@ server:
   #       group       The group for the socket
   #
   extraListens: []
-  #  - name: proxy
-  #    address: "127.0.0.1"
-  #    port: 8088
-  #    proto: "PROXY"
+  # - name: proxy
+  #   address: "127.0.0.1"
+  #   port: 8088
+  #   proto: "PROXY"
   #
   #  - name: proxy-sock
   #    path: "/tmp/varnish-proxy.sock"
@@ -135,11 +135,11 @@ server:
   # Sets the extra environment variables for Varnish Cache. Can be set as either
   # an object, a list, or a templated string.
   extraEnvs: {}
-  #extraEnvs:
+  # extraEnvs:
   #  MY_ENV_VAR: value
   #  MY_OTHER_ENV_VAR: other_value
   #
-  #extraEnvs:
+  # extraEnvs:
   #  - name: MY_ENV_VAR
   #    value: value
   #  - name: MY_OTHER_ENV_VAR
@@ -148,7 +148,7 @@ server:
   #        name: my-config-map
   #        value: my-key
   #
-  #extraEnvs: |
+  # extraEnvs: |
   #  - name: RELEASE_NAMESPACE
   #    value: {{ .Release.Namespace }}
 
@@ -170,7 +170,7 @@ server:
   # Sets the extra configuration args for Varnish.
   extraArgs: []
 
-  # Declares the extra init containers to run before Varnish pods are run. Can be set
+  # Declares the extra init containers to run before Varnish containers are run. Can be set
   # as either a YAML list or a templated string.
   extraInitContainers: []
   #extraInitContainers: |
@@ -181,7 +181,7 @@ server:
   #    command:
   #      - sh -c "sleep 3600"
 
-  # Declares the extra sidecar containers to run with Varnish pods. Can be set as either
+  # Declares the extra containers to run within Varnish pods. Can be set as either
   # a YAML list or a templated string.
   extraContainers: []
   #extraContainers: |
@@ -334,7 +334,7 @@ server:
     # Configures the behavior. Can be set as a template string or a
     # YAML map.
     behavior: ""
-    #behavior: |
+    # behavior: |
     #  scaleDown:
     #    stabilizationWindowSeconds: 120
     #    policies:
@@ -354,7 +354,7 @@ server:
     # Configures the autoscaling metrics. Can be set as a templated string
     # or a YAML map.
     metrics: ""
-    #metrics: |
+    # metrics: |
     #  - type: Resource
     #    resource:
     #      name: cpu
@@ -515,15 +515,6 @@ server:
     # Sets the consecutive failures until a probe is considered a failure.
     failureThreshold: 3
 
-  # Configures a probe for checking if a Pod has started.
-  startupProbe: {}
-  #startupProbe:
-  #  initialDelaySeconds: 5
-  #  periodSeconds: 10
-  #  timeoutSeconds: 1
-  #  successThreshold: 1
-  #  failureThreshold: 3
-
   # Configures a probe for checking if a Pod can continue to receive a connection.
   livenessProbe:
     # Sets the initial delays in seconds until the first probe is performed.
@@ -554,7 +545,7 @@ server:
   # Configures a node selector to assign a Pod. Can be set as a templated string
   # or a YAML map.
   nodeSelector: {}
-  #nodeSelector:
+  # nodeSelector:
   #  beta.kubernetes.io/arch: amd64
 
   # Configures toleration settings for a Pod. Can be set as a templated string
