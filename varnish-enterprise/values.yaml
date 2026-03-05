@@ -222,6 +222,9 @@ server:
   # Type: boolean
   shareProcessNamespace: false
 
+  # The working directory of Varnish inside /var/lib/varnish.
+  workDir: "varnish"
+
   http:
     # Configures Varnish to listen for HTTP traffic.
     # Type: boolean
@@ -233,11 +236,8 @@ server:
     # Configures the address to listen to for HTTP.
     # Availability: v1.7.4
     address: "0.0.0.0"
-    # Set this to `true` to listen to podIP instead of a specific address. Note that setting this might make
-    # port forwarding with kubectl more challenging.
-    # Availability: v1.7.4
-    # Type: boolean
-    podIP: false 
+    # Set this to true to listen on podIP instead of above address (valueFrom.fieldRef.fieldPath: status.podIP)
+    podIP: false
 
   tls:
     # Configures Varnish to enable [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/)
@@ -248,12 +248,9 @@ server:
     # This port is used by HTTP service as a targetPort.
     # Type: boolean
     enabled: false
-
-    # Configures the TCP port on which Varnish will listen for HTTPS traffic. This port is used for Varnish
-    # to bind to within a container. To change the port exposed via service to other applications, see
-    # `server.service.https.port`.
-    #
-    # This port is used by HTTPS service as a targetPort.
+    address: "0.0.0.0"
+    # Sets the port to listen to. Must be the same port as in config (see below).
+    # Use the default TLS port 6443 if no config is provided.
     port: 6443
 
     # The TLS configuration. See also [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/) for configuration options. It is recommended
@@ -335,8 +332,12 @@ server:
   # Sets the threshold in seconds where idle threads are destroyed after least this duration.
   threadTimeout: 120
 
-  # Sets the extra arguments to the Varnish Enterprise.
-  # Type: array of strings
+  # Sets the command for Varnish Enterprise
+  # Note that by overriding this, you will also override parameters, listening ports, etc.
+  # See: https://varnish-cache.org/docs/6.0/reference/varnishd.html
+  command: []
+
+  # Sets the extra configuration args for Varnish Enterprise.
   extraArgs: []
 
   # Sets the Varnish Enterprise parameters (i.e. the -p argument).
@@ -1076,7 +1077,7 @@ server:
               app.kubernetes.io/name: {{ include "varnish-enterprise.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
-  
+
   # Configures the Varnish NCSA sidecar.
   varnishncsa:
     # Enables HTTP request logging via [varnishncsa](https://varnish-cache.org/docs/6.0/reference/varnishncsa.html).

@@ -233,68 +233,163 @@ Declares the Varnish Enterprise container
 {{- $mseConfig := include "varnish-enterprise.mseConfig" . }}
 {{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
 {{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $tp := kindOf .Values.server.extraArgs }}
-{{- $varnishExtraArgs := list }}
-{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
-{{- if eq $tp "string" }}
-{{- $varnishExtraArgs = append $varnishExtraArgs .Values.server.extraArgs }}
-{{- else }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs .Values.server.extraArgs }}
-{{- end }}
+{{- $defaultVcl := osBase .Values.server.vclConfigPath -}}
+{{/*
+Composing the $varnishArgs list or arguments
+*/}}
+{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
 {{- if and .Values.server.agent.enabled (not (eq $cmdfileConfig "")) }}
-{{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
+  {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
 {{- else if .Values.server.agent.enabled }}
-{{- if .Values.server.initAgent.enabled }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
-{{- else }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
-{{- end }}
+  {{- if .Values.server.initAgent.enabled }}
+    {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
+  {{- end }}
 {{- else if not (eq $cmdfileConfig "") }}
-{{- $varnishExtraArgs = concat $varnishExtraArgs (list "-I" .Values.server.cmdfileConfigPath) }}
-{{- end }}
-{{- range .Values.server.extraListens }}
-{{- $extraArg := "-a " }}
-{{- if .name }}
-{{- $extraArg = print $extraArg .name "=" }}
-{{- end }}
-{{- if and .address .port }}
-{{- $extraArg = print $extraArg .address ":" .port }}
-{{- else if .port }}
-{{- $extraArg = print $extraArg ":" .port }}
-{{- else if .path }}
-{{- $extraArg = print $extraArg .path }}
-{{- if .user }}
-{{- $extraArg = print $extraArg ",user=" .user }}
-{{- end }}
-{{- if .group }}
-{{- $extraArg = print $extraArg ",group=" .group }}
-{{- end }}
-{{- if .mode }}
-{{- $extraArg = print $extraArg ",mode=" .mode }}
-{{- end }}
-{{- else }}
-{{ fail "Extra listens require either port or path: 'server.extraListens[].port' or 'server.extraListens[].path'" }}
-{{- end }}
-{{- if .proto }}
-{{- $extraArg = print $extraArg "," .proto }}
-{{- end }}
-{{- $varnishExtraArgs = append $varnishExtraArgs $extraArg }}
-{{- end }}
-{{- $varnishParams := .Values.server.parameters | default dict }}
+  {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
+{{- end -}}
+{{/*
+    Parameter list
+*/}}
+{{- $varnishParams := merge (dict
+    "thread_pool_min" (toString .Values.server.minThreads)
+    "thread_pool_max" (toString .Values.server.maxThreads)
+    "thread_pool_timeout" (toString .Values.server.threadTimeout)
+    )
+    .Values.server.parameters
+ }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
-{{- $varnishParams = merge (dict
+  {{- $varnishParams = merge (dict
     "shutdown_delay" .Values.server.delayedShutdown.shutdownDelay.seconds
     "shutdown_close" "off") $varnishParams }}
-{{- end }}
+{{- end -}}
 {{- range $pKey, $pValue := $varnishParams }}
-{{- $pTp := kindOf $pValue }}
-{{- if eq $pTp "slice" }}
-{{- $varnishExtraArgs = append $varnishExtraArgs (print "-p " (snakecase $pKey) "=" (join "," $pValue)) }}
+  {{- $pTp := kindOf $pValue }}
+  {{- if eq $pTp "slice" }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (join "," $pValue))) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
+  {{- end }}
+{{- end -}}
+{{/*
+    Working directory
+*/}}
+{{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir | default "varnish")) }}
+{{/*
+    TTL
+*/}}
+{{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
+{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
+{{- if .Values.cluster.enabled }}
+    {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
 {{- else }}
-{{- $varnishExtraArgs = append $varnishExtraArgs (print "-p " (snakecase $pKey) "=" (toString $pValue)) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
+{{- end -}}
+{{/*
+    Listen address
+*/}}
+{{- if .Values.server.http.enabled }}
+    {{- if .Values.server.http.podIP }}
+      {{- $varnishArgs = concat $varnishArgs (list "-a" ( print "http=$(POD_IP)" ":" (toString .Values.server.http.port) )) }}
+    {{- else }}
+      {{- $varnishArgs = concat $varnishArgs (list "-a" ( printf "http=%s:%s" (toString .Values.server.http.address) (toString .Values.server.http.port) )) }}
+    {{- end }}
+{{- end -}}
+{{/*
+    Secret
+*/}}
+{{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
+{{- end -}}
+{{/*
+    MSE
+*/}}
+{{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
+  {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+{{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
+  {{- if and .Values.server.mse.memoryTarget (not (eq .Values.server.mse.memoryTarget "")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse.memoryTarget)))}}
+  {{- end }}
+  {{- if (not (empty $mseConfig)) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" (print "mse,/etc/varnish/mse.conf")) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" "mse") }}
+  {{- end }}
+{{- else if .Values.server.mse4.enabled }}
+  {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse4.memoryTarget))) }}
+  {{- end }}
+  {{- if (not (empty $mse4Config)) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" (print "mse4,/etc/varnish/mse4.conf")) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" "mse4") }}
+  {{- end }}
+{{- else }}
+{{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+{{- end -}}
+{{/*
+    TLS
+*/}}
+{{- if .Values.server.tls.enabled }}
+  {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-A" "/etc/varnish/tls.conf") }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-a" ( printf "https=%s:%s,https" (toString .Values.server.tls.address) (toString .Values.server.tls.port) )) }}
+  {{- end }}
+{{- end -}}
+{{/*
+    Extra arguments
+*/}}
+{{- if eq (kindOf .Values.server.extraArgs) "string" }}
+  {{- $extra := .Values.server.extraArgs | default "" | trim -}}
+  {{- if $extra }}
+    {{- $varnishArgs = concat $varnishArgs ( regexSplit "\\s+" $extra -1 ) -}}
+  {{- end }}
+{{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
+  {{- range .Values.server.extraArgs }}
+    {{- $item := . -}}
+    {{- if eq (kindOf $item) "string" }}
+      {{- $varnishArgs = concat $varnishArgs (regexSplit "\\s+" $item -1) -}}
+    {{- else }}
+      {{- $varnishArgs = concat $varnishArgs (list $item) -}}
+    {{- end }}
+  {{- end }}
+{{- else if .Values.server.extraArgs }}
+  {{- fail (printf "Validation failed: .Values.server.extraArgs should be a string or list, not a %s" (kindOf .Values.server.extraArgs)) }}
 {{- end }}
-{{- end }}
+{{/*
+    Extra Listeners
+*/}}
+{{- range .Values.server.extraListens }}
+  {{- $extraArg := "" }}
+  {{- if .name }}
+    {{- $extraArg = print $extraArg .name "=" }}
+  {{- end }}
+  {{- if and .address .port }}
+    {{- $extraArg = print $extraArg .address ":" .port }}
+  {{- else if .port }}
+    {{- $extraArg = print $extraArg ":" .port }}
+  {{- else if .path }}
+    {{- $extraArg = print $extraArg .path }}
+    {{- if .user }}
+      {{- $extraArg = print $extraArg ",user=" .user }}
+    {{- end }}
+    {{- if .group }}
+      {{- $extraArg = print $extraArg ",group=" .group }}
+    {{- end }}
+    {{- if .mode }}
+      {{- $extraArg = print $extraArg ",mode=" .mode }}
+    {{- end }}
+  {{- else }}
+    {{ fail "Extra listens require either port or path: 'server.extraListens[].port' or 'server.extraListens[].path'" }}
+  {{- end }}
+  {{- if .proto }}
+    {{- $extraArg = print $extraArg "," .proto }}
+  {{- end }}
+  {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
+{{- end -}}
 - name: {{ .Chart.Name }}
   {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
   {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
@@ -331,40 +426,6 @@ Declares the Varnish Enterprise container
   {{- include "varnish-enterprise.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
   {{- include "varnish-enterprise.resources" (merge (dict "section" "server") .) | nindent 2 }}
   env:
-    - name: VARNISH_LISTEN_ADDRESS
-    {{- if .Values.server.http.podIP }}
-      valueFrom:
-        fieldRef:
-          fieldPath: status.podIP
-    {{- else }}
-      value: {{ .Values.server.http.address | quote }}
-    {{- end }}
-    {{- if .Values.server.http.enabled }}
-    - name: VARNISH_LISTEN_PORT
-      value: {{ .Values.server.http.port | quote }}
-    {{- end }}
-    - name: VARNISH_VCL_CONF
-      {{- if .Values.cluster.enabled }}
-      value: {{ list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
-      {{- else }}
-      value: {{ .Values.server.vclConfigPath | quote }}
-      {{- end}}
-    - name: VARNISH_ADMIN_LISTEN_ADDRESS
-      value: {{ .Values.server.admin.address | quote }}
-    - name: VARNISH_ADMIN_LISTEN_PORT
-      value: {{ .Values.server.admin.port | quote }}
-    - name: VARNISH_TTL
-      value: {{ .Values.server.ttl | quote }}
-    - name: VARNISH_MIN_THREADS
-      value: {{ .Values.server.minThreads | quote }}
-    - name: VARNISH_MAX_THREADS
-      value: {{ .Values.server.maxThreads | quote }}
-    - name: VARNISH_THREAD_TIMEOUT
-      value: {{ .Values.server.threadTimeout | quote }}
-    {{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
-    - name: VARNISH_SECRET_FILE
-      value: /etc/varnish/secret
-    {{- end }}
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
@@ -391,6 +452,7 @@ Declares the Varnish Enterprise container
     {{- else }}
     {{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- end }}
+
     {{- if .Values.server.tls.enabled }}
     {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
     - name: VARNISH_TLS_CFG
@@ -411,10 +473,6 @@ Declares the Varnish Enterprise container
           fieldPath: metadata.name
     {{- end }}
     {{- end }}
-    {{- if (not (empty $varnishExtraArgs)) }}
-    - name: VARNISH_EXTRA
-      value: {{ $varnishExtraArgs | join " " | quote }}
-    {{- end }}
     {{- if .Values.cluster.enabled }}
     - name: VARNISH_CLUSTER_TOKEN
       valueFrom:
@@ -427,6 +485,13 @@ Declares the Varnish Enterprise container
           key: token
     {{- end }}
     {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
+  {{- if gt (len .Values.server.command) 0 }}
+  command:
+    {{- .Values.server.command | toYaml | nindent 4 }}
+  {{- else }}
+  command:
+    {{- $varnishArgs | toYaml | nindent 4 }}
+  {{- end }}
   volumeMounts:
     - name: {{ .Release.Name }}-varnish-vsm
       mountPath: /var/lib/varnish
@@ -476,6 +541,7 @@ Declares the Varnish Enterprise container
     {{- end }}
     {{- end }}
     {{- if .Values.cluster.enabled }}
+    {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
     - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
       mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
       subPath: {{ $wrappedDefaultVCL | quote }}
@@ -549,7 +615,7 @@ Declares the Varnish NCSA container
   {{- include "varnish-enterprise.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
   {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
-  args: {{- toYaml .Values.server.varnishncsa.extraArgs | nindent 4 }}
+  args: {{- toYaml ( concat (list "-n"  (.Values.server.workDir | default "varnish") ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.extraEnvs (not (empty .Values.server.varnishncsa.extraEnvs)) }}
   env:
@@ -564,7 +630,9 @@ Declares the Varnish NCSA container
       command:
         - /usr/bin/varnishncsa
         - -d
-        - -t 3
+        - -t3
+        - -n
+        - {{ (.Values.server.workDir | default "varnish") }}
     {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
@@ -573,7 +641,9 @@ Declares the Varnish NCSA container
       command:
         - /usr/bin/varnishncsa
         - -d
-        - -t 3
+        - -t3
+        - -n
+        - {{ (.Values.server.workDir | default "varnish") }}
     {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
@@ -582,7 +652,9 @@ Declares the Varnish NCSA container
       command:
         - /usr/bin/varnishncsa
         - -d
-        - -t 3
+        - -t3
+        - -n
+        - {{ (.Values.server.workDir | default "varnish") }}
     {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
@@ -863,8 +935,38 @@ Declares the Varnish extra container
 Declares the Varnish init containers
 */}}
 {{- define "varnish-enterprise.initContainers" -}}
-{{- if or (and .Values.server.agent.enabled .Values.server.initAgent.enabled) .Values.server.extraInitContainers }}
+{{- if or (and .Values.server.agent.enabled .Values.server.initAgent.enabled) .Values.server.extraInitContainers .Values.server.mse.persistence.enabled .Values.server.mse4.persistence.enabled}}
 initContainers:
+{{- if .Values.server.mse.persistence.enabled }}
+  - name: mse-config
+    {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    command:
+     - /bin/busybox
+     - sh
+     - -c
+     - mkfs.mse -c /etc/varnish/mse.conf || mkfs.mse -c /etc/varnish/mse.conf -r
+    volumeMounts:
+     - name: {{ .Release.Name }}-mse
+       mountPath: {{ .Values.server.mse.persistence.mountPath }}
+     - name: {{ .Release.Name }}-config-mse
+       mountPath: /etc/varnish/mse.conf
+       subPath: mse.conf
+{{- end }}
+{{- if .Values.server.mse4.persistence.enabled }}
+  - name: mse4-config
+    {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    command:
+     - mkfs.mse4
+     - -c
+     - /etc/varnish/mse4.conf
+     - configure
+    volumeMounts:
+     - name: {{ .Release.Name }}-mse4
+       mountPath: {{ .Values.server.mse4.persistence.mountPath }}
+     - name: {{ .Release.Name }}-config-mse4
+       mountPath: /etc/varnish/mse4.conf
+       subPath: mse4.conf
+{{- end }}
 {{- if and .Values.server.agent.enabled .Values.server.initAgent.enabled }}
   - name: init-agent
     image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ .Values.global.initContainer.tag | default "1.36"}}
