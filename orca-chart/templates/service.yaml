@@ -12,11 +12,17 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+      {{- if and (.Values.service.http.nodePort) (eq .Values.service.type "NodePort") }}
+      nodePort: {{ .Values.service.http.nodePort }}
+      {{- end }}
     {{- if .Values.service.https.enabled }}
     - port: {{ .Values.service.https.port | default 443 }}
       targetPort: https
       protocol: TCP
       name: https
+      {{- if and (.Values.service.https.nodePort) (eq .Values.service.type "NodePort") }}
+      nodePort: {{ .Values.service.https.nodePort }}
+      {{- end }}
     {{- end }}
   selector:
     {{- include "helm.selectorLabels" . | nindent 4 }}
