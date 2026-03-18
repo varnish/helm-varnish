@@ -48,6 +48,7 @@ orca:
 | `autoscaling.maxReplicas` | int | `100` |  |
 | `autoscaling.minReplicas` | int | `1` |  |
 | `autoscaling.targetCPUUtilizationPercentage` | int | `80` |  |
+| `extraEnvs` | object | `{}` | Set extra environment variables |
 | `fullnameOverride` | string | `""` |  |
 | `image.pullPolicy` | string | `"IfNotPresent"` |  |
 | `image.repository` | string | `"docker.io/varnish/orca"` | |

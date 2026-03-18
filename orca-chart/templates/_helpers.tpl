@@ -81,3 +81,20 @@ It also supports storing TLS certificates in secrets before mounting them into t
   {{- end -}}
   {{- toYaml $cfg -}}
 {{- end -}}
+
+{{/*
+Sets extra envs from either an array, an object, or a string.
+*/}}
+{{- define "orca.toEnv" }}
+{{- $tp := kindOf .envs }}
+{{- if eq $tp "string" }}
+{{- tpl .envs . | trim | nindent 0 }}
+{{- else if eq $tp "map" }}
+{{- range $k, $v := .envs -}}
+- name: {{ $k | quote }}
+  value: {{ $v | quote }}
+{{- end }}
+{{- else if eq $tp "slice" }}
+{{- .envs | toYaml }}
+{{- end }}
+{{- end }}
