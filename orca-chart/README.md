@@ -75,6 +75,7 @@ orca:
 | `service.type` | string | `"ClusterIP"` |  |
 | `service.http.enabled` | bool | `true` | Enable or disable the HTTP service |
 | `service.http.port` | int | `80` | The service port for HTTP traffic |
+| `service.http.nodePort` | int | empty | The service port to assign on the node in case of a `"NodePort"` service type. Leave empty for a random port number. |
 | `service.https.enabled` | bool | `false` | Enable or disable the HTTPS service |
 | `service.https.port` | int | `443` | The service port for HTTPS traffic |
 | `serviceAccount.annotations` | object | `{}` | |
