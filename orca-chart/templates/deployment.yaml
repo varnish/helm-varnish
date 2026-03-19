@@ -56,6 +56,10 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if and .Values.extraEnvs (not (empty .Values.extraEnvs)) }}
+          env:
+            {{- include "orca.toEnv" (merge (dict "envs" .Values.extraEnvs) .) | nindent 12 }}
+          {{- end }}
           volumeMounts:
           - name: orca-config
             mountPath: /etc/varnish-supervisor/config.yaml

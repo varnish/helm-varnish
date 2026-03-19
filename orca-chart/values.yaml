@@ -105,6 +105,23 @@ volumeMounts: []
 #   mountPath: "/etc/foo"
 #   readOnly: true
 
+# Sets the extra environment variables for Varnish Orca. Can be set as either
+# an object, a list, or a templated string.
+extraEnvs: {}
+#extraEnvs:
+#  MY_ENV_VAR: value
+#  MY_OTHER_ENV_VAR: other_value
+#
+#extraEnvs:
+#  - name: MY_ENV_VAR
+#    value: value
+#  - name: MY_OTHER_ENV_VAR
+#    valueFrom:
+#      configMapRef:
+#        name: my-config-map
+#        value: my-key
+#
+
 nodeSelector: {}
 
 tolerations: []
