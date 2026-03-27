@@ -401,7 +401,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-a") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-a") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-a","http=$(VARNISH_HTTP_ADDRESS):8090,HTTP"]' ]
 
@@ -447,7 +447,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-a")' |
+            .args | . as $cmd | index("-a")' |
             tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
@@ -531,7 +531,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-T","127.0.0.1:6082"]' ]
 }
@@ -555,7 +555,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-T","0.0.0.0:9999"]' ]
 }
@@ -582,7 +582,7 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+5]' |
+            .args | . as $cmd | indices("-a")[1:] | map(. as $i | $cmd[$i:$i+2]) | flatten' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-a","proxy=:8088,PROXY","-a","proxy-sock=/tmp/varnish-proxy.sock,user=www,group=www,mode=0700,PROXY"]' ]
@@ -603,7 +603,7 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | indices("-a")[1:] | map(. as $i | $cmd[$i:$i+2]) | flatten' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-a","althttp=:8888"]' ]
@@ -624,7 +624,7 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | indices("-a")[1:] | map(. as $i | $cmd[$i:$i+2]) | flatten' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-a","althttp=/tmp/varnish.sock"]' ]
@@ -786,25 +786,25 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-t","120"]' ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("thread_pool_min=50") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("thread_pool_min=50") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_min=50" ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("thread_pool_max=1000") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("thread_pool_max=1000") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_max=1000" ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("thread_pool_timeout=120") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("thread_pool_timeout=120") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_timeout=120" ]
 }
@@ -830,25 +830,25 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-t","240"]' ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("thread_pool_min=300") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("thread_pool_min=300") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_min=300" ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("thread_pool_max=5000") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("thread_pool_max=5000") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_max=5000" ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("thread_pool_timeout=500") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("thread_pool_timeout=500") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_timeout=500" ]
 }
@@ -868,7 +868,7 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-p","feature=+http2"]' ]
@@ -888,7 +888,7 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | index("-d") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("-d") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "-d" ]
@@ -916,13 +916,13 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-a","proxy=:8088,PROXY"]' ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-p","feature=+http2"]' ]
 }
@@ -948,13 +948,13 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-a","proxy=:8088,PROXY"]' ]
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-d") as $i | $cmd[$i]' |
+            .args | . as $cmd | index("-d") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == '-d' ]
 }
@@ -972,7 +972,7 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$(echo "$object" |
         yq -r -c '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a") | length' |
+            .args | . as $cmd | indices("-a") | length' |
             tee -a /dev/stderr)
     [ "${actual}" == "1" ]
 }
@@ -1139,7 +1139,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-S","/etc/varnish/secret"]' ]
 
@@ -1179,7 +1179,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-S","/etc/varnish/secret"]' ]
 
@@ -1326,7 +1326,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
@@ -1380,7 +1380,7 @@ backend release-name {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
@@ -1435,7 +1435,7 @@ backend release-name {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
@@ -1516,7 +1516,7 @@ backend release-name {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
@@ -1603,7 +1603,7 @@ backend release-name {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
@@ -1691,7 +1691,7 @@ backend release-name {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/varnish.vcl"]' ]
 
@@ -1794,7 +1794,7 @@ backend default {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
 
@@ -1834,7 +1834,7 @@ backend default {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
 
@@ -1872,7 +1872,7 @@ backend default {
 
     local actual=$(echo "$container" |
         yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            .args | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
 
@@ -1916,7 +1916,7 @@ vcl.use vcl_main
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | . as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
+        yq -r -c '.args | . as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-I","/etc/varnish/cmds.cli"]' ]
 
@@ -1951,7 +1951,7 @@ vcl.use vcl_main
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | . as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
+        yq -r -c '.args | . as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-I","/etc/varnish/cmdfile"]' ]
 
@@ -3367,4 +3367,119 @@ EOF
         yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
             tee -a /dev/stderr)
     [ "${actual}" = '7823f0c2674876bd60bca3d758cb320a0ea13090ec80d5aead53cd9ce0e1a53f' ]
+}
+
+@test "${kind}/command: default has /usr/sbin/varnishd command with expected args" {
+    cd "$(chart_dir)"
+    
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+        
+    local command=$(echo "$object" |
+        yq -r -c '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .command' |
+            tee -a /dev/stderr)
+    [ "${command}" = '["/usr/sbin/varnishd"]' ]
+    
+    local args=$(echo "$object" |
+        yq -r '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .args' |
+            tee -a /dev/stderr)
+    [[ "${args}" == *"-F"* ]]
+    [[ "${args}" == *"http=\$(VARNISH_HTTP_ADDRESS):6081,HTTP"* ]]
+    [[ "${args}" == *"-f"* ]]
+    [[ "${args}" == *"/etc/varnish/default.vcl"* ]]
+}
+
+@test "${kind}/command: can override command without affecting args" {
+    cd "$(chart_dir)"
+    
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.command[0]=/custom/path/varnishd' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+        
+    local command=$(echo "$object" |
+        yq -r -c '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .command' |
+            tee -a /dev/stderr)
+    [ "${command}" = '["/custom/path/varnishd"]' ]
+    
+    local args=$(echo "$object" |
+        yq -r '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .args' |
+            tee -a /dev/stderr)
+    [[ "${args}" == *"-F"* ]]
+    [[ "${args}" == *"http=\$(VARNISH_HTTP_ADDRESS):6081,HTTP"* ]]
+    [[ "${args}" == *"-f"* ]]
+    [[ "${args}" == *"/etc/varnish/default.vcl"* ]]
+}
+
+@test "${kind}/command: can override args without affecting command" {
+    cd "$(chart_dir)"
+    
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.args[0]=-F' \
+        --set 'server.args[1]=-f' \
+        --set 'server.args[2]=/custom/path/default.vcl' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+        
+    local command=$(echo "$object" |
+        yq -r -c '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .command' |
+            tee -a /dev/stderr)
+    [ "${command}" = '["/usr/sbin/varnishd"]' ]
+    
+    local args=$(echo "$object" |
+        yq -r -c '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .args' |
+            tee -a /dev/stderr)
+    [ "${args}" = '["-F","-f","/custom/path/default.vcl"]' ]
+}
+
+@test "${kind}/command: can override both command and args" {
+    cd "$(chart_dir)"
+    
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.command[0]=/custom/path/varnishd' \
+        --set 'server.args[0]=-d' \
+        --set 'server.args[1]=-f' \
+        --set 'server.args[2]=/custom/path/default.vcl' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+        
+    local command=$(echo "$object" |
+        yq -r -c '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .command' |
+            tee -a /dev/stderr)
+    [ "${command}" = '["/custom/path/varnishd"]' ]
+    
+    local args=$(echo "$object" |
+        yq -r -c '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .args' |
+            tee -a /dev/stderr)
+    [ "${args}" = '["-d","-f","/custom/path/default.vcl"]' ]
+}
+
+@test "${kind}/command: empty args array is respected" {
+    cd "$(chart_dir)"
+    
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.args=[]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+    
+    local args=$(echo "$object" |
+        yq -r -c '.spec.template.spec.containers[] | select(.name == "varnish-cache") | .args' |
+            tee -a /dev/stderr)
+    [ "${args}" = '[]' ]
 }

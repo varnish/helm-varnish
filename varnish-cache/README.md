@@ -608,6 +608,20 @@ server:
     key: varnish-secret
 ```
 
+**server.command**
+
+- Type: array of strings
+- Default: `[]`
+
+Sets the command executable to use. If provided, the default executable path will be overridden. See also `server.args`.
+
+**server.args**
+
+- Type: array of strings
+- Required: no
+
+Sets the command arguments to use. If not set, the generated command arguments will be used. To prevent any generated arguments from being passed, set `server.args` to `[]`.
+
 **server.vclConfig**
 
 - Type: template string
