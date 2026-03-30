@@ -335,8 +335,13 @@ server:
   # Sets the threshold in seconds where idle threads are destroyed after least this duration.
   threadTimeout: 120
 
-  # Sets the extra arguments to the Varnish Enterprise.
+  # Sets the command for Varnish Enterprise
+  # Note that by overriding this, you will also override parameters, listening ports, etc.
   # Type: array of strings
+  # See: https://varnish-cache.org/docs/6.0/reference/varnishd.html
+  command: []
+
+  # Sets the extra configuration args for Varnish Enterprise.
   extraArgs: []
 
   # Sets the Varnish Enterprise parameters (i.e. the -p argument).
