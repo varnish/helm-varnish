@@ -259,6 +259,10 @@ server:
     # This port is used by HTTPS service as a targetPort.
     port: 6443
 
+    # Configures the address on which Varnish will listen for HTTPS traffic.
+    # Type: template string
+    address: "0.0.0.0"
+
     # The TLS configuration. See also [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/) for configuration options. It is recommended
     # to reference to a port in a configuration using `{{ .Values.server.tls.port }}` template string for
     # services integration.
