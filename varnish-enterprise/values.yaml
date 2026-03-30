@@ -222,6 +222,9 @@ server:
   # Type: boolean
   shareProcessNamespace: false
 
+  # The working directory of Varnish inside /var/lib/varnish.
+  workDir: "varnish"
+
   http:
     # Configures Varnish to listen for HTTP traffic.
     # Type: boolean
@@ -1081,7 +1084,7 @@ server:
               app.kubernetes.io/name: {{ include "varnish-enterprise.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
-  
+
   # Configures the Varnish NCSA sidecar.
   varnishncsa:
     # Enables HTTP request logging via [varnishncsa](https://varnish-cache.org/docs/6.0/reference/varnishncsa.html).
