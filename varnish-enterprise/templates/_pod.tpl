@@ -275,7 +275,7 @@ Composing the $varnishArgs list or arguments
 {{/*
     Working directory
 */}}
-{{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir | default "varnish")) }}
+{{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir)) }}
 {{/*
     TTL
 */}}
@@ -713,6 +713,8 @@ Declares the Varnish Controller Agent container
       value: {{ .Values.server.admin.address | quote }}
     - name: VARNISH_CONTROLLER_VARNISH_ADMIN_PORT
       value: {{ .Values.server.admin.port | quote }}
+    - name: VARNISH_CONTROLLER_VARNISH_NAME
+      value: {{ (toString .Values.server.workDir) | quote }}
     {{- if .Values.server.http.enabled }}
     - name: VARNISH_CONTROLLER_VARNISH_PORT
       value: {{ .Values.server.http.port | quote }}
