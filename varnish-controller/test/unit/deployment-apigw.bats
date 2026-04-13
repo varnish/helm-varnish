@@ -633,6 +633,27 @@ rollingUpdate:
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .startupProbe' | tee -a /dev/stderr)
 
+    [ "${actual}" == '{"httpGet":{"path":"/healthy?check=nats","port":8092},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+}
+
+@test "Deployment/apigw/startupProbe: can be enabled without management" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'apigw.startupProbe.initialDelaySeconds=10' \
+        --set 'apigw.startupProbe.periodSeconds=20' \
+        --set 'apigw.startupProbe.timeoutSeconds=2' \
+        --set 'apigw.startupProbe.successThreshold=2' \
+        --set 'apigw.startupProbe.failureThreshold=6' \
+        --set 'apigw.mgmt.enabled=false' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-apigw.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "apigw") |
+            .startupProbe' | tee -a /dev/stderr)
+
     [ "${actual}" == '{"tcpSocket":{"port":8002},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
@@ -653,7 +674,23 @@ rollingUpdate:
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .readinessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"tcpSocket":{"port":8002},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"httpGet":{"path":"/healthy?check=nats","port":8092},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+}
+
+@test "Deployment/apigw/readinessProbe: is enabled as TCP without management" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'apigw.mgmt.enabled=false' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-apigw.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "apigw") |
+            .readinessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"tcpSocket":{"port":8002},"failureThreshold":3,"initialDelaySeconds":5,"periodSeconds":10,"successThreshold":1,"timeoutSeconds":1}' ]
 }
 
 @test "Deployment/apigw/readinessProbe: can be disabled" {
@@ -689,7 +726,23 @@ rollingUpdate:
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .livenessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"tcpSocket":{"port":8002},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"httpGet":{"path":"/healthy","port":8092},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+}
+
+@test "Deployment/apigw/livenessProbe: is enabled as TCP without management" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'apigw.mgmt.enabled=false' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-apigw.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "apigw") |
+            .livenessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"tcpSocket":{"port":8002},"failureThreshold":3,"initialDelaySeconds":30,"periodSeconds":10,"successThreshold":1,"timeoutSeconds":5}' ]
 }
 
 @test "Deployment/apigw/livenessProbe: can be disabled" {

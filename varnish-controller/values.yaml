@@ -198,6 +198,14 @@ apigw:
     # APIGW must be connected via the port defined in the pod (i.e., 8002).
     port: 8080
 
+  # Configures the management API
+  mgmt:
+    # Enables or disables the management API
+    enabled: true
+
+    # Sets the port of the management API
+    port: 8092
+
   # Sets the extra environment variables for Varnish Controller APIGW.
   # Can be set as either an object, a list, or a templated string.
   extraEnvs: {}
@@ -457,6 +465,58 @@ brainz:
   # Configures toleration settings for a Pod. Can be set as a templated string
   # or a YAML list.
   tolerations: []
+
+  # Configures the management API
+  mgmt:
+    # Enables or disables the management API
+    enabled: true
+
+    # Sets the port of the management API
+    port: 8092
+
+  # Configures a probe for checking if a Pod has started.
+  startupProbe: {}
+  #startupProbe:
+  #  initialDelaySeconds: 5
+  #  periodSeconds: 10
+  #  timeoutSeconds: 1
+  #  successThreshold: 1
+  #  failureThreshold: 3
+
+  # Configures a probe for checking if a Pod is ready to receive a connection.
+  readinessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 5
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 1
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
+  # Configures a probe for checking if a Pod can continue to receive a connection.
+  livenessProbe:
+    # Sets the initial delays in seconds until the first probe is performed.
+    initialDelaySeconds: 30
+
+    # Sets the interval in seconds between each probes.
+    periodSeconds: 10
+
+    # Sets the timeout in seconds probe is considered timed out.
+    timeoutSeconds: 5
+
+    # Sets the consecutive successes until a probe is considered a success.
+    successThreshold: 1
+
+    # Sets the consecutive failures until a probe is considered a failure.
+    failureThreshold: 3
+
 
   # Configures an affinity for a Pod. Can be set as a templated string or
   # a YAML map. By default, require Varnish to be deployed only on a node

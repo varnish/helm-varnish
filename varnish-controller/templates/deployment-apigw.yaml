@@ -32,12 +32,35 @@ spec:
         - name: apigw
           {{- include "varnish-controller.securityContext" (merge (dict "section" "apigw") .) | nindent 10 }}
           {{- include "varnish-controller.image" (merge (dict "base" .Values.global.controller.image "image" .Values.apigw.image) .) | nindent 10 }}
-          {{- if and .Values.apigw.startupProbe (not (empty .Values.apigw.startupProbe)) }}
+      {{- if ( .Values.apigw.mgmt.enabled ) }}
+        {{- if and .Values.apigw.startupProbe (not (empty .Values.apigw.startupProbe)) }}
+          startupProbe:
+            httpGet:
+              path: /healthy?check=nats
+              port: {{ .Values.apigw.mgmt.port | int }}
+            {{- toYaml .Values.apigw.startupProbe | nindent 12 }}
+        {{- end }}
+        {{- if and .Values.apigw.readinessProbe (not (empty .Values.apigw.readinessProbe)) }}
+          readinessProbe:
+            httpGet:
+              path: /healthy?check=nats
+              port: {{ .Values.apigw.mgmt.port | int }}
+            {{- toYaml .Values.apigw.readinessProbe | nindent 12 }}
+        {{- end }}
+        {{- if and .Values.apigw.livenessProbe (not (empty .Values.apigw.livenessProbe)) }}
+          livenessProbe:
+            httpGet:
+              path: /healthy
+              port: {{ .Values.apigw.mgmt.port | int }}
+            {{- toYaml .Values.apigw.livenessProbe | nindent 12 }}
+        {{- end }}
+      {{- else }}
           startupProbe:
             tcpSocket:
               port: 8002
+        {{- if and .Values.apigw.startupProbe (not (empty .Values.apigw.startupProbe)) }}
             {{- toYaml .Values.apigw.startupProbe | nindent 12 }}
-          {{- end }}
+        {{- end }}
           {{- if and .Values.apigw.readinessProbe (not (empty .Values.apigw.readinessProbe)) }}
           readinessProbe:
             tcpSocket:
@@ -50,6 +73,7 @@ spec:
               port: 8002
             {{- toYaml .Values.apigw.livenessProbe | nindent 12 }}
           {{- end }}
+      {{- end }}
           {{- include "varnish-controller.resources" (merge (dict "section" "apigw") .) | nindent 10 }}
           command: ["/usr/bin/varnish-controller-api-gw"]
           {{- if and .Values.apigw.extraArgs (not (empty .Values.apigw.extraArgs)) }}
@@ -62,6 +86,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            {{- if .Values.apigw.mgmt.enabled }}
+            - name: VARNISH_CONTROLLER_ENABLE_MGMT
+              value: "True"
+            - name: VARNISH_CONTROLLER_MGMT_HOST
+              value: "0.0.0.0"
+            - name: VARNISH_CONTROLLER_MGMT_PORT
+              value: {{ .Values.apigw.mgmt.port | quote }}
+            {{- end }}
           ports:
             - name: apigw
               containerPort: 8002

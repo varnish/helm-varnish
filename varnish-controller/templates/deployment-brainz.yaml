@@ -159,7 +159,36 @@ spec:
             - name: VARNISH_CONTROLLER_MMDB_FILE_CSV
               value: /etc/varnish-controller/geoip/geoip.csv
             {{- end }}
+            {{- if .Values.brainz.mgmt.enabled }}
+            - name: VARNISH_CONTROLLER_ENABLE_MGMT
+              value: "True"
+            - name: VARNISH_CONTROLLER_MGMT_HOST
+              value: "0.0.0.0"
+            - name: VARNISH_CONTROLLER_MGMT_PORT
+              value: {{ .Values.brainz.mgmt.port | quote }}
+            {{- end }}
             {{- include "varnish-controller.toEnv" (merge (dict "envs" .Values.brainz.extraEnvs) .) | nindent 12 }}
+          {{- if and .Values.brainz.startupProbe (not (empty .Values.brainz.startupProbe)) (.Values.brainz.mgmt.enabled) }}
+          startupProbe:
+            httpGet:
+              path: /health?check=nats,db
+              port: {{ .Values.brainz.mgmt.port | int }}
+            {{- toYaml .Values.brainz.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.brainz.readinessProbe (not (empty .Values.brainz.readinessProbe)) (.Values.brainz.mgmt.enabled) }}
+          readinessProbe:
+            httpGet:
+              path: /healthy?check=nats,db
+              port: {{ .Values.brainz.mgmt.port | int }}
+            {{- toYaml .Values.brainz.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if and .Values.brainz.livenessProbe (not (empty .Values.brainz.livenessProbe)) (.Values.brainz.mgmt.enabled) }}
+          livenessProbe:
+            httpGet:
+              path: /healthy
+              port: {{ .Values.brainz.mgmt.port | int }}
+            {{- toYaml .Values.brainz.livenessProbe | nindent 12 }}
+          {{- end }}
           volumeMounts:
           - name: {{ .Release.Name }}-data
             mountPath: /var/lib/varnish-controller
