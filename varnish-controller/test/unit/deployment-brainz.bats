@@ -1745,3 +1745,163 @@ requests:
 
     [ "${actual}" == '{"name":"release-name-geoip","emptyDir":{}}' ]
 }
+
+@test "Deployment/brainz/startupProbe: not configured by default" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .startupProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/brainz/startupProbe: can be enabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.startupProbe.initialDelaySeconds=10' \
+        --set 'brainz.startupProbe.periodSeconds=20' \
+        --set 'brainz.startupProbe.timeoutSeconds=2' \
+        --set 'brainz.startupProbe.successThreshold=2' \
+        --set 'brainz.startupProbe.failureThreshold=6' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .startupProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"httpGet":{"path":"/health?check=nats,db","port":8092},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+}
+
+@test "Deployment/brainz/startupProbe: is disabled if management is disabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.startupProbe.initialDelaySeconds=10' \
+        --set 'brainz.startupProbe.periodSeconds=20' \
+        --set 'brainz.startupProbe.timeoutSeconds=2' \
+        --set 'brainz.startupProbe.successThreshold=2' \
+        --set 'brainz.startupProbe.failureThreshold=6' \
+        --set 'brainz.mgmt.enabled=false' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .startupProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "Deployment/brainz/readinessProbe: can be configured" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.readinessProbe.initialDelaySeconds=10' \
+        --set 'brainz.readinessProbe.periodSeconds=20' \
+        --set 'brainz.readinessProbe.timeoutSeconds=2' \
+        --set 'brainz.readinessProbe.successThreshold=2' \
+        --set 'brainz.readinessProbe.failureThreshold=6' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .readinessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"httpGet":{"path":"/healthy?check=nats,db","port":8092},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+}
+
+@test "Deployment/brainz/readinessProbe: can be disabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.readinessProbe=' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .readinessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == "null" ]
+}
+
+@test "Deployment/brainz/readinessProbe: is disabled if management is disabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.mgmt.enabled=false' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .readinessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == "null" ]
+}
+
+@test "Deployment/brainz/livenessProbe: can be configured" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.livenessProbe.initialDelaySeconds=10' \
+        --set 'brainz.livenessProbe.periodSeconds=20' \
+        --set 'brainz.livenessProbe.timeoutSeconds=2' \
+        --set 'brainz.livenessProbe.successThreshold=2' \
+        --set 'brainz.livenessProbe.failureThreshold=6' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .livenessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"httpGet":{"path":"/healthy","port":8092},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+}
+
+@test "Deployment/brainz/livenessProbe: can be disabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.livenessProbe=' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .livenessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == "null" ]
+}
+
+@test "Deployment/brainz/livenessProbe: is disabled if management is disabled" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'brainz.mgmt.enabled=false' \
+        --set 'brainz.licenseSecret=brainz-license-secret' \
+        --namespace default \
+        --show-only templates/deployment-brainz.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "brainz") |
+            .livenessProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == "null" ]
+}
