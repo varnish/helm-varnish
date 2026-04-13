@@ -15,7 +15,7 @@ load _helpers
 @test "extraManifests: can be enabled as templated string" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     data: |
@@ -44,14 +44,14 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set "server.kind=Deployment" \
         --namespace default \
         --show-only templates/extra.yaml \
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -c | wc -l | xargs | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
     local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
@@ -64,7 +64,7 @@ EOF
 @test "extraManifests: can be enabled as yaml object" {
     cd "$(chart_dir)"
 
-    cat <<EOF > "$BATS_RUN_TMPDIR"/values.yaml
+    cat <<EOF > "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml
 extraManifests:
   - name: clusterrole
     data:
@@ -93,14 +93,14 @@ extraManifests:
 EOF
 
     local object=$((helm template \
-        -f "$BATS_RUN_TMPDIR"/values.yaml \
+        -f "$BATS_RUN_TMPDIR"/values-"$BATS_TEST_NUMBER".yaml \
         --set "server.kind=Deployment" \
         --namespace default \
         --show-only templates/extra.yaml \
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -c | wc -l | xargs | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
     local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-enterprise-clusterrole")' | tee -a /dev/stderr)

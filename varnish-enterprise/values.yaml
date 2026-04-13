@@ -222,6 +222,9 @@ server:
   # Type: boolean
   shareProcessNamespace: false
 
+  # The working directory of Varnish inside /var/lib/varnish.
+  workDir: "varnish"
+
   http:
     # Configures Varnish to listen for HTTP traffic.
     # Type: boolean
@@ -255,6 +258,10 @@ server:
     #
     # This port is used by HTTPS service as a targetPort.
     port: 6443
+
+    # Configures the address on which Varnish will listen for HTTPS traffic.
+    # Type: template string
+    address: "0.0.0.0"
 
     # The TLS configuration. See also [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/) for configuration options. It is recommended
     # to reference to a port in a configuration using `{{ .Values.server.tls.port }}` template string for
@@ -335,8 +342,13 @@ server:
   # Sets the threshold in seconds where idle threads are destroyed after least this duration.
   threadTimeout: 120
 
-  # Sets the extra arguments to the Varnish Enterprise.
+  # Sets the command for Varnish Enterprise
+  # Note that by overriding this, you will also override parameters, listening ports, etc.
   # Type: array of strings
+  # See: https://varnish-cache.org/docs/6.0/reference/varnishd.html
+  command: []
+
+  # Sets the extra configuration args for Varnish Enterprise.
   extraArgs: []
 
   # Sets the Varnish Enterprise parameters (i.e. the -p argument).
@@ -1076,7 +1088,7 @@ server:
               app.kubernetes.io/name: {{ include "varnish-enterprise.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
-  
+
   # Configures the Varnish NCSA sidecar.
   varnishncsa:
     # Enables HTTP request logging via [varnishncsa](https://varnish-cache.org/docs/6.0/reference/varnishncsa.html).
