@@ -198,6 +198,14 @@ apigw:
     # APIGW must be connected via the port defined in the pod (i.e., 8002).
     port: 8080
 
+  # Configures the management API
+  mgmt:
+    # Enables or disables the management API
+    enabled: true
+
+    # Sets the port of the management API
+    port: 8092
+
   # Sets the extra environment variables for Varnish Controller APIGW.
   # Can be set as either an object, a list, or a templated string.
   extraEnvs: {}
