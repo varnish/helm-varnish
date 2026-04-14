@@ -62,6 +62,15 @@ jobs:
           helm package "${{ matrix.chart }}"
           mkdir -p /tmp/artifacts
           cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
+      - name: "Check version does not already exist"
+        if: ${{ github.event.inputs.publish == matrix.chart }}
+        run: |
+          VERSION=$(yq -r '.version' "${{ matrix.chart }}/Chart.yaml")
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
+          if helm pull "oci://registry-1.docker.io/varnish/${{ matrix.chart }}" --version "$VERSION" --destination /tmp 2>/dev/null; then
+            echo "Error: ${{ matrix.chart }} version $VERSION already exists in the registry"
+            exit 1
+          fi
       - name: "Push chart"
         if: ${{ github.event.inputs.publish == matrix.chart }}
         run: |
