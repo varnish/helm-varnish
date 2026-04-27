@@ -1,5 +1,5 @@
 {{/*
-Pod template (metadata + spec).
+Pod template (metadata + spec) shared by Deployment and StatefulSet workloads.
 Caller is responsible for indenting the result (e.g. `nindent 4` to embed it
 under `spec.template`).
 */}}
@@ -78,6 +78,10 @@ spec:
         subPath: "{{ base $cert.private_key }}"
           {{- end -}}
         {{- end -}}
+      {{- end }}
+      {{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) }}
+      - name: orca-storage-{{ $store.name }}
+        mountPath: {{ $store.path | quote }}
       {{- end }}
       {{- with .Values.volumeMounts }}
       {{- toYaml . | nindent 6 }}

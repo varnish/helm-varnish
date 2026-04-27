@@ -1,0 +1,46 @@
+{{- include "orca.validate" . -}}
+{{- if eq .Values.kind "StatefulSet" -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "helm.fullname" . }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "helm.fullname" . }}-headless
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "helm.selectorLabels" . | nindent 6 }}
+  template:
+    {{- include "orca.podTemplate" . | nindent 4 }}
+  {{- if eq (include "orca.hasStores" .) "true" }}
+  volumeClaimTemplates:
+  {{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) }}
+    - metadata:
+        name: orca-storage-{{ $store.name }}
+        labels:
+          {{- include "helm.labels" $ | nindent 10 }}
+          {{- with $.Values.storage.labels }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        {{- with $.Values.storage.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml ($.Values.storage.accessModes | default (list "ReadWriteOnce")) | nindent 10 }}
+        {{- with $.Values.storage.storageClassName }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        {{- with $store.size }}
+        resources:
+          requests:
+            storage: {{ include "orca.varnishSizeToK8sQuantity" . | quote }}
+        {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end -}}
