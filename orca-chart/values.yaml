@@ -4,6 +4,21 @@
 
 replicaCount: 1
 
+# Workload kind. One of "Deployment" or "StatefulSet". Persistent storage
+# (`orca.varnish.storage.stores`) requires StatefulSet, which also provides
+# stable per-pod DNS via a headless companion service.
+kind: Deployment
+
+# Defaults applied to every PVC the chart creates for `orca.varnish.storage.stores`.
+# A PVC is created for each store, sized to `store.size` and mounted at
+# `store.path`. Leave `orca.varnish.storage.stores` empty to use a memory-only
+# cache.
+storage:
+  storageClassName: ""
+  accessModes: ["ReadWriteOnce"]
+  labels: {}
+  annotations: {}
+
 image:
   repository: docker.io/varnish/orca
   pullPolicy: IfNotPresent
@@ -85,6 +100,9 @@ readinessProbe:
     path: /healthz
     port: http
 
+# Autoscaling is supported but generally a poor fit for caches: scale-up adds
+# cold replicas, and scale-down throws warm cache away. Manual scaling via
+# `replicaCount` is usually preferable.
 autoscaling:
   enabled: false
   minReplicas: 1
@@ -138,6 +156,15 @@ orca:
   varnish:
     http:
     - port: 80
+    # Storage backends for Varnish Enterprise. Each entry gets a PVC sized to
+    # `size` and mounted at `path` (orca treats the path as a directory and
+    # creates the MSE4 book/store files inside it). PVC defaults come from
+    # the top-level `storage:` block.
+    storage:
+      stores: []
+      # - name: store1
+      #   path: /var/lib/varnish-supervisor/storage/store1
+      #   size: 100G
   virtual_registry:
     registries:
     - name: dockerhub
