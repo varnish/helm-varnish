@@ -47,7 +47,7 @@ load _helpers
     local actual=$((helm template \
         --namespace default \
         --show-only templates/deployment.yaml \
-        .) | yq -o=json -I=0 '.spec.selector.matchLabels')
+        .) | yqj '.spec.selector.matchLabels')
     [ "${actual}" = '{"app.kubernetes.io/name":"orca-chart","app.kubernetes.io/instance":"release-name"}' ]
 }
 

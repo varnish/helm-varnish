@@ -35,7 +35,7 @@ load _helpers
     local actual=$((helm template \
         --namespace default \
         --show-only templates/service.yaml \
-        .) | yq -o=json -I=0 '.spec.ports[] | select(.name == "http")')
+        .) | yqj '.spec.ports[] | select(.name == "http")')
     [ "${actual}" = '{"port":80,"targetPort":"http","protocol":"TCP","name":"http"}' ]
 }
 
@@ -64,7 +64,7 @@ load _helpers
         --set service.https.enabled=true \
         --namespace default \
         --show-only templates/service.yaml \
-        .) | yq -o=json -I=0 '.spec.ports[] | select(.name == "https")')
+        .) | yqj '.spec.ports[] | select(.name == "https")')
     [ "${actual}" = '{"port":443,"targetPort":"https","protocol":"TCP","name":"https"}' ]
 }
 
@@ -84,6 +84,6 @@ load _helpers
     local actual=$((helm template \
         --namespace default \
         --show-only templates/service.yaml \
-        .) | yq -o=json -I=0 '.spec.selector')
+        .) | yqj '.spec.selector')
     [ "${actual}" = '{"app.kubernetes.io/name":"orca-chart","app.kubernetes.io/instance":"release-name"}' ]
 }

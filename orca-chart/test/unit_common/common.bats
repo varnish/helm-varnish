@@ -58,7 +58,7 @@ load _helpers
         --set 'imagePullSecrets[0].name=my-pull-secret' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.imagePullSecrets')
+        .) | yqj '.spec.template.spec.imagePullSecrets')
     [ "${actual}" = '[{"name":"my-pull-secret"}]' ]
 }
 
@@ -89,7 +89,7 @@ load _helpers
         --set "kind=${kind}" \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].ports[] | select(.name == "http")')
+        .) | yqj '.spec.template.spec.containers[0].ports[] | select(.name == "http")')
     [ "${actual}" = '{"name":"http","containerPort":80,"protocol":"TCP"}' ]
 }
 
@@ -112,7 +112,7 @@ load _helpers
         --set 'orca.varnish.http[1].port=8080' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '[.spec.template.spec.containers[0].ports[].name]')
+        .) | yqj '[.spec.template.spec.containers[0].ports[].name]')
     [ "${actual}" = '["http-80","http-8080"]' ]
 }
 
@@ -123,7 +123,7 @@ load _helpers
         --set 'orca.varnish.https[0].port=443' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].ports[] | select(.name == "https")')
+        .) | yqj '.spec.template.spec.containers[0].ports[] | select(.name == "https")')
     [ "${actual}" = '{"name":"https","containerPort":443,"protocol":"TCP"}' ]
 }
 
@@ -135,7 +135,7 @@ load _helpers
         --set 'resources.requests.memory=256Mi' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].resources')
+        .) | yqj '.spec.template.spec.containers[0].resources')
     [ "${actual}" = '{"limits":{"cpu":"500m"},"requests":{"memory":"256Mi"}}' ]
 }
 
@@ -147,7 +147,7 @@ load _helpers
         --set 'securityContext.runAsNonRoot=true' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].securityContext')
+        .) | yqj '.spec.template.spec.containers[0].securityContext')
     [ "${actual}" = '{"runAsNonRoot":true,"runAsUser":1000}' ]
 }
 
@@ -158,7 +158,7 @@ load _helpers
         --set 'podSecurityContext.fsGroup=2000' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.securityContext')
+        .) | yqj '.spec.template.spec.securityContext')
     [ "${actual}" = '{"fsGroup":2000}' ]
 }
 
@@ -191,7 +191,7 @@ load _helpers
         --set 'nodeSelector.disktype=ssd' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.nodeSelector')
+        .) | yqj '.spec.template.spec.nodeSelector')
     [ "${actual}" = '{"disktype":"ssd"}' ]
 }
 
@@ -205,7 +205,7 @@ load _helpers
         --set 'tolerations[0].effect=NoSchedule' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.tolerations')
+        .) | yqj '.spec.template.spec.tolerations')
     [ "${actual}" = '[{"effect":"NoSchedule","key":"role","operator":"Equal","value":"cache"}]' ]
 }
 
@@ -227,7 +227,7 @@ load _helpers
         --set 'extraEnvs.MY_VAR=my-value' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].env[] | select(.name == "MY_VAR")')
+        .) | yqj '.spec.template.spec.containers[0].env[] | select(.name == "MY_VAR")')
     [ "${actual}" = '{"name":"MY_VAR","value":"my-value"}' ]
 }
 
@@ -239,7 +239,7 @@ load _helpers
         --set 'extraEnvs[0].value=my-value' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].env[] | select(.name == "MY_VAR")')
+        .) | yqj '.spec.template.spec.containers[0].env[] | select(.name == "MY_VAR")')
     [ "${actual}" = '{"name":"MY_VAR","value":"my-value"}' ]
 }
 
@@ -251,7 +251,7 @@ load _helpers
         --set 'volumeMounts[0].mountPath=/mount/path' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].volumeMounts[] | select(.name == "my-vol")')
+        .) | yqj '.spec.template.spec.containers[0].volumeMounts[] | select(.name == "my-vol")')
     [ "${actual}" = '{"mountPath":"/mount/path","name":"my-vol"}' ]
 }
 
@@ -263,7 +263,7 @@ load _helpers
         --set 'volumes[0].persistentVolumeClaim.claimName=my-pvc' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.volumes[] | select(.name == "my-vol")')
+        .) | yqj '.spec.template.spec.volumes[] | select(.name == "my-vol")')
     [ "${actual}" = '{"name":"my-vol","persistentVolumeClaim":{"claimName":"my-pvc"}}' ]
 }
 
@@ -273,7 +273,7 @@ load _helpers
         --set "kind=${kind}" \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].volumeMounts[] | select(.name == "orca-config")')
+        .) | yqj '.spec.template.spec.containers[0].volumeMounts[] | select(.name == "orca-config")')
     [ "${actual}" = '{"name":"orca-config","mountPath":"/etc/varnish-supervisor/config.yaml","subPath":"config.yaml"}' ]
 }
 
@@ -283,7 +283,7 @@ load _helpers
         --set "kind=${kind}" \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].command')
+        .) | yqj '.spec.template.spec.containers[0].command')
     [ "${actual}" = '["/usr/bin/varnish-supervisor","--config","/etc/varnish-supervisor/config.yaml"]' ]
 }
 
@@ -294,6 +294,6 @@ load _helpers
         --set 'orca.license.secret=my-license-secret' \
         --namespace default \
         --show-only "${template}" \
-        .) | yq -o=json -I=0 '.spec.template.spec.volumes[] | select(.name == "orca-license")')
+        .) | yqj '.spec.template.spec.volumes[] | select(.name == "orca-license")')
     [ "${actual}" = '{"name":"orca-license","secret":{"secretName":"my-license-secret","items":[{"key":"license.lic","path":"license.lic"}]}}' ]
 }
