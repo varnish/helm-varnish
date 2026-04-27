@@ -43,7 +43,7 @@ default_store() {
     local actual=$((helm template $(default_store) \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        .) | yq -o=json -I=0 '.spec.template.spec.containers[0].volumeMounts[] | select(.name == "orca-storage-disk1")')
+        .) | yqj '.spec.template.spec.containers[0].volumeMounts[] | select(.name == "orca-storage-disk1")')
     [ "${actual}" = '{"name":"orca-storage-disk1","mountPath":"/var/lib/varnish-supervisor/storage/disk1"}' ]
 }
 
@@ -110,7 +110,7 @@ default_store() {
     local actual=$((helm template $(default_store) \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        .) | yq -o=json -I=0 '.spec.volumeClaimTemplates[0].spec.accessModes')
+        .) | yqj '.spec.volumeClaimTemplates[0].spec.accessModes')
     [ "${actual}" = '["ReadWriteOnce"]' ]
 }
 
@@ -120,7 +120,7 @@ default_store() {
         --set 'storage.accessModes={ReadWriteMany}' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        .) | yq -o=json -I=0 '.spec.volumeClaimTemplates[0].spec.accessModes')
+        .) | yqj '.spec.volumeClaimTemplates[0].spec.accessModes')
     [ "${actual}" = '["ReadWriteMany"]' ]
 }
 
@@ -156,7 +156,7 @@ default_store() {
         --set orca.varnish.storage.stores[1].size=20G \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        .) | yq -o=json -I=0 '[.spec.volumeClaimTemplates[].metadata.name]')
+        .) | yqj '[.spec.volumeClaimTemplates[].metadata.name]')
     [ "${actual}" = '["orca-storage-disk1","orca-storage-disk2"]' ]
 }
 
@@ -165,6 +165,6 @@ default_store() {
     local actual=$((helm template $(default_store) \
         --namespace default \
         --show-only templates/configmap.yaml \
-        .) | yq -r '.data."config.yaml"' | yq -o=json -I=0 '.varnish.storage.stores[0]')
+        .) | yq -r '.data."config.yaml"' | yqj '.varnish.storage.stores[0]')
     [ "${actual}" = '{"name":"disk1","path":"/var/lib/varnish-supervisor/storage/disk1","size":"10G"}' ]
 }

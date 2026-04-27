@@ -47,7 +47,7 @@ load _helpers
         --set orca.varnish.https[0].certificates[0].secret=my-tls \
         --namespace default \
         --show-only templates/configmap.yaml \
-        .) | yq -r '.data."config.yaml"' | yq -o=json -I=0 '.varnish.https[0].certificates[0]')
+        .) | yq -r '.data."config.yaml"' | yqj '.varnish.https[0].certificates[0]')
     [ "${actual}" = '{"cert":"/etc/varnish-supervisor/cert-0-0.crt","private_key":"/etc/varnish-supervisor/cert-0-0.key"}' ]
 }
 
