@@ -4,6 +4,9 @@
 
 replicaCount: 1
 
+# Workload kind. 
+kind: Deployment
+
 image:
   repository: docker.io/varnish/orca
   pullPolicy: IfNotPresent
