@@ -83,13 +83,49 @@ It also supports storing TLS certificates in secrets before mounting them into t
 {{- end -}}
 
 {{/*
+Returns "true" if any varnish.storage.stores entry is defined. Each store
+gets a PVC backed by the chart-level `storage` defaults.
+*/}}
+{{- define "orca.hasStores" -}}
+{{- $stores := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) -}}
+{{- if not (empty $stores) -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+Returns "true" if the chart should render a headless companion Service.
+Currently driven by `kind: StatefulSet`;
+*/}}
+{{- define "orca.needsHeadlessService" -}}
+{{- if eq .Values.kind "StatefulSet" -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+Translates a Varnish size string into a Kubernetes resource.Quantity. The
+supervisor accepts K/M/G/T (case-insensitive) as binary multipliers (2^10,
+2^20, ...) and bare integers as bytes. Kubernetes treats bare K/M/G as
+decimal (10^3, 10^6, ...) and uses Ki/Mi/Gi for binary, so we uppercase and
+append "i" to the suffix. Bare integers pass through unchanged.
+Examples: "100G" -> "100Gi", "100k" -> "100Ki", "100" -> "100".
+*/}}
+{{- define "orca.varnishSizeToK8sQuantity" -}}
+{{- $s := upper (toString .) -}}
+{{- regexReplaceAll "([KMGT])$" $s "${1}i" -}}
+{{- end -}}
+
+{{/*
 Validates the chart values. Called from every workload template so that an
 invalid configuration fails the render regardless of which workload is gated
 on the chosen kind.
 */}}
 {{- define "orca.validate" -}}
-{{- if not (eq .Values.kind "Deployment") -}}
-{{- fail (printf "kind must be 'Deployment', got %q" .Values.kind) -}}
+{{- if not (or (eq .Values.kind "Deployment") (eq .Values.kind "StatefulSet")) -}}
+{{- fail (printf "kind must be 'Deployment' or 'StatefulSet', got %q" .Values.kind) -}}
+{{- end -}}
+{{- if and (eq (include "orca.needsHeadlessService" .) "true") (not .Values.service.http.enabled) (not .Values.service.https.enabled) -}}
+{{- fail "the headless service needs at least one port: enable 'service.http.enabled' or 'service.https.enabled'" -}}
+{{- end -}}
+{{- if and (eq .Values.kind "Deployment") (eq (include "orca.hasStores" .) "true") -}}
+{{- fail "persistent storage requires 'kind: StatefulSet'; 'kind: Deployment' is for memory-only caches" -}}
 {{- end -}}
 {{- end -}}
 

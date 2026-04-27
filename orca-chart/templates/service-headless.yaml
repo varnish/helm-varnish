@@ -1,0 +1,27 @@
+{{- if eq (include "orca.needsHeadlessService" .) "true" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm.fullname" . }}-headless
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    {{- if .Values.service.http.enabled }}
+    - port: {{ .Values.service.http.port | default 80 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    {{- end }}
+    {{- if .Values.service.https.enabled }}
+    - port: {{ .Values.service.https.port | default 443 }}
+      targetPort: https
+      protocol: TCP
+      name: https
+    {{- end }}
+  selector:
+    {{- include "helm.selectorLabels" . | nindent 4 }}
+{{- end -}}
