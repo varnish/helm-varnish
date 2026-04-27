@@ -61,6 +61,7 @@ orca:
 | `ingress.hosts[0].paths[0]` | string | `"/"` |  |
 | `ingress.hosts[0].paths[0].pathType` | string | `"Prefix"` |  |
 | `ingress.tls` | list | `[]` |  |
+| `kind` | string | `"Deployment"` | Workload kind |
 | `livenessProbe.httpGet.path` | string | `"/"` |  |
 | `livenessProbe.httpGet.port` | string | `"http"` |  |
 | `nameOverride` | string | `""` |  |

@@ -83,6 +83,17 @@ It also supports storing TLS certificates in secrets before mounting them into t
 {{- end -}}
 
 {{/*
+Validates the chart values. Called from every workload template so that an
+invalid configuration fails the render regardless of which workload is gated
+on the chosen kind.
+*/}}
+{{- define "orca.validate" -}}
+{{- if not (eq .Values.kind "Deployment") -}}
+{{- fail (printf "kind must be 'Deployment', got %q" .Values.kind) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Sets extra envs from either an array, an object, or a string.
 */}}
 {{- define "orca.toEnv" }}
