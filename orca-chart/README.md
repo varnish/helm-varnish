@@ -229,7 +229,7 @@ For each store:
 * The PVC is mounted at `path` inside the pod. Orca treats `path` as a directory and creates the MSE4 book/store files (`<store-name>_book`, `<store-name>_store`) inside it.
 * Defaults like `storageClassName` and `accessModes` come from the top-level `storage:` block and apply to every store.
 
-Each store needs at least 6G.
+Each store's `size` must be strictly greater than `book_size` + 1G filesystem overhead. `book_size` defaults to 5G, so `size` must be greater than 6G unless `book_size` is overridden.
 
 `size` is interpreted in Varnish format (binary `K`/`M`/`G`/`T`, e.g. `100G` is 100 * 2^30 bytes). The chart translates this to the equivalent Kubernetes binary quantity for the PVC (`100G` becomes `100Gi`), so the PVC and the cache files always agree on size.
 

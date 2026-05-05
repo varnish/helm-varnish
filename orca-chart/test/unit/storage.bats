@@ -60,30 +60,31 @@ default_store() {
     [ "${actual}" = "100Gi" ]
 }
 
-@test "Storage: size 100k translates to 100Ki" {
+@test "Storage: size 10g translates to 10Gi (lowercase suffix)" {
     cd "$(chart_dir)"
     local actual=$((helm template \
         --set kind=StatefulSet \
         --set orca.varnish.storage.stores[0].name=disk1 \
         --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
-        --set orca.varnish.storage.stores[0].size=100k \
+        --set orca.varnish.storage.stores[0].size=10g \
         --namespace default \
         --show-only templates/statefulset.yaml \
         .) | yq -r '.spec.volumeClaimTemplates[0].spec.resources.requests.storage')
-    [ "${actual}" = "100Ki" ]
+    [ "${actual}" = "10Gi" ]
 }
 
 @test "Storage: bare integer size passed through" {
     cd "$(chart_dir)"
+    # Bare bytes; ~6.52 GiB, just above the 5G book + 1G overhead floor.
     local actual=$((helm template \
         --set kind=StatefulSet \
         --set orca.varnish.storage.stores[0].name=disk1 \
         --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
-        --set orca.varnish.storage.stores[0].size=1024 \
+        --set orca.varnish.storage.stores[0].size=7000000000 \
         --namespace default \
         --show-only templates/statefulset.yaml \
         .) | yq -r '.spec.volumeClaimTemplates[0].spec.resources.requests.storage')
-    [ "${actual}" = "1024" ]
+    [ "${actual}" = "7000000000" ]
 }
 
 @test "Storage: storageClassName applied" {

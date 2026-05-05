@@ -113,6 +113,44 @@ Examples: "100G" -> "100Gi", "100k" -> "100Ki", "100" -> "100".
 {{- end -}}
 
 {{/*
+Parses a Varnish size string into a byte count (decimal integer). Mirrors
+the supervisor's parser: K/M/G/T as binary multipliers (2^10, 2^20, 2^30,
+2^40), case-insensitive, and bare integers as bytes. Returns 0 on unknown
+input (the supervisor would reject those at runtime anyway).
+*/}}
+{{- define "orca.parseSizeToBytes" -}}
+{{- $s := upper (toString .) -}}
+{{- $unit := regexFind "[KMGT]$" $s -}}
+{{- $num := atoi (regexReplaceAll "[KMGT]$" $s "") -}}
+{{- $mult := 1 -}}
+{{- if eq $unit "K" -}}{{- $mult = 1024 -}}{{- end -}}
+{{- if eq $unit "M" -}}{{- $mult = 1048576 -}}{{- end -}}
+{{- if eq $unit "G" -}}{{- $mult = 1073741824 -}}{{- end -}}
+{{- if eq $unit "T" -}}{{- $mult = 1099511627776 -}}{{- end -}}
+{{- mul $num $mult -}}
+{{- end -}}
+
+{{/*
+Validates that each store's size is strictly greater than book_size + 1G
+filesystem overhead. Mirrors the supervisor's runtime check so the failure
+surfaces during helm render instead of as a CrashLoopBackOff.
+*/}}
+{{- define "orca.validateStoreSizes" -}}
+{{- $oneGB := 1073741824 -}}
+{{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) -}}
+  {{- if $store.size -}}
+    {{- $bookSizeStr := default "5G" $store.book_size -}}
+    {{- $size := include "orca.parseSizeToBytes" $store.size | atoi -}}
+    {{- $bookSize := include "orca.parseSizeToBytes" $bookSizeStr | atoi -}}
+    {{- $minSize := add $bookSize $oneGB -}}
+    {{- if le $size $minSize -}}
+    {{- fail (printf "store %q: size %q must be greater than book_size + 1G filesystem overhead (book_size=%q)" $store.name (toString $store.size) $bookSizeStr) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Validates the chart values. Called from every workload template so that an
 invalid configuration fails the render regardless of which workload is gated
 on the chosen kind.
@@ -127,6 +165,7 @@ on the chosen kind.
 {{- if and (eq .Values.kind "Deployment") (eq (include "orca.hasStores" .) "true") -}}
 {{- fail "persistent storage requires 'kind: StatefulSet'; 'kind: Deployment' is for memory-only caches" -}}
 {{- end -}}
+{{- include "orca.validateStoreSizes" . -}}
 {{- end -}}
 
 {{/*

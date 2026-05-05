@@ -160,6 +160,10 @@ orca:
     # `size` and mounted at `path` (orca treats the path as a directory and
     # creates the MSE4 book/store files inside it). PVC defaults come from
     # the top-level `storage:` block.
+    #
+    # `size` must be strictly greater than `book_size` + 1G filesystem overhead.
+    # `book_size` defaults to 5G, so `size` must be greater than 6G unless
+    # `book_size` is overridden.
     storage:
       stores: []
       # - name: store1
