@@ -276,6 +276,21 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"duplicate normalized name"* ]]
 }
 
+@test "vcl-bundle: error when two routes produce the same k8s name" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].name=Foo-bar" \
+        --set "server.vcls.routes[0].hostnames[0]=a.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[1].name=foo_bar" \
+        --set "server.vcls.routes[1].hostnames[0]=b.com" \
+        --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"duplicate k8s name"* ]]
+}
+
 @test "vcl-bundle: error when catch-all route is not last" {
     cd "$(chart_dir)"
     local actual=$((helm template \
@@ -558,6 +573,18 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"-f "* ]]
 }
 
+
+@test "vcl-bundle: error when two includes produce the same k8s name" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.includes.foo/bar\\.vcl=content1" \
+        --set "server.vcls.includes.foo-bar\\.vcl=content2" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"duplicate k8s name"* ]]
+}
 
 @test "vcl-bundle: error when include filename contains invalid characters" {
     cd "$(chart_dir)"

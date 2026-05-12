@@ -181,6 +181,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
     {{- end -}}
     {{- $seen := dict -}}
+    {{- $seenK8s := dict -}}
     {{- $catchAllSeen := false -}}
     {{- range .Values.server.vcls.routes -}}
       {{- if $catchAllSeen -}}
@@ -194,6 +195,19 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
         {{- fail (printf "server.vcls.routes: duplicate normalized name '%s' — routes must produce unique names" $name) -}}
       {{- end -}}
       {{- $_ := set $seen $name true -}}
+      {{- $k8sName := include "varnish-enterprise.vclBundleK8sName" $name -}}
+      {{- if hasKey $seenK8s $k8sName -}}
+        {{- fail (printf "server.vcls.routes: duplicate k8s name '%s' — routes must produce unique k8s-safe names" $k8sName) -}}
+      {{- end -}}
+      {{- $_ := set $seenK8s $k8sName true -}}
+    {{- end -}}
+    {{- $seenIncludeK8s := dict -}}
+    {{- range $filename, $_ := .Values.server.vcls.includes -}}
+      {{- $k8sName := include "varnish-enterprise.vclBundleK8sName" $filename -}}
+      {{- if hasKey $seenIncludeK8s $k8sName -}}
+        {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
+      {{- end -}}
+      {{- $_ := set $seenIncludeK8s $k8sName true -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
