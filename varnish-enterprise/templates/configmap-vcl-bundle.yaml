@@ -9,8 +9,31 @@ metadata:
 data:
   router.vcl: |
     vcl 4.1;
+    {{- if .Values.cluster.enabled }}
+
+    import activedns;
+
+    include "cluster.vcl";
+    {{- end }}
 
     backend default none;
+    {{- if .Values.cluster.enabled }}
+
+    sub vcl_init {
+      {{- if .Values.cluster.trace }}
+      cluster_opts.set("trace", "true");
+      {{- end }}
+      new cluster_group = activedns.dns_group(
+        {{- if .Values.cluster.headlessServiceName }}
+        "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
+        {{- else }}
+        "{{ include "varnish-enterprise.fullname" . }}-peers:{{ .Values.server.http.port }}"
+        {{- end }}
+      );
+      cluster.subscribe(cluster_group.get_tag());
+      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
+    }
+    {{- end }}
 
     sub vcl_recv {
     {{- range .Values.server.vcls.routes }}

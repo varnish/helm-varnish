@@ -165,6 +165,11 @@ volumes:
   secret:
     secretName: {{ include "varnish-enterprise.fullname" . }}-secret
 {{- end }}
+{{- if not (empty .Values.server.vcls.routes) }}
+- name: {{ .Release.Name }}-config-vcl-bundle
+  configMap:
+    name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle
+{{- else }}
 {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
 - name: {{ .Release.Name }}-config-vcl
   configMap:
@@ -183,15 +188,11 @@ volumes:
   configMap:
     name: {{ include "varnish-enterprise.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
 {{- end }}
-{{- if not (empty .Values.server.vcls.routes) }}
-- name: {{ .Release.Name }}-config-vcl-bundle
-  configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle
-{{- end }}
 {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
 - name: {{ .Release.Name }}-config-cmdfile
   configMap:
     name: {{ include "varnish-enterprise.fullname" . }}-cmdfile
+{{- end }}
 {{- end }}
 {{- if and .Values.server.agent.enabled (not .Values.server.agent.persistence.enabled) (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
 - name: {{ .Release.Name }}-varnish-controller
@@ -247,20 +248,26 @@ Declares the Varnish Enterprise container
 Composing the $varnishArgs list or arguments
 */}}
 {{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
-{{- if and .Values.server.agent.enabled (not (eq $cmdfileConfig "")) }}
-  {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
-{{- else if and .Values.server.agent.enabled (not (empty .Values.server.vcls.routes)) }}
-  {{ fail "Cannot enable both 'server.vcls.routes' and 'server.agent.enabled'" }}
-{{- else if .Values.server.agent.enabled }}
-  {{- if .Values.server.initAgent.enabled }}
-    {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
-  {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
+{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
+{{- if not (empty .Values.server.vcls.routes) }}
+  {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli" "-f" "") }}
+{{- else }}
+  {{- if .Values.server.agent.enabled }}
+    {{- if not (eq $cmdfileConfig "") }}
+      {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
+    {{- else if .Values.server.initAgent.enabled }}
+      {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
+    {{- else }}
+      {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
+    {{- end }}
+  {{- else if not (eq $cmdfileConfig "") }}
+    {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
   {{- end }}
-{{- else if not (eq $cmdfileConfig "") }}
-  {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
-{{- else if not (empty .Values.server.vcls.routes) }}
-  {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli") }}
+  {{- if .Values.cluster.enabled }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
+  {{- end }}
 {{- end -}}
 {{/*
     Parameter list
@@ -293,15 +300,6 @@ Composing the $varnishArgs list or arguments
     TTL
 */}}
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
-{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
-{{- if .Values.cluster.enabled }}
-    {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
-{{- else if not (empty .Values.server.vcls.routes) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" "") }}
-{{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
-{{- end -}}
 {{/*
     Listen address
 */}}
@@ -542,6 +540,10 @@ Composing the $varnishArgs list or arguments
       mountPath: /etc/varnish/secret
       subPath: secret
     {{- end }}
+    {{- if not (empty .Values.server.vcls.routes) }}
+    - name: {{ .Release.Name }}-config-vcl-bundle
+      mountPath: /etc/varnish/vcls
+    {{- else }}
     {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
       mountPath: {{ .Values.server.vclConfigPath | quote }}
@@ -561,14 +563,11 @@ Composing the $varnishArgs list or arguments
       mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
       subPath: {{ $wrappedDefaultVCL | quote }}
     {{- end }}
-    {{- if not (empty .Values.server.vcls.routes) }}
-    - name: {{ .Release.Name }}-config-vcl-bundle
-      mountPath: /etc/varnish/vcls
-    {{- end }}
     {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
     - name: {{ .Release.Name }}-config-cmdfile
       mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
       subPath: cmds.cli
+    {{- end }}
     {{- end }}
     {{- if and (eq .Values.server.kind "StatefulSet") (and (or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled))) .Values.server.mse.persistence.enabled) }}
     - name: {{ .Release.Name }}-mse
