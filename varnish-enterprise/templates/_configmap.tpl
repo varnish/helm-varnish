@@ -154,10 +154,11 @@ any
 Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings.
 */}}
 {{- define "varnish-enterprise.vclBundleConflictCheck" -}}
-  {{- if and (empty .Values.server.vcls.routes) (not (empty .Values.server.vcls.includes)) -}}
-    {{- fail "'server.vcls.includes' requires 'server.vcls.routes' to be set" -}}
-  {{- end -}}
-  {{- if not (empty .Values.server.vcls.routes) -}}
+  {{- if empty .Values.server.vcls.routes -}}
+    {{- if not (empty .Values.server.vcls.includes) -}}
+      {{- fail "'server.vcls.includes' requires 'server.vcls.routes' to be set" -}}
+    {{- end -}}
+  {{- else -}}
     {{- if not (eq .Values.server.vclConfigPath "/etc/varnish/default.vcl") -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigPath'" -}}
     {{- end -}}
