@@ -662,6 +662,40 @@ server:
   #       }
   vclConfigs: {}
 
+  # Per-domain VCL routing (multi-tenant). When set, supersedes server.vclConfig, server.vclConfigFile,
+  # and server.vclConfigs. An auto-generated routing VCL and cmdfile are created from these settings.
+  # server.cmdfileConfig and server.cmdfileConfigFile must not be set when routes is non-empty.
+  # Availability: v1.X.0
+  vcls:
+    # routes: ordered list of per-domain VCL configurations.
+    # Each entry must set vclContent.
+    # Entries without hostnames act as a catch-all (last one wins).
+    # Type: object list
+    # Example:
+    #   routes:
+    #     - name: foo-site            # optional; defaults to first hostname or "any"
+    #       hostnames:                # the hostnames to match for this VCL. If empty, this VCL will be used as a catch-all.
+    #         - foo.com
+    #         - www.foo.com
+    #       vclContent: |
+    #         vcl 4.1;
+    #         backend default none;
+    #         sub vcl_recv { return (synth(200)); }
+    #     - vclContent: |             # no hostnames = catch-all
+    #         vcl 4.1;
+    #         backend default none;
+    #         sub vcl_recv { return (synth(404)); }
+    routes: []
+
+    # includes: shared VCL files placed in /etc/varnish/includes/, referenced by route VCLs.
+    # Map of filename to VCL content (template string).
+    # Type: object
+    # Example:
+    #   includes:
+    #     helpers.vcl: |
+    #       sub common_recv { ... }
+    includes: {}
+
   # A path to the [CLI command file](https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file).
   # This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the
   # `-I` argument in the Varnish Enterprise container when `server.cmdfileConfig` is not empty.

@@ -1,3 +1,4 @@
+{{- include "varnish-enterprise.vclBundleConflictCheck" . }}
 {{- $vclConfig := include "varnish-enterprise.vclConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if not (eq $vclConfig "") }}

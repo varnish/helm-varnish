@@ -110,6 +110,7 @@ env: {
 {{- end }}
 
 {{- define "varnish-enterprise.vclConfig" -}}
+{{- include "varnish-enterprise.vclBundleConflictCheck" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if and (hasKey .Values.server.vclConfigs $defaultVcl) (not (eq (get .Values.server.vclConfigs $defaultVcl) "")) }}
 {{- if (not (eq .Values.server.vclConfig "")) }}
@@ -129,6 +130,49 @@ env: {
 {{- tpl .Values.server.vclConfig . }}
 {{- end }}
 {{- end }}
+
+{{/*
+Normalizes a route object's name for use as a VCL filename and Varnish label.
+Takes a route object as context. Replaces non-alphanumeric characters with underscores.
+*/}}
+{{- define "varnish-enterprise.vclBundleNormalizeName" -}}
+{{- if .name -}}
+{{- regexReplaceAll "[^a-zA-Z0-9]" .name "_" -}}
+{{- else if .hostnames -}}
+{{- regexReplaceAll "[^a-zA-Z0-9]" (first .hostnames) "_" -}}
+{{- else -}}
+any
+{{- end -}}
+{{- end -}}
+
+{{/*
+Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings.
+*/}}
+{{- define "varnish-enterprise.vclBundleConflictCheck" -}}
+  {{- if and (empty .Values.server.vcls.routes) (not (empty .Values.server.vcls.includes)) -}}
+    {{- fail "'server.vcls.includes' requires 'server.vcls.routes' to be set" -}}
+  {{- end -}}
+  {{- if not (empty .Values.server.vcls.routes) -}}
+    {{- if not (eq .Values.server.vclConfigPath "/etc/varnish/default.vcl") -}}
+      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigPath'" -}}
+    {{- end -}}
+    {{- if not (eq .Values.server.vclConfig "") -}}
+      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfig'" -}}
+    {{- end -}}
+    {{- if not (eq .Values.server.vclConfigFile "") -}}
+      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigFile'" -}}
+    {{- end -}}
+    {{- if not (empty .Values.server.vclConfigs) -}}
+      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigs'" -}}
+    {{- end -}}
+    {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") -}}
+      {{- fail "Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'/'server.cmdfileConfigFile'" -}}
+    {{- end -}}
+    {{- if not (eq .Values.server.cmdfileConfigPath "/etc/varnish/cmds.cli") -}}
+      {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
 
 {{- define "varnish-enterprise.cmdfileConfig" -}}
 {{- if (not (eq .Values.server.cmdfileConfigFile "")) -}}
