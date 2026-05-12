@@ -176,6 +176,17 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 # ── Conflict checks ───────────────────────────────────────────────────────────
 
+@test "vcl-bundle: error when server.vcls.routes and server.agent.enabled both set" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.agent.enabled=true" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"Cannot use both 'server.vcls.routes' and 'server.agent.enabled'"* ]]
+}
+
 @test "vcl-bundle: error when server.vcls.routes and server.vclConfigPath both set" {
     cd "$(chart_dir)"
     local actual=$((helm template \

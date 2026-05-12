@@ -159,6 +159,9 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- fail "'server.vcls.includes' requires 'server.vcls.routes' to be set" -}}
     {{- end -}}
   {{- else -}}
+    {{- if .Values.server.agent.enabled -}}
+      {{- fail "Cannot use both 'server.vcls.routes' and 'server.agent.enabled'" -}}
+    {{- end -}}
     {{- if not (eq .Values.server.vclConfigPath "/etc/varnish/default.vcl") -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigPath'" -}}
     {{- end -}}
