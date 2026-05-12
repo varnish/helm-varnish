@@ -818,10 +818,6 @@ Declares the Varnish Controller Agent container
       subPath: {{ $k | quote }}
     {{- end }}
     {{- end }}
-    {{- if not (empty .Values.server.vcls.routes) }}
-    - name: {{ .Release.Name }}-config-vcl-bundle
-      mountPath: /etc/varnish/vcls
-    {{- end }}
     {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
     - name: {{ .Release.Name }}-config-cmdfile
       mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
