@@ -564,7 +564,7 @@ Composing the $varnishArgs list or arguments
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
     - name: {{ $.Release.Name }}-config-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
-      mountPath: /etc/varnish/vcls/routes/{{ $name }}.vcl
+      mountPath: /etc/varnish/vcls/{{ $name }}.vcl
       subPath: {{ $name }}.vcl
     {{- end }}
     {{- range $filename, $_ := .Values.server.vcls.includes }}

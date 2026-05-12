@@ -153,7 +153,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r 'select(.data | has("cmds.cli")) | .data."cmds.cli"' \
         | tee -a /dev/stderr)
-    [[ "${actual}" == *'vcl.load route_foo_com_0 /etc/varnish/vcls/routes/foo_com.vcl'* ]]
+    [[ "${actual}" == *'vcl.load route_foo_com_0 /etc/varnish/vcls/foo_com.vcl'* ]]
     [[ "${actual}" == *'vcl.label foo_com route_foo_com_0'* ]]
     [[ "${actual}" == *'vcl.load router_0 /etc/varnish/vcls/router.vcl'* ]]
     [[ "${actual}" == *'vcl.use router_0'* ]]
@@ -472,7 +472,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
             .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
             .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-foo-com") |
             [.mountPath, .subPath] | join(":")' | tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/vcls/routes/foo_com.vcl:foo_com.vcl" ]
+    [ "${actual}" = "/etc/varnish/vcls/foo_com.vcl:foo_com.vcl" ]
 }
 
 @test "vcl-bundle: ConfigMap has cmds.cli key" {

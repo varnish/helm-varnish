@@ -131,7 +131,7 @@ data:
   cmds.cli: |
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-    vcl.load route_{{ $name }}_0 /etc/varnish/vcls/routes/{{ $name }}.vcl
+    vcl.load route_{{ $name }}_0 /etc/varnish/vcls/{{ $name }}.vcl
     vcl.label {{ $name }} route_{{ $name }}_0
     {{- end }}
     vcl.load router_0 /etc/varnish/vcls/router.vcl
