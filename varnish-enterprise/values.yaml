@@ -687,7 +687,7 @@ server:
     #         sub vcl_recv { return (synth(404)); }
     routes: []
 
-    # includes: shared VCL files placed in /etc/varnish/includes/, referenced by route VCLs.
+    # includes: shared VCL files placed in /etc/varnish/vcls/includes/, referenced by route VCLs.
     # Map of filename to VCL content (template string).
     # Type: object
     # Example:
