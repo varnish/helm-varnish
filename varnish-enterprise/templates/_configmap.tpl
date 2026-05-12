@@ -176,6 +176,14 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- if not (eq .Values.server.cmdfileConfigPath "/etc/varnish/cmds.cli") -}}
       {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
     {{- end -}}
+    {{- $seen := dict -}}
+    {{- range .Values.server.vcls.routes -}}
+      {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . -}}
+      {{- if hasKey $seen $name -}}
+        {{- fail (printf "server.vcls.routes: duplicate normalized name '%s' — routes must produce unique names" $name) -}}
+      {{- end -}}
+      {{- $_ := set $seen $name true -}}
+    {{- end -}}
   {{- end -}}
 {{- end -}}
 
