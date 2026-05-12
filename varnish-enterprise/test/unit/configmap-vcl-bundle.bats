@@ -45,7 +45,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 # ── Route VCL keys ─────────────────────────────────────────────────────────────
 
-@test "vcl-bundle: route ConfigMap key uses route- prefix with normalized hostname" {
+@test "vcl-bundle: route ConfigMap key uses normalized hostname" {
     cd "$(chart_dir)"
     local actual=$((helm template \
         --namespace default \
@@ -53,7 +53,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("route-foo_com.vcl")) | .data | has("route-foo_com.vcl")' \
+        yq -r 'select(.data | has("foo_com.vcl")) | .data | has("foo_com.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -67,7 +67,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("route-my_site.vcl")) | .data | has("route-my_site.vcl")' \
+        yq -r 'select(.data | has("my_site.vcl")) | .data | has("my_site.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -79,7 +79,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("route-any.vcl")) | .data | has("route-any.vcl")' \
+        yq -r 'select(.data | has("any.vcl")) | .data | has("any.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -92,7 +92,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("route-__api_bar_com.vcl")) | .data | has("route-__api_bar_com.vcl")' \
+        yq -r 'select(.data | has("__api_bar_com.vcl")) | .data | has("__api_bar_com.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -153,7 +153,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r 'select(.data | has("cmds.cli")) | .data."cmds.cli"' \
         | tee -a /dev/stderr)
-    [[ "${actual}" == *'vcl.load route_foo_com_0 /etc/varnish/vcls/routes/route-foo_com.vcl'* ]]
+    [[ "${actual}" == *'vcl.load route_foo_com_0 /etc/varnish/vcls/routes/foo_com.vcl'* ]]
     [[ "${actual}" == *'vcl.label foo_com route_foo_com_0'* ]]
     [[ "${actual}" == *'vcl.load router_0 /etc/varnish/vcls/router.vcl'* ]]
     [[ "${actual}" == *'vcl.use router_0'* ]]
@@ -413,9 +413,9 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-route-foo-com") | .configMap.name' \
+        yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-foo-com") | .configMap.name' \
         | tee -a /dev/stderr)
-    [ "${actual}" = "release-name-varnish-enterprise-vcl-bundle-route-foo-com" ]
+    [ "${actual}" = "release-name-varnish-enterprise-vcl-bundle-foo-com" ]
 }
 
 @test "vcl-bundle: deployment mounts router.vcl with subPath" {
@@ -458,9 +458,9 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
-            .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-route-foo-com") |
+            .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-foo-com") |
             [.mountPath, .subPath] | join(":")' | tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/vcls/routes/route-foo_com.vcl:route-foo_com.vcl" ]
+    [ "${actual}" = "/etc/varnish/vcls/routes/foo_com.vcl:foo_com.vcl" ]
 }
 
 @test "vcl-bundle: ConfigMap has cmds.cli key" {
@@ -535,16 +535,6 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"-f "* ]]
 }
 
-@test "vcl-bundle: error when include filename starts with route-" {
-    cd "$(chart_dir)"
-    local actual=$((helm template \
-        --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.vcls.includes.route-helpers\\.vcl=sub common_recv {}" \
-        --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"must not start with 'route-'"* ]]
-}
 
 @test "vcl-bundle: error when include filename contains invalid characters" {
     cd "$(chart_dir)"

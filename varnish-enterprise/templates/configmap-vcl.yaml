@@ -131,7 +131,7 @@ data:
   cmds.cli: |
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-    vcl.load route_{{ $name }}_0 /etc/varnish/vcls/routes/route-{{ $name }}.vcl
+    vcl.load route_{{ $name }}_0 /etc/varnish/vcls/routes/{{ $name }}.vcl
     vcl.label {{ $name }} route_{{ $name }}_0
     {{- end }}
     vcl.load router_0 /etc/varnish/vcls/router.vcl
@@ -145,17 +145,14 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-route-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+  name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
   labels:
     {{- include "varnish-enterprise.labels" $ | nindent 4 }}
 data:
-  route-{{ $name }}.vcl: |
+  {{ $name }}.vcl: |
     {{- tpl .vclContent $ | nindent 4 }}
 {{- end }}
 {{- range $filename, $content := .Values.server.vcls.includes }}
-{{- if hasPrefix "route-" $filename }}
-{{- fail (printf "server.vcls.includes: filename '%s' must not start with 'route-'" $filename) }}
-{{- end }}
 {{- if not (regexMatch "^[-._a-zA-Z0-9/]+$" $filename) }}
 {{- fail (printf "server.vcls.includes: filename '%s' contains invalid characters (allowed: [-._/a-zA-Z0-9])" $filename) }}
 {{- end }}

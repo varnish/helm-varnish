@@ -174,9 +174,9 @@ volumes:
     name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-cmds
 {{- range .Values.server.vcls.routes }}
 {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-- name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
   configMap:
-    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-route-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
 {{- end }}
 {{- range $filename, $_ := .Values.server.vcls.includes }}
 - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
@@ -563,9 +563,9 @@ Composing the $varnishArgs list or arguments
       subPath: cmds.cli
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-    - name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
-      mountPath: /etc/varnish/vcls/routes/route-{{ $name }}.vcl
-      subPath: route-{{ $name }}.vcl
+    - name: {{ $.Release.Name }}-config-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+      mountPath: /etc/varnish/vcls/routes/{{ $name }}.vcl
+      subPath: {{ $name }}.vcl
     {{- end }}
     {{- range $filename, $_ := .Values.server.vcls.includes }}
     - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
