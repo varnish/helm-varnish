@@ -61,6 +61,7 @@ orca:
 | `ingress.hosts[0].paths[0]` | string | `"/"` |  |
 | `ingress.hosts[0].paths[0].pathType` | string | `"Prefix"` |  |
 | `ingress.tls` | list | `[]` |  |
+| `kind` | string | `"Deployment"` | Workload kind, either `"Deployment"` or `"StatefulSet"`. `StatefulSet` provides stable per-pod DNS via a headless companion service and is the safe choice for horizontally scaling a persistent cache. |
 | `livenessProbe.httpGet.path` | string | `"/"` |  |
 | `livenessProbe.httpGet.port` | string | `"http"` |  |
 | `nameOverride` | string | `""` |  |
@@ -83,6 +84,10 @@ orca:
 | `serviceAccount.automount` | bool | `true` |  |
 | `serviceAccount.create` | bool | `true` |  |
 | `serviceAccount.name` | string | `""` |  |
+| `storage.accessModes` | list | `["ReadWriteOnce"]` | Access modes applied to every cache PVC the chart creates |
+| `storage.annotations` | object | `{}` | Extra annotations applied to every cache PVC the chart creates |
+| `storage.labels` | object | `{}` | Extra labels applied to every cache PVC the chart creates |
+| `storage.storageClassName` | string | `""` | StorageClass applied to every cache PVC the chart creates. Empty uses the cluster default. |
 | `orca.acme` | object | `{}` | Generate [ACME TLS certificates](https://github.com/varnish/orca/blob/main/docs/configuration/acme.md) inside the *Varnish Orca* pod.
 | `orca.virtual_registry` | object | See below | Orca virtual registry settings | [Virtual Registry configuration](https://github.com/varnish/orca/blob/main/docs/configuration/virtual-registry.md)
 | `orca.git_mirror` | object | `{}` | Deploy a Git mirror alongside Orca for Git caching |
@@ -91,6 +96,7 @@ orca:
 | `orca.supervisor` | object | `{}` | Orca [supervisor settings](https://github.com/varnish/orca/blob/main/docs/configuration/supervisor.md)
 | `orca.varnish` | object | `{}` | Orca's underlying [Varnish configuration](https://github.com/varnish/orca/blob/main/docs/configuration/varnish.md)
 | `orca.varnish.http[0].port` | int | `80` | On what port(s) should Varnish listen for HTTP requests
+| `orca.varnish.storage.stores` | list | `[]` | Persistent cache stores. Each entry gets a PVC sized to `size` and mounted at `path`. See [Deploying with persistent storage](#deploying-with-persistent-storage). |
 | `tolerations` | list | `[]` |  |
 | `volumeMounts` | list | `[]` |  |
 | `volumes` | list | `[]` |  |
@@ -212,6 +218,44 @@ orca:
 ```
 
 Not only does this config mount the certificate into the pod from the `varnish-orca-certificate`, it also exposes port `443` as a service within your Kubernetes cluster.
+
+## Deploying with persistent cache
+
+By default Orca uses a memory-only cache. Adding entries to `orca.varnish.storage.stores` enables MSE4 persistent cache in addition to the memory cache. Persistent cache requires `kind: StatefulSet`. Each replica gets its own PVC (one per ordinal) via `volumeClaimTemplates`, plus a stable per-pod DNS name from a headless companion service.
+
+For each store:
+
+* The StatefulSet creates a PVC per replica, sized to `size`.
+* The PVC is mounted at `path` inside the pod. Orca treats `path` as a directory and creates the MSE4 book/store files (`<store-name>_book`, `<store-name>_store`) inside it.
+* Defaults like `storageClassName` and `accessModes` come from the top-level `storage:` block and apply to every store.
+
+Each store's `size` must be strictly greater than `book_size` + 1G filesystem overhead. `book_size` defaults to 5G, so `size` must be greater than 6G unless `book_size` is overridden.
+
+`size` is interpreted in Varnish format (binary `K`/`M`/`G`/`T`, e.g. `100G` is 100 * 2^30 bytes). The chart translates this to the equivalent Kubernetes binary quantity for the PVC (`100G` becomes `100Gi`), so the PVC and the cache files always agree on size.
+
+```yaml
+kind: StatefulSet
+replicaCount: 3
+orca:
+  varnish:
+    http:
+    - port: 80
+    storage:
+      stores:
+      - name: store1
+        path: /var/lib/varnish-supervisor/storage/store1
+        size: 100G
+```
+
+Scaling up creates a new empty PVC for the new replica (which cold-starts while the existing replicas keep their warm cache). Scaling down does *not* delete PVCs by default.
+
+### Cache data survives `helm upgrade` and `helm uninstall`
+
+The StatefulSet's `persistentVolumeClaimRetentionPolicy` defaults to `Retain`, so PVCs created from `volumeClaimTemplates` are preserved across `helm upgrade` and `helm uninstall`. If you no longer need the cache data, delete the PVCs manually:
+
+```sh
+kubectl delete pvc -l app.kubernetes.io/instance=varnish-orca
+```
 
 ## Undeploying Varnish Orca
 
