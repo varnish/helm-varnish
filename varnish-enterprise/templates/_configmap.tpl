@@ -135,6 +135,11 @@ env: {
 Normalizes a route object's name for use as a VCL filename and Varnish label.
 Takes a route object as context. Replaces non-alphanumeric characters with underscores.
 */}}
+{{- define "varnish-enterprise.vclBundleK8sName" -}}
+{{- $s := regexReplaceAll "[^a-z0-9]" (. | lower) "-" -}}
+{{- regexReplaceAll "^-+|-+$" $s "" -}}
+{{- end -}}
+
 {{- define "varnish-enterprise.vclBundleNormalizeName" -}}
 {{- if .name -}}
 {{- regexReplaceAll "[^a-zA-Z0-9]" .name "_" -}}

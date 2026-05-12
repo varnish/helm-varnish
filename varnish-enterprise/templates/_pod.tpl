@@ -174,14 +174,14 @@ volumes:
     name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-cmds
 {{- range .Values.server.vcls.routes }}
 {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-- name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ $name }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
   configMap:
-    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-route-{{ $name }}
+    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-route-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
 {{- end }}
 {{- range $filename, $_ := .Values.server.vcls.includes }}
-- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ regexReplaceAll "[^a-zA-Z0-9]" $filename "-" }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
   configMap:
-    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-include-{{ regexReplaceAll "[^a-zA-Z0-9]" $filename "-" }}
+    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
 {{- end }}
 {{- else }}
 {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
@@ -563,14 +563,14 @@ Composing the $varnishArgs list or arguments
       subPath: cmds.cli
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-    - name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ $name }}
-      mountPath: /etc/varnish/vcls/route-{{ $name }}.vcl
+    - name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+      mountPath: /etc/varnish/vcls/routes/route-{{ $name }}.vcl
       subPath: route-{{ $name }}.vcl
     {{- end }}
     {{- range $filename, $_ := .Values.server.vcls.includes }}
-    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ regexReplaceAll "[^a-zA-Z0-9]" $filename "-" }}
-      mountPath: /etc/varnish/vcls/{{ $filename }}
-      subPath: {{ $filename }}
+    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
+      mountPath: /etc/varnish/vcls/includes/{{ $filename }}
+      subPath: {{ base $filename }}
     {{- end }}
     {{- else }}
     {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
