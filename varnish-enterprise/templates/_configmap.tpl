@@ -190,6 +190,9 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- if empty .hostnames -}}
         {{- $catchAllSeen = true -}}
       {{- end -}}
+      {{- if and .name (regexMatch "(^\\.\\./)|(/\\.\\.)" .name) -}}
+        {{- fail (printf "server.vcls.routes: name '%s' contains path traversal sequence" .name) -}}
+      {{- end -}}
       {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . -}}
       {{- if hasKey $seen $name -}}
         {{- fail (printf "server.vcls.routes: duplicate normalized name '%s' — routes must produce unique names" $name) -}}
@@ -203,6 +206,9 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- end -}}
     {{- $seenIncludeK8s := dict -}}
     {{- range $filename, $_ := .Values.server.vcls.includes -}}
+      {{- if regexMatch "(^\\.\\./)|(/\\.\\.)" $filename -}}
+        {{- fail (printf "server.vcls.includes: filename '%s' contains path traversal sequence" $filename) -}}
+      {{- end -}}
       {{- $k8sName := include "varnish-enterprise.vclBundleK8sName" $filename -}}
       {{- if hasKey $seenIncludeK8s $k8sName -}}
         {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}

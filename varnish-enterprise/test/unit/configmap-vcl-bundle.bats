@@ -330,6 +330,16 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"catch-all route (no hostnames) must be the last route"* ]]
 }
 
+@test "vcl-bundle: error when route name contains path traversal" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --values <(printf 'server:\n  vcls:\n    routes:\n      - name: "../evil"\n        vclContent: "vcl 4.1;"\n') \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"contains path traversal sequence"* ]]
+}
+
 @test "vcl-bundle: error when route has no vclContent" {
     cd "$(chart_dir)"
     local actual=$((helm template \
@@ -611,6 +621,26 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/configmap-vcl.yaml \
         . 2>&1 || true) | tee -a /dev/stderr)
     [[ "${actual}" == *"duplicate k8s name"* ]]
+}
+
+@test "vcl-bundle: error when include filename contains path traversal (middle)" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --values <(printf 'server:\n  vcls:\n    routes:\n      - vclContent: "vcl 4.1;"\n    includes:\n      "foo/../bar.vcl": content\n') \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"contains path traversal sequence"* ]]
+}
+
+@test "vcl-bundle: error when include filename contains path traversal (leading)" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --values <(printf 'server:\n  vcls:\n    routes:\n      - vclContent: "vcl 4.1;"\n    includes:\n      "../foo.vcl": content\n') \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"contains path traversal sequence"* ]]
 }
 
 @test "vcl-bundle: error when include filename contains invalid characters" {
