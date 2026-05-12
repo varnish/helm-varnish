@@ -67,3 +67,105 @@ data:
     }
     include {{ .Values.server.vclConfigPath | quote }};
 {{- end }}
+{{- if not (empty .Values.server.vcls.routes) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-router
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+data:
+  router.vcl: |
+    vcl 4.1;
+    {{- if .Values.cluster.enabled }}
+
+    import activedns;
+
+    include "cluster.vcl";
+    {{- end }}
+
+    backend default none;
+    {{- if .Values.cluster.enabled }}
+
+    sub vcl_init {
+      {{- if .Values.cluster.trace }}
+      cluster_opts.set("trace", "true");
+      {{- end }}
+      new cluster_group = activedns.dns_group(
+        {{- if .Values.cluster.headlessServiceName }}
+        "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
+        {{- else }}
+        "{{ include "varnish-enterprise.fullname" . }}-peers:{{ .Values.server.http.port }}"
+        {{- end }}
+      );
+      cluster.subscribe(cluster_group.get_tag());
+      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
+    }
+    {{- end }}
+
+    sub vcl_recv {
+    {{- range .Values.server.vcls.routes }}
+    {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+    {{- if .hostnames }}
+      # {{ $name }}: {{ .hostnames | join ", " }}
+      if ({{- range $i, $h := .hostnames }}{{- if $i }} || {{ end }}req.http.host == {{ $h | quote }}{{- end }}) {
+        return(vcl({{ $name }}));
+      }
+    {{- else }}
+      # {{ $name }}: catch-all
+      return(vcl({{ $name }}));
+    {{- end }}
+    {{- end }}
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-cmds
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+data:
+  cmds.cli: |
+    {{- range .Values.server.vcls.routes }}
+    {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+    vcl.load route_{{ $name }}_0 /etc/varnish/vcls/route-{{ $name }}.vcl
+    vcl.label {{ $name }} route_{{ $name }}_0
+    {{- end }}
+    vcl.load router_0 /etc/varnish/vcls/router.vcl
+    vcl.use router_0
+{{- range .Values.server.vcls.routes }}
+{{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+{{- if eq (default "" .vclContent) "" }}
+{{- fail (printf "server.vcls.routes: route '%s' must set vclContent" $name) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-route-{{ $name }}
+  labels:
+    {{- include "varnish-enterprise.labels" $ | nindent 4 }}
+data:
+  route-{{ $name }}.vcl: |
+    {{- tpl .vclContent $ | nindent 4 }}
+{{- end }}
+{{- range $filename, $content := .Values.server.vcls.includes }}
+{{- if hasPrefix "route-" $filename }}
+{{- fail (printf "server.vcls.includes: filename '%s' must not start with 'route-'" $filename) }}
+{{- end }}
+{{- if not (regexMatch "^[-._a-zA-Z0-9]+$" $filename) }}
+{{- fail (printf "server.vcls.includes: filename '%s' contains invalid characters (allowed: [-._a-zA-Z0-9])" $filename) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-include-{{ regexReplaceAll "[^a-zA-Z0-9]" $filename "-" }}
+  labels:
+    {{- include "varnish-enterprise.labels" $ | nindent 4 }}
+data:
+  {{ $filename }}: |
+    {{- tpl $content $ | nindent 4 }}
+{{- end }}
+{{- end }}

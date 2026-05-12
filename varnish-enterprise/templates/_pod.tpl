@@ -166,9 +166,23 @@ volumes:
     secretName: {{ include "varnish-enterprise.fullname" . }}-secret
 {{- end }}
 {{- if not (empty .Values.server.vcls.routes) }}
-- name: {{ .Release.Name }}-config-vcl-bundle
+- name: {{ .Release.Name }}-config-vcl-bundle-router
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle
+    name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-router
+- name: {{ .Release.Name }}-config-vcl-bundle-cmds
+  configMap:
+    name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-cmds
+{{- range .Values.server.vcls.routes }}
+{{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ $name }}
+  configMap:
+    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-route-{{ $name }}
+{{- end }}
+{{- range $filename, $_ := .Values.server.vcls.includes }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ regexReplaceAll "[^a-zA-Z0-9]" $filename "-" }}
+  configMap:
+    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-include-{{ regexReplaceAll "[^a-zA-Z0-9]" $filename "-" }}
+{{- end }}
 {{- else }}
 {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
 - name: {{ .Release.Name }}-config-vcl
@@ -541,8 +555,23 @@ Composing the $varnishArgs list or arguments
       subPath: secret
     {{- end }}
     {{- if not (empty .Values.server.vcls.routes) }}
-    - name: {{ .Release.Name }}-config-vcl-bundle
-      mountPath: /etc/varnish/vcls
+    - name: {{ .Release.Name }}-config-vcl-bundle-router
+      mountPath: /etc/varnish/vcls/router.vcl
+      subPath: router.vcl
+    - name: {{ .Release.Name }}-config-vcl-bundle-cmds
+      mountPath: /etc/varnish/vcls/cmds.cli
+      subPath: cmds.cli
+    {{- range .Values.server.vcls.routes }}
+    {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+    - name: {{ $.Release.Name }}-config-vcl-bundle-route-{{ $name }}
+      mountPath: /etc/varnish/vcls/route-{{ $name }}.vcl
+      subPath: route-{{ $name }}.vcl
+    {{- end }}
+    {{- range $filename, $_ := .Values.server.vcls.includes }}
+    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ regexReplaceAll "[^a-zA-Z0-9]" $filename "-" }}
+      mountPath: /etc/varnish/vcls/{{ $filename }}
+      subPath: {{ $filename }}
+    {{- end }}
     {{- else }}
     {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
