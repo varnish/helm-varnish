@@ -127,6 +127,33 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *'return(vcl(any))'* ]]
 }
 
+@test "vcl-bundle: routing VCL has synth 404 fallback when no catch-all route" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].hostnames[0]=foo.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
+        | tee -a /dev/stderr)
+    [[ "${actual}" == *'return(synth(404, "No matching route"))'* ]]
+}
+
+@test "vcl-bundle: routing VCL omits synth 404 fallback when catch-all route present" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].hostnames[0]=foo.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
+        | tee -a /dev/stderr)
+    [[ "${actual}" != *'synth(404'* ]]
+}
+
 @test "vcl-bundle: routing VCL handles multiple hostnames with OR" {
     cd "$(chart_dir)"
     local actual=$((helm template \

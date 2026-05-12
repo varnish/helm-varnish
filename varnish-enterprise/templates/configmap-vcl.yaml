@@ -106,6 +106,7 @@ data:
 
     sub vcl_recv {
       set req.http.No-Port-Host = regsub(req.http.host, ":\d+$", "");
+    {{- $hasCatchAll := false }}
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
     {{- if .hostnames }}
@@ -114,11 +115,15 @@ data:
         return(vcl({{ $name }}));
       }
     {{- else }}
+    {{- $hasCatchAll = true }}
       # {{ $name }}: catch-all
       return(vcl({{ $name }}));
     {{- end }}
     {{- end }}
+    {{- if not $hasCatchAll }}
+      # automatically added as a no catch-all route is defined to avoid unexpected behavior when a request doesn't match any route
       return(synth(404, "No matching route"));
+    {{- end }}
     }
 ---
 apiVersion: v1
