@@ -669,7 +669,7 @@ server:
   vcls:
     # routes: ordered list of per-domain VCL configurations.
     # Each entry must set vclContent.
-    # Entries without hostnames act as a catch-all (last one wins).
+    # Entries without hostnames act as a catch-all and must be the last route.
     # Type: object list
     # Example:
     #   routes:
