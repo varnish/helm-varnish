@@ -203,7 +203,7 @@ server:
   # *Note: While both StatefulSet and DaemonSet share the same `updateStrategy` configuration key, its
   # applicable values are different. See
   # [updateStrategy on StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies)
-  # and [updateStrategy on DaemonSet](https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/).* 
+  # and [updateStrategy on DaemonSet](https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/).*
   # Availability: v1.1.0
   # Type: object or template string
   updateStrategy: {}
@@ -240,7 +240,7 @@ server:
     # port forwarding with kubectl more challenging.
     # Availability: v1.7.4
     # Type: boolean
-    podIP: false 
+    podIP: false
 
   tls:
     # Configures Varnish to enable [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/)
@@ -662,8 +662,8 @@ server:
   #       }
   vclConfigs: {}
 
-  # Per-domain VCL routing (multi-tenant). When set, supersedes server.vclConfig, server.vclConfigFile,
-  # and server.vclConfigs. An auto-generated routing VCL and cmdfile are created from these settings.
+  # Per-domain VCL routing (multi-tenant). When set, supersedes the server.vclConfig* fields.
+  # An auto-generated routing VCL and cmdfile are created from these settings.
   # server.cmdfileConfig and server.cmdfileConfigFile must not be set when routes is non-empty.
   # Availability: v1.X.0
   vcls:
@@ -1527,9 +1527,9 @@ server:
           # on a separate cluster.
           clusterDomain: "cluster.local"
 
-        # Sets the extra environment variables for Varnish Controller VCLI. 
+        # Sets the extra environment variables for Varnish Controller VCLI.
         # Type: object or array or template string
-        # Sets the extra environment variables for Varnish Controller VCLI. 
+        # Sets the extra environment variables for Varnish Controller VCLI.
         # Type: object or array or template string
         # Example:
         #  extraEnvs:
