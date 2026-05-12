@@ -4,7 +4,7 @@ load _helpers
 
 @test "Service: headless TLS service uses server TLS port instead of non-existent server.service.tls.port (non-regression test)" {
     cd "$(chart_dir)"
-    local actual=$((helm template \
+    run helm template \
         --set 'server.service.type=ClusterIP' \
         --set 'server.service.clusterIP=None' \
         --set 'server.service.https.enabled=true' \
@@ -12,21 +12,29 @@ load _helpers
         --set 'server.tls.port=443' \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r '.spec.ports[1].port' | tee -a /dev/stderr)
-    [ "${actual}" = "443" ]
+        .
+    echo "$output"
+
+    [ "${status}" == 0 ]
+
+    local port=$( echo "$output" |  yq -r '.spec.ports[1].port' )
+
+    echo Port: $port
+    [ "${port}" == "443" ]
 }
 
 @test "Service/externalTrafficPolicy: defaults to Cluster" {
     cd "$(chart_dir)"
 
-    local object=$((helm template \
+    run helm template \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") |
-        tee -a /dev/stderr)
+        .
+    echo "$output"
 
-    local actual=$(echo "$object" |
+    [ "${status}" == 0 ]
+
+    local actual=$(echo "$output" |
         yq -r -c '.spec.externalTrafficPolicy' |
         tee -a /dev/stderr)
 
@@ -36,14 +44,16 @@ load _helpers
 @test "Service/externalTrafficPolicy: can be changed by user, for example Local" {
     cd "$(chart_dir)"
 
-    local object=$((helm template \
+    run helm template \
         --set 'server.service.externalTrafficPolicy=Local' \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") |
-        tee -a /dev/stderr)
+        .
+    echo "$output"
+    
+    [ "${status}" == 0 ]
 
-    local actual=$(echo "$object" |
+    local actual=$(echo "$output" |
         yq -r -c '.spec.externalTrafficPolicy' |
         tee -a /dev/stderr)
 
