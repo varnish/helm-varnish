@@ -109,7 +109,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
         | tee -a /dev/stderr)
-    [[ "${actual}" == *'req.http.host == "foo.com"'* ]]
+    [[ "${actual}" == *'req.http.No-Port-Host == "foo.com"'* ]]
     [[ "${actual}" == *'return(vcl(foo_com))'* ]]
 }
 
@@ -138,7 +138,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
         | tee -a /dev/stderr)
-    [[ "${actual}" == *'req.http.host == "foo.com" || req.http.host == "www.foo.com"'* ]]
+    [[ "${actual}" == *'req.http.No-Port-Host == "foo.com" || req.http.No-Port-Host == "www.foo.com"'* ]]
 }
 
 # ── Cmdfile ───────────────────────────────────────────────────────────────────
@@ -250,6 +250,19 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/configmap-vcl.yaml \
         . 2>&1 || true) | tee -a /dev/stderr)
     [[ "${actual}" == *"'server.vcls.includes' requires 'server.vcls.routes' to be set"* ]]
+}
+
+@test "vcl-bundle: error when two routes produce the same normalized name" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].hostnames[0]=foo.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[1].hostnames[0]=foo_com" \
+        --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"duplicate normalized name"* ]]
 }
 
 @test "vcl-bundle: error when route has no vclContent" {

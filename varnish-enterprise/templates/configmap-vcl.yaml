@@ -105,11 +105,12 @@ data:
     {{- end }}
 
     sub vcl_recv {
+      set req.http.No-Port-Host = regsub(req.http.host, ":\d+$", "");
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
     {{- if .hostnames }}
       # {{ $name }}: {{ .hostnames | join ", " }}
-      if ({{- range $i, $h := .hostnames }}{{- if $i }} || {{ end }}req.http.host == {{ $h | quote }}{{- end }}) {
+      if ({{- range $i, $h := .hostnames }}{{- if $i }} || {{ end }}req.http.No-Port-Host == {{ $h | quote }}{{- end }}) {
         return(vcl({{ $name }}));
       }
     {{- else }}
