@@ -265,6 +265,18 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"duplicate normalized name"* ]]
 }
 
+@test "vcl-bundle: error when catch-all route is not last" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[1].hostnames[0]=foo.com" \
+        --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"catch-all route (no hostnames) must be the last route"* ]]
+}
+
 @test "vcl-bundle: error when route has no vclContent" {
     cd "$(chart_dir)"
     local actual=$((helm template \

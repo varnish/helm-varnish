@@ -178,7 +178,14 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
     {{- end -}}
     {{- $seen := dict -}}
+    {{- $catchAllSeen := false -}}
     {{- range .Values.server.vcls.routes -}}
+      {{- if $catchAllSeen -}}
+        {{- fail "server.vcls.routes: catch-all route (no hostnames) must be the last route" -}}
+      {{- end -}}
+      {{- if empty .hostnames -}}
+        {{- $catchAllSeen = true -}}
+      {{- end -}}
       {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . -}}
       {{- if hasKey $seen $name -}}
         {{- fail (printf "server.vcls.routes: duplicate normalized name '%s' — routes must produce unique names" $name) -}}
