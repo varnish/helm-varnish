@@ -37,7 +37,14 @@ Sets up Pod annotations
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-secret") (sha256sum $secretConfig)) $checksum) }}
 {{- end }}
 {{- if not (empty .Values.server.vcls.routes) }}
-{{- $bundleData := dict "routes" .Values.server.vcls.routes "includes" .Values.server.vcls.includes }}
+{{- $bundleData := dict
+    "routes" .Values.server.vcls.routes
+    "includes" .Values.server.vcls.includes
+    "clusterEnabled" .Values.cluster.enabled
+    "clusterTrace" .Values.cluster.trace
+    "clusterHeadlessServiceName" .Values.cluster.headlessServiceName
+    "serverHttpPort" .Values.server.http.port
+}}
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl-bundle") (sha256sum (toJson $bundleData))) $checksum) }}
 {{- end }}
 {{- if not (empty $extraManifests) }}
