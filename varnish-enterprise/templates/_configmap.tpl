@@ -142,6 +142,9 @@ Takes a route object as context. Replaces non-alphanumeric characters with under
 
 {{- define "varnish-enterprise.vclBundleNormalizeName" -}}
 {{- if .name -}}
+{{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" .name -}}
+{{- fail (printf "server.vcls.routes: name '%s' contains path traversal sequence" .name) -}}
+{{- end -}}
 {{- regexReplaceAll "[^a-zA-Z0-9]" .name "_" -}}
 {{- else if .hostnames -}}
 {{- regexReplaceAll "[^a-zA-Z0-9]" (first .hostnames) "_" -}}
@@ -190,9 +193,6 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- if empty .hostnames -}}
         {{- $catchAllSeen = true -}}
       {{- end -}}
-      {{- if and .name (regexMatch "(^\\.\\./)|(/\\.\\.)" .name) -}}
-        {{- fail (printf "server.vcls.routes: name '%s' contains path traversal sequence" .name) -}}
-      {{- end -}}
       {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . -}}
       {{- if hasKey $seen $name -}}
         {{- fail (printf "server.vcls.routes: duplicate normalized name '%s' — routes must produce unique names" $name) -}}
@@ -206,7 +206,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- end -}}
     {{- $seenIncludeK8s := dict -}}
     {{- range $filename, $_ := .Values.server.vcls.includes -}}
-      {{- if regexMatch "(^\\.\\./)|(/\\.\\.)" $filename -}}
+      {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" $filename -}}
         {{- fail (printf "server.vcls.includes: filename '%s' contains path traversal sequence" $filename) -}}
       {{- end -}}
       {{- $k8sName := include "varnish-enterprise.vclBundleK8sName" $filename -}}

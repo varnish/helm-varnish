@@ -643,6 +643,16 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"contains path traversal sequence"* ]]
 }
 
+@test "vcl-bundle: error when include filename starts with /" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --namespace default \
+        --values <(printf 'server:\n  vcls:\n    routes:\n      - vclContent: "vcl 4.1;"\n    includes:\n      "/etc/passwd": content\n') \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"contains path traversal sequence"* ]]
+}
+
 @test "vcl-bundle: error when include filename contains invalid characters" {
     cd "$(chart_dir)"
     local actual=$((helm template \
