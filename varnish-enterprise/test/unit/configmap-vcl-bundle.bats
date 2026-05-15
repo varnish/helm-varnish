@@ -11,10 +11,9 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     local actual=$( (helm template \
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.metadata.name | test("-vcl-bundle-")) | .metadata.name' \
-        | tee -a /dev/stderr | wc -l | tr -d ' ')
-    [ "${actual}" = "0" ]
+        . 2>&1 ) | tee -a /dev/stderr  )
+
+    [ "${actual}" = "Error: could not find template templates/configmap-vcl.yaml in chart" ]
 }
 
 @test "vcl-bundle: created when server.vcls.routes is non-empty" {
