@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 load _helpers
+bats_require_minimum_version 1.5.0
 
 VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200)); }'
 
@@ -8,12 +9,12 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: not created when server.vcls.routes is empty" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 ) | tee -a /dev/stderr  )
-
-    [ "${actual}" = "Error: could not find template templates/configmap-vcl.yaml in chart" ]
+        .
+    [ "$status" -ne 0 ]
+    [ "$stderr" = "Error: could not find template templates/configmap-vcl.yaml in chart" ]
 }
 
 @test "vcl-bundle: created when server.vcls.routes is non-empty" {
@@ -215,96 +216,104 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: error when server.vcls.routes and server.vclConfigPath both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vclConfigPath=/etc/varnish/custom.vcl" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigPath'"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigPath'"* ]]
 }
 
 @test "vcl-bundle: error when server.vcls.routes and server.vclConfig both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vclConfig=vcl 4.1;" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfig'"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfig'"* ]]
 }
 
 @test "vcl-bundle: error when server.vcls.routes and server.vclConfigFile both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vclConfigFile=files/default.vcl" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigFile'"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigFile'"* ]]
 }
 
 @test "vcl-bundle: error when server.vcls.routes and server.vclConfigs both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vclConfigs.default\\.vcl=vcl 4.1;" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigs'"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigs'"* ]]
 }
 
 @test "vcl-bundle: error when server.vcls.routes and server.cmdfileConfig both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.cmdfileConfig=vcl.use boot;" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'"* ]]
 }
 
 @test "vcl-bundle: error when server.vcls.routes and server.cmdfileConfigPath both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.cmdfileConfigPath=/etc/varnish/custom.cli" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set"* ]]
 }
 
 @test "vcl-bundle: error when server.vcls.includes set without server.vcls.routes" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.includes.helpers\\.vcl=sub common_recv {}" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"'server.vcls.includes' requires 'server.vcls.routes' to be set"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.vcls.includes' requires 'server.vcls.routes' to be set"* ]]
 }
 
 @test "vcl-bundle: error when two routes produce the same normalized name" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.routes[1].hostnames[0]=foo_com" \
         --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"duplicate normalized name"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"duplicate normalized name"* ]]
 }
 
 @test "vcl-bundle: error when two routes produce the same k8s name" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].name=Foo-bar" \
         --set "server.vcls.routes[0].hostnames[0]=a.com" \
@@ -313,40 +322,44 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[1].hostnames[0]=b.com" \
         --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"duplicate k8s name"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"duplicate k8s name"* ]]
 }
 
 @test "vcl-bundle: error when catch-all route is not last" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.routes[1].hostnames[0]=foo.com" \
         --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"catch-all route (no hostnames) must be the last route"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"catch-all route (no hostnames) must be the last route"* ]]
 }
 
 @test "vcl-bundle: error when route name contains path traversal" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --values <(printf 'server:\n  vcls:\n    routes:\n      - name: "../evil"\n        vclContent: "vcl 4.1;"\n') \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"contains path traversal sequence"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"contains path traversal sequence"* ]]
 }
 
 @test "vcl-bundle: error when route has no vclContent" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"must set vclContent"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"must set vclContent"* ]]
 }
 
 # ── Cluster ───────────────────────────────────────────────────────────────────
@@ -612,55 +625,60 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: error when two includes produce the same k8s name" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.includes.foo/bar\\.vcl=content1" \
         --set "server.vcls.includes.foo-bar\\.vcl=content2" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"duplicate k8s name"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"duplicate k8s name"* ]]
 }
 
 @test "vcl-bundle: error when include filename contains path traversal (middle)" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --values <(printf 'server:\n  vcls:\n    routes:\n      - vclContent: "vcl 4.1;"\n    includes:\n      "foo/../bar.vcl": content\n') \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"contains path traversal sequence"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"contains path traversal sequence"* ]]
 }
 
 @test "vcl-bundle: error when include filename contains path traversal (leading)" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --values <(printf 'server:\n  vcls:\n    routes:\n      - vclContent: "vcl 4.1;"\n    includes:\n      "../foo.vcl": content\n') \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"contains path traversal sequence"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"contains path traversal sequence"* ]]
 }
 
 @test "vcl-bundle: error when include filename starts with /" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --values <(printf 'server:\n  vcls:\n    routes:\n      - vclContent: "vcl 4.1;"\n    includes:\n      "/etc/passwd": content\n') \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"contains path traversal sequence"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"contains path traversal sequence"* ]]
 }
 
 @test "vcl-bundle: error when include filename contains invalid characters" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.includes.sub!helpers\\.vcl=sub common_recv {}" \
         --show-only templates/configmap-vcl.yaml \
-        . 2>&1 || true) | tee -a /dev/stderr)
-    [[ "${actual}" == *"contains invalid characters"* ]]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"contains invalid characters"* ]]
 }
 
 @test "vcl-bundle: include with subdirectory path mounts under includes/" {
