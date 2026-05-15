@@ -203,7 +203,7 @@ server:
   # *Note: While both StatefulSet and DaemonSet share the same `updateStrategy` configuration key, its
   # applicable values are different. See
   # [updateStrategy on StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies)
-  # and [updateStrategy on DaemonSet](https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/).* 
+  # and [updateStrategy on DaemonSet](https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/).*
   # Availability: v1.1.0
   # Type: object or template string
   updateStrategy: {}
@@ -240,7 +240,7 @@ server:
     # port forwarding with kubectl more challenging.
     # Availability: v1.7.4
     # Type: boolean
-    podIP: false 
+    podIP: false
 
   tls:
     # Configures Varnish to enable [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/)
@@ -661,6 +661,40 @@ server:
   #         .port = "8080";
   #       }
   vclConfigs: {}
+
+  # Per-domain VCL routing (multi-tenant). When set, supersedes the server.vclConfig* fields.
+  # An auto-generated routing VCL and cmdfile are created from these settings.
+  # server.cmdfileConfig and server.cmdfileConfigFile must not be set when routes is non-empty.
+  # Availability: v1.X.0
+  vcls:
+    # routes: ordered list of per-domain VCL configurations.
+    # Each entry must set vclContent.
+    # Entries without hostnames act as a catch-all and must be the last route.
+    # Type: object list
+    # Example:
+    #   routes:
+    #     - name: foo-site            # optional; defaults to first hostname or "any"
+    #       hostnames:                # the hostnames to match for this VCL. If empty, this VCL will be used as a catch-all.
+    #         - foo.com
+    #         - www.foo.com
+    #       vclContent: |
+    #         vcl 4.1;
+    #         backend default none;
+    #         sub vcl_recv { return (synth(200)); }
+    #     - vclContent: |             # no hostnames = catch-all
+    #         vcl 4.1;
+    #         backend default none;
+    #         sub vcl_recv { return (synth(404)); }
+    routes: []
+
+    # includes: shared VCL files placed in /etc/varnish/vcls/includes/, referenced by route VCLs.
+    # Map of filename to VCL content (template string).
+    # Type: object
+    # Example:
+    #   includes:
+    #     helpers.vcl: |
+    #       sub common_recv { ... }
+    includes: {}
 
   # A path to the [CLI command file](https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file).
   # This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the
@@ -1493,9 +1527,9 @@ server:
           # on a separate cluster.
           clusterDomain: "cluster.local"
 
-        # Sets the extra environment variables for Varnish Controller VCLI. 
+        # Sets the extra environment variables for Varnish Controller VCLI.
         # Type: object or array or template string
-        # Sets the extra environment variables for Varnish Controller VCLI. 
+        # Sets the extra environment variables for Varnish Controller VCLI.
         # Type: object or array or template string
         # Example:
         #  extraEnvs:
