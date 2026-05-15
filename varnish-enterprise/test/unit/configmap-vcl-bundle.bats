@@ -141,13 +141,13 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: routing VCL omits synth 404 fallback when catch-all route present" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    local actual=$(helm template \
         --namespace default \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
         | tee -a /dev/stderr)
     [[ "${actual}" != *'synth(404'* ]]
@@ -353,12 +353,12 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: router.vcl has no cluster code when cluster disabled" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    local actual=$(helm template \
         --namespace default \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
     [[ "${actual}" != *"import activedns"* ]]
     [[ "${actual}" != *"cluster.vcl"* ]]
@@ -439,14 +439,14 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: router.vcl has no trace opt when cluster.trace disabled" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    local actual=$(helm template \
         --namespace default \
         --set "cluster.enabled=true" \
         --set "server.http.enabled=true" \
         --set "cluster.trace=false" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
     [[ "${actual}" != *'"trace"'* ]]
 }
@@ -563,14 +563,14 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: varnishd -f arg is empty string when routes and cluster both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    local actual=$(helm template \
         --namespace default \
         --set "cluster.enabled=true" \
         --set "server.http.enabled=true" \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
             .command | join(" ")' | tee -a /dev/stderr)
@@ -580,14 +580,14 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 
 @test "vcl-bundle: wrapped-default.vcl not mounted when routes and cluster both set" {
     cd "$(chart_dir)"
-    local actual=$( (helm template \
+    local actual=$(helm template \
         --namespace default \
         --set "cluster.enabled=true" \
         --set "server.http.enabled=true" \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
             .volumeMounts[] | select(.name | test("wrapped-default")) | .name' \
