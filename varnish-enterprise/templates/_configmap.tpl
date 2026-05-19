@@ -185,6 +185,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- end -}}
     {{- $seen := dict -}}
     {{- $seenK8s := dict -}}
+    {{- $seenMountPaths := dict -}}
     {{- $catchAllSeen := false -}}
     {{- range .Values.server.vcls.routes -}}
       {{- if $catchAllSeen -}}
@@ -203,6 +204,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
         {{- fail (printf "server.vcls.routes: duplicate k8s name '%s' — routes must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
       {{- $_ := set $seenK8s $k8sName true -}}
+      {{- $_ := set $seenMountPaths (printf "%s.vcl" $name) "route" -}}
     {{- end -}}
     {{- $seenIncludeK8s := dict -}}
     {{- range $filename, $_ := .Values.server.vcls.includes -}}
@@ -214,6 +216,9 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
         {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
       {{- $_ := set $seenIncludeK8s $k8sName true -}}
+      {{- if hasKey $seenMountPaths $filename -}}
+        {{- fail (printf "server.vcls.includes: filename '%s' collides with a route mounted at the same path" $filename) -}}
+      {{- end -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}

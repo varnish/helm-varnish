@@ -576,7 +576,7 @@ Composing the $varnishArgs list or arguments
     {{- end }}
     {{- range $filename, $_ := .Values.server.vcls.includes }}
     - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
-      mountPath: /etc/varnish/vcls/includes/{{ $filename }}
+      mountPath: /etc/varnish/vcls/{{ $filename }}
       subPath: {{ base $filename }}
     {{- end }}
     {{- else }}

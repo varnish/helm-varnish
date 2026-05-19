@@ -623,6 +623,18 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 
+@test "vcl-bundle: error when include filename collides with route mount path" {
+    cd "$(chart_dir)"
+    local actual=$( (helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[0].name=myroute" \
+        --set "server.vcls.includes.myroute\\.vcl=content" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"collides with a route mounted at the same path"* ]]
+}
+
 @test "vcl-bundle: error when two includes produce the same k8s name" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
@@ -681,7 +693,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "$stderr" == *"contains invalid characters"* ]]
 }
 
-@test "vcl-bundle: include with subdirectory path mounts under includes/" {
+@test "vcl-bundle: include with subdirectory path mounts under vcls/" {
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -693,7 +705,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
             .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
             .volumeMounts[] | select(.name | test("bundle-include")) |
             [.mountPath, .subPath] | join(":")' | tee -a /dev/stderr)
-    [ "${actual}" = "/etc/varnish/vcls/includes/sub/helpers.vcl:helpers.vcl" ]
+    [ "${actual}" = "/etc/varnish/vcls/sub/helpers.vcl:helpers.vcl" ]
 }
 
 @test "vcl-bundle: include ConfigMap data key uses basename only" {
