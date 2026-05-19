@@ -185,7 +185,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- end -}}
     {{- $seen := dict -}}
     {{- $seenK8s := dict -}}
-    {{- $seenMountPaths := dict -}}
+    {{- $seenMountPaths := dict "router.vcl" "reserved" "cmds.cli" "reserved" -}}
     {{- $catchAllSeen := false -}}
     {{- range .Values.server.vcls.routes -}}
       {{- if $catchAllSeen -}}

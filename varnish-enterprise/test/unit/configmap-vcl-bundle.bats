@@ -623,6 +623,28 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 
+@test "vcl-bundle: error when include filename collides with reserved router.vcl" {
+    cd "$(chart_dir)"
+    local actual=$( (helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.includes.router\\.vcl=content" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"collides with a route mounted at the same path"* ]]
+}
+
+@test "vcl-bundle: error when include filename collides with reserved cmds.cli" {
+    cd "$(chart_dir)"
+    local actual=$( (helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.includes.cmds\\.cli=content" \
+        --show-only templates/configmap-vcl.yaml \
+        . 2>&1 || true) | tee -a /dev/stderr)
+    [[ "${actual}" == *"collides with a route mounted at the same path"* ]]
+}
+
 @test "vcl-bundle: error when include filename collides with route mount path" {
     cd "$(chart_dir)"
     local actual=$( (helm template \
