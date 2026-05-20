@@ -316,7 +316,11 @@ Composing the $varnishArgs list or arguments
 {{/*
     Working directory
 */}}
+{{- if (eq .Values.server.workDir "-" ) }}
+{{- $varnishArgs = concat $varnishArgs (list "-n" "$(VARNISH_WORKDIR)" )  }}
+{{- else }}
 {{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir)) }}
+{{- end }}
 {{/*
     TTL
 */}}
@@ -507,6 +511,15 @@ Composing the $varnishArgs list or arguments
           fieldPath: metadata.name
     {{- end }}
     {{- end }}
+    {{- if eq .Values.server.workDir "-" }}
+    - name: VARNISH_WORKDIR
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    {{- else }}
+    - name: VARNISH_WORKDIR
+      value: "{{ .Values.server.workDir }}"
+    {{- end }}
     {{- if .Values.cluster.enabled }}
     - name: VARNISH_CLUSTER_TOKEN
       valueFrom:
@@ -669,10 +682,19 @@ Declares the Varnish NCSA container
   {{- include "varnish-enterprise.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
   {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
-  args: {{- toYaml ( concat (list "-n"  (.Values.server.workDir | default "varnish") ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
+  args: {{- toYaml ( concat (list "-n"  "$(VARNISH_WORKDIR)" ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
+  {{- end }}
+  env:
+  {{- if eq .Values.server.workDir "-" }}
+    - name: VARNISH_WORKDIR
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+  {{- else }}
+    - name: VARNISH_WORKDIR
+      value: "{{ .Values.server.workDir }}"
   {{- end }}
   {{- if and .Values.server.varnishncsa.extraEnvs (not (empty .Values.server.varnishncsa.extraEnvs)) }}
-  env:
   {{- range $k, $v := .Values.server.varnishncsa.extraEnvs }}
     - name: {{ $k | quote }}
       value: {{ $v | quote }}
@@ -686,7 +708,7 @@ Declares the Varnish NCSA container
         - -d
         - -t3
         - -n
-        - {{ (.Values.server.workDir | default "varnish") }}
+        - "$(VARNISH_WORKDIR)"
     {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
@@ -697,7 +719,7 @@ Declares the Varnish NCSA container
         - -d
         - -t3
         - -n
-        - {{ (.Values.server.workDir | default "varnish") }}
+        - "$(VARNISH_WORKDIR)"
     {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
@@ -708,7 +730,7 @@ Declares the Varnish NCSA container
         - -d
         - -t3
         - -n
-        - {{ (.Values.server.workDir | default "varnish") }}
+        - "$(VARNISH_WORKDIR)"
     {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
@@ -739,8 +761,15 @@ Declares the Varnish Otel container
   {{- include "varnish-enterprise.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
   command: ["/usr/bin/varnish-otel"]
   env:
+    {{- if eq .Values.server.workDir "-" }}
     - name: OTEL_VARNISH_WORKDIR
-      value: {{ (toString .Values.server.workDir) | quote }}
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    {{- else }}
+    - name: OTEL_VARNISH_WORKDIR
+      value: "{{ .Values.server.workDir }}"
+    {{- end }}
   {{- if .Values.server.otel.env }}
     {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.otel.env) .) | nindent 4 }}
   {{- end }}

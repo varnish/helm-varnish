@@ -223,7 +223,8 @@ server:
   shareProcessNamespace: false
 
   # The working directory of Varnish inside /var/lib/varnish.
-  workDir: "varnish"
+  # Leaving this to the default "-" will use the pod name.
+  workDir: "-"
 
   http:
     # Configures Varnish to listen for HTTP traffic.
