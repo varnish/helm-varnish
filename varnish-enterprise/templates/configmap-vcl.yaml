@@ -1,3 +1,4 @@
+{{- include "varnish-enterprise.vclBundleConflictCheck" . }}
 {{- $vclConfig := include "varnish-enterprise.vclConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if not (eq $vclConfig "") }}
@@ -65,4 +66,110 @@ data:
       cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
     }
     include {{ .Values.server.vclConfigPath | quote }};
+{{- end }}
+{{- if not (empty .Values.server.vcls.routes) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-router
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+data:
+  router.vcl: |
+    vcl 4.1;
+    {{- if .Values.cluster.enabled }}
+
+    import activedns;
+
+    include "cluster.vcl";
+    {{- end }}
+
+    backend default none;
+    {{- if .Values.cluster.enabled }}
+
+    sub vcl_init {
+      {{- if .Values.cluster.trace }}
+      cluster_opts.set("trace", "true");
+      {{- end }}
+      new cluster_group = activedns.dns_group(
+        {{- if .Values.cluster.headlessServiceName }}
+        "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
+        {{- else }}
+        "{{ include "varnish-enterprise.fullname" . }}-peers:{{ .Values.server.http.port }}"
+        {{- end }}
+      );
+      cluster.subscribe(cluster_group.get_tag());
+      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
+    }
+    {{- end }}
+
+    sub vcl_recv {
+      set req.http.No-Port-Host = regsub(req.http.host, ":\d+$", "");
+    {{- $hasCatchAll := false }}
+    {{- range .Values.server.vcls.routes }}
+    {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+    {{- if .hostnames }}
+      # {{ $name }}: {{ .hostnames | join ", " }}
+      if ({{- range $i, $h := .hostnames }}{{- if $i }} || {{ end }}req.http.No-Port-Host == {{ $h | quote }}{{- end }}) {
+        return(vcl({{ $name }}));
+      }
+    {{- else }}
+    {{- $hasCatchAll = true }}
+      # {{ $name }}: catch-all
+      return(vcl({{ $name }}));
+    {{- end }}
+    {{- end }}
+    {{- if not $hasCatchAll }}
+      # automatically added as a no catch-all route is defined to avoid unexpected behavior when a request doesn't match any route
+      return(synth(404, "No matching route"));
+    {{- end }}
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-cmds
+  labels:
+    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+data:
+  cmds.cli: |
+    {{- range .Values.server.vcls.routes }}
+    {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+    vcl.load route_{{ $name }}_0 /etc/varnish/vcls/{{ $name }}.vcl
+    vcl.label {{ $name }} route_{{ $name }}_0
+    {{- end }}
+    vcl.load router_0 /etc/varnish/vcls/router.vcl
+    vcl.use router_0
+{{- range .Values.server.vcls.routes }}
+{{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
+{{- if eq (default "" .vclContent) "" }}
+{{- fail (printf "server.vcls.routes: route '%s' must set vclContent" $name) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+  labels:
+    {{- include "varnish-enterprise.labels" $ | nindent 4 }}
+data:
+  {{ $name }}.vcl: |
+    {{- tpl .vclContent $ | nindent 4 }}
+{{- end }}
+{{- range $filename, $content := .Values.server.vcls.includes }}
+{{- if not (regexMatch "^[-._a-zA-Z0-9/]+$" $filename) }}
+{{- fail (printf "server.vcls.includes: filename '%s' contains invalid characters (allowed: [-._/a-zA-Z0-9])" $filename) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
+  labels:
+    {{- include "varnish-enterprise.labels" $ | nindent 4 }}
+data:
+  {{ base $filename }}: |
+    {{- tpl $content $ | nindent 4 }}
+{{- end }}
 {{- end }}
