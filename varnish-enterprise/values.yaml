@@ -1478,7 +1478,7 @@ server:
         image:
           repository: "quay.io/varnish-software/varnish-controller-cli"
           pullPolicy: IfNotPresent
-          tag: "7.3.3"
+          tag: "7.4.1"
 
         # Configures Varnish Controller Agent to use external Varnish Controller endpoint.
         # Ignored if `server.vcli.internal.enabled` is set to `true`.
