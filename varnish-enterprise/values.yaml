@@ -665,7 +665,7 @@ server:
   # Per-domain VCL routing (multi-tenant). When set, supersedes the server.vclConfig* fields.
   # An auto-generated routing VCL and cmdfile are created from these settings.
   # server.cmdfileConfig and server.cmdfileConfigFile must not be set when routes is non-empty.
-  # Availability: v1.X.0
+  # Availability: v1.8.0
   vcls:
     # routes: ordered list of per-domain VCL configurations.
     # Each entry must set vclContent.
