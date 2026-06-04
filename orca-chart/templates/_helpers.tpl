@@ -131,6 +131,24 @@ input (the supervisor would reject those at runtime anyway).
 {{- end -}}
 
 {{/*
+Validates each store's name: it is required (it forms the PVC name
+"orca-storage-<name>") and must be unique across stores so the generated PVCs
+do not collide.
+*/}}
+{{- define "orca.validateStoreNames" -}}
+{{- $seen := dict -}}
+{{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) -}}
+  {{- if not $store.name -}}
+  {{- fail (printf "store at index %d: 'name' is required; it forms the PVC name \"orca-storage-<name>\"" $i) -}}
+  {{- end -}}
+  {{- if hasKey $seen $store.name -}}
+  {{- fail (printf "store %q: duplicate name; each store name must be unique" $store.name) -}}
+  {{- end -}}
+  {{- $_ := set $seen $store.name true -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Validates each store's size: it is required (a PVC with no storage request is
 rejected by dynamic provisioners) and must be strictly greater than book_size +
 1G filesystem overhead. Mirrors the supervisor's runtime check so the failure
@@ -167,6 +185,7 @@ on the chosen kind.
 {{- if and (eq .Values.kind "Deployment") (eq (include "orca.hasStores" .) "true") -}}
 {{- fail "persistent storage requires 'kind: StatefulSet'; 'kind: Deployment' is for memory-only caches" -}}
 {{- end -}}
+{{- include "orca.validateStoreNames" . -}}
 {{- include "orca.validateStoreSizes" . -}}
 {{- end -}}
 
