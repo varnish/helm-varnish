@@ -22,7 +22,7 @@ spec:
     - metadata:
         name: orca-storage-{{ $store.name }}
         labels:
-          {{- include "helm.labels" $ | nindent 10 }}
+          {{- include "helm.selectorLabels" $ | nindent 10 }}
           {{- with $.Values.storage.labels }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
