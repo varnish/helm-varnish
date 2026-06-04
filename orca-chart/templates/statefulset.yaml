@@ -36,11 +36,9 @@ spec:
         {{- with $.Values.storage.storageClassName }}
         storageClassName: {{ . | quote }}
         {{- end }}
-        {{- with $store.size }}
         resources:
           requests:
-            storage: {{ include "orca.varnishSizeToK8sQuantity" . | quote }}
-        {{- end }}
+            storage: {{ include "orca.varnishSizeToK8sQuantity" $store.size | quote }}
   {{- end }}
   {{- end }}
 {{- end -}}
