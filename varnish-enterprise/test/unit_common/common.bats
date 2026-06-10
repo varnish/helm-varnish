@@ -5641,7 +5641,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t3","-n","$(VARNISH_WORKDIR)"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be configured" {
@@ -5661,7 +5661,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t3","-n","$(VARNISH_WORKDIR)"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be disabled" {
@@ -5697,7 +5697,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t3","-n","$(VARNISH_WORKDIR)"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/livenessProbe: can be disabled" {
