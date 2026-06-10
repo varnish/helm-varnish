@@ -685,6 +685,8 @@ Declares the Varnish NCSA container
   args: {{- toYaml ( concat (list "-n"  "$(VARNISH_WORKDIR)" ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
   {{- end }}
   env:
+    - name: VSM_NOPID
+      value: "1"
   {{- if eq .Values.server.workDir "-" }}
     - name: VARNISH_WORKDIR
       valueFrom:
