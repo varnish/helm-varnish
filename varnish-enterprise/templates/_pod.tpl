@@ -685,6 +685,8 @@ Declares the Varnish NCSA container
   args: {{- toYaml ( concat (list "-n"  "$(VARNISH_WORKDIR)" ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
   {{- end }}
   env:
+    - name: VSM_NOPID
+      value: "1"
   {{- if eq .Values.server.workDir "-" }}
     - name: VARNISH_WORKDIR
       valueFrom:
@@ -704,33 +706,27 @@ Declares the Varnish NCSA container
   startupProbe:
     exec:
       command:
-        - /usr/bin/varnishncsa
-        - -d
-        - -t3
-        - -n
-        - "$(VARNISH_WORKDIR)"
+        - /bin/sh
+        - -c
+        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
     {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
   readinessProbe:
     exec:
       command:
-        - /usr/bin/varnishncsa
-        - -d
-        - -t3
-        - -n
-        - "$(VARNISH_WORKDIR)"
+        - /bin/sh
+        - -c
+        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
     {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
   livenessProbe:
     exec:
       command:
-        - /usr/bin/varnishncsa
-        - -d
-        - -t3
-        - -n
-        - "$(VARNISH_WORKDIR)"
+        - /bin/sh
+        - -c
+        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
     {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
