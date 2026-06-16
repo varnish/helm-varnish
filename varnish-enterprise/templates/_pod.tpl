@@ -342,11 +342,22 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
 {{- end -}}
 {{/*
-    MSE
+    Stevedores
 */}}
-{{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
-  {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
-{{- else if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
+{{- $mse := false }}
+{{- $mse4 := .Values.server.mse4.enabled }}
+{{- $malloc := .Values.server.malloc.enabled }}
+{{- if or (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not $mse4) (not $malloc) ) (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) }}
+  {{- $mse = true }}
+{{- else }}
+  {{- $mse = false }}
+{{- end }}
+
+{{- if or (and $malloc $mse) (and $malloc $mse4) (and $mse $mse4) }}
+  {{- fail "Only one of these storages can be enabled at the same time: 'server.mse.enabled', 'server.mse4.enabled', 'server.malloc.enabled'" }}
+{{- end }}
+
+{{- if $mse }}
   {{- if and .Values.server.mse.memoryTarget (not (eq .Values.server.mse.memoryTarget "")) }}
     {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse.memoryTarget)))}}
   {{- end }}
@@ -355,7 +366,7 @@ Composing the $varnishArgs list or arguments
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-s" "mse") }}
   {{- end }}
-{{- else if .Values.server.mse4.enabled }}
+{{- else if $mse4 }}
   {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
     {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse4.memoryTarget))) }}
   {{- end }}
@@ -364,8 +375,17 @@ Composing the $varnishArgs list or arguments
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-s" "mse4") }}
   {{- end }}
+{{- else if $malloc }}
+  {{- if (eq (kindOf .Values.server.malloc.size) ("string")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" (printf "malloc,%s" .Values.server.malloc.size ) ) }}
+  {{- else }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" "malloc") }}
+  {{- end -}}
+  {{- if (eq (kindOf .Values.server.malloc.transient.size) ("string")) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-s" (printf "Transient=malloc,%s" .Values.server.malloc.transient.size)) }}
+  {{- end }}
 {{- else }}
-{{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+  {{- fail "Exactly one of MSE, MSE4 or malloc must be enabled: 'server.mse.enabled', 'server.mse4.enabled', 'server.malloc.enabled'" }}
 {{- end -}}
 {{/*
     TLS
@@ -488,7 +508,6 @@ Composing the $varnishArgs list or arguments
       value: "mse4"
     {{- end }}
     {{- else }}
-    {{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
     {{- end }}
 
     {{- if .Values.server.tls.enabled }}
