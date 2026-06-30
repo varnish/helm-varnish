@@ -131,21 +131,41 @@ input (the supervisor would reject those at runtime anyway).
 {{- end -}}
 
 {{/*
-Validates that each store's size is strictly greater than book_size + 1G
-filesystem overhead. Mirrors the supervisor's runtime check so the failure
+Validates each store's name: it is required (it forms the PVC name
+"orca-storage-<name>") and must be unique across stores so the generated PVCs
+do not collide.
+*/}}
+{{- define "orca.validateStoreNames" -}}
+{{- $seen := dict -}}
+{{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) -}}
+  {{- if not $store.name -}}
+  {{- fail (printf "store at index %d: 'name' is required; it forms the PVC name \"orca-storage-<name>\"" $i) -}}
+  {{- end -}}
+  {{- if hasKey $seen $store.name -}}
+  {{- fail (printf "store %q: duplicate name; each store name must be unique" $store.name) -}}
+  {{- end -}}
+  {{- $_ := set $seen $store.name true -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validates each store's size: it is required (a PVC with no storage request is
+rejected by dynamic provisioners) and must be strictly greater than book_size +
+1G filesystem overhead. Mirrors the supervisor's runtime check so the failure
 surfaces during helm render instead of as a CrashLoopBackOff.
 */}}
 {{- define "orca.validateStoreSizes" -}}
 {{- $oneGB := 1073741824 -}}
 {{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) -}}
-  {{- if $store.size -}}
-    {{- $bookSizeStr := default "5G" $store.book_size -}}
-    {{- $size := include "orca.parseSizeToBytes" $store.size | atoi -}}
-    {{- $bookSize := include "orca.parseSizeToBytes" $bookSizeStr | atoi -}}
-    {{- $minSize := add $bookSize $oneGB -}}
-    {{- if le $size $minSize -}}
-    {{- fail (printf "store %q: size %q must be greater than book_size + 1G filesystem overhead (book_size=%q)" $store.name (toString $store.size) $bookSizeStr) -}}
-    {{- end -}}
+  {{- if not $store.size -}}
+  {{- fail (printf "store %q: 'size' is required; each store renders a PVC that needs a storage request" $store.name) -}}
+  {{- end -}}
+  {{- $bookSizeStr := default "5G" $store.book_size -}}
+  {{- $size := include "orca.parseSizeToBytes" $store.size | atoi -}}
+  {{- $bookSize := include "orca.parseSizeToBytes" $bookSizeStr | atoi -}}
+  {{- $minSize := add $bookSize $oneGB -}}
+  {{- if le $size $minSize -}}
+  {{- fail (printf "store %q: size %q must be greater than book_size + 1G filesystem overhead (book_size=%q)" $store.name (toString $store.size) $bookSizeStr) -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -165,6 +185,7 @@ on the chosen kind.
 {{- if and (eq .Values.kind "Deployment") (eq (include "orca.hasStores" .) "true") -}}
 {{- fail "persistent storage requires 'kind: StatefulSet'; 'kind: Deployment' is for memory-only caches" -}}
 {{- end -}}
+{{- include "orca.validateStoreNames" . -}}
 {{- include "orca.validateStoreSizes" . -}}
 {{- end -}}
 
