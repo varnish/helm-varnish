@@ -2918,7 +2918,7 @@ env: {
         . || echo "---") 2>&1 |
         tee -a /dev/stderr)
 
-    [[ "${actual}" == *"Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
+    [[ "${actual}" == *"Exactly one of MSE, MSE4 or malloc must be enabled:"* ]]
 }
 
 @test "${kind}/mse/config: can be disabled when mse4 is enabled" {
@@ -2974,7 +2974,7 @@ env: {
         . || echo "---") 2>&1 |
         tee -a /dev/stderr)
 
-    [[ "${actual}" == *"Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
+    [[ "${actual}" == *"Only one of these storages can be enabled at the same time:"* ]]
 }
 
 @test "${kind}/mse4/memoryTarget: can be configured" {
@@ -3120,6 +3120,59 @@ env: {
             tee -a /dev/stderr)
     [ "${actual}" == '' ]
 }
+
+@test "${kind}/malloc/config: not configured by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.malloc.enabled=true' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | .[ index("-s") + 1 ] | split(",")[1]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "null" ]
+}
+
+@test "${kind}/malloc/config: can be configured" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.malloc.enabled=true' \
+        --set 'server.malloc.size=2G' \
+        --set 'server.malloc.transient.size=1G' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command | .[ indices("-s")[0]+1 ] | split(",")[1]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "2G" ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.command |  .[ indices("-s")[1]+1]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "Transient=malloc,1G" ]
+
+}
+
 
 @test "${kind}/delayedHaltSeconds: not enabled by default" {
     cd "$(chart_dir)"
