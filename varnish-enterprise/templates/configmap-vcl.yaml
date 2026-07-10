@@ -28,7 +28,7 @@ data:
 {{- end }}
 {{- end }}
 
-{{- if .Values.cluster.enabled }}
+{{- if and (eq .Values.global.edition "enterprise") .Values.cluster.enabled }}
 {{- if not .Values.server.http.enabled }}
 {{- fail "'server.http.enabled must be true for clustering to work" }}
 {{- end }}
@@ -78,7 +78,7 @@ metadata:
 data:
   router.vcl: |
     vcl 4.1;
-    {{- if .Values.cluster.enabled }}
+    {{- if and (eq .Values.global.edition "enterprise") .Values.cluster.enabled }}
 
     import activedns;
 
@@ -86,7 +86,7 @@ data:
     {{- end }}
 
     backend default none;
-    {{- if .Values.cluster.enabled }}
+    {{- if and (eq .Values.global.edition "enterprise") .Values.cluster.enabled }}
 
     sub vcl_init {
       {{- if .Values.cluster.trace }}

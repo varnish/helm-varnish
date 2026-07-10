@@ -2,6 +2,7 @@
 {{- if .Values.server.strategy }}
 {{- fail "'server.strategy' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
 {{- end }}
+{{- if eq .Values.global.edition "enterprise" }}
 {{- if .Values.server.mse.persistence.enabled }}
 {{- fail "'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
 {{- end }}
@@ -10,6 +11,7 @@
 {{- end }}
 {{- if .Values.server.agent.persistence.enabled }}
 {{- fail "'server.agent.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
+{{- end }}
 {{- end }}
 {{- if not (empty .Values.server.extraVolumeClaimTemplates) }}
 {{- fail "'server.extraVolumeClaimTemplates' cannot be enabled when 'server.kind' is 'DaemonSet'" }}

@@ -23,6 +23,12 @@ global:
   #     - name: registry-quay-k7c2f4m2d5
   imagePullSecrets: []
 
+  # Controls which feature set is active.
+  # "enterprise" enables MSE, MSE4, agent, initAgent, otel, cluster, and NATS features.
+  # "community" restricts to features available in open-source Varnish Cache.
+  # This value is overridden to "community" when publishing the varnish-cache chart.
+  edition: enterprise
+
   # Overrides the default busybox initContainer image.
   initContainer:
     # The image to use for the initContainer.
