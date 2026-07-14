@@ -378,10 +378,6 @@ Composing the $varnishArgs list or arguments
   {{- if or (and $malloc $mse) (and $malloc $mse4) (and $mse $mse4) }}
     {{- fail "Only one of these storages can be enabled at the same time: 'server.mse.enabled', 'server.mse4.enabled', 'server.malloc.enabled'" }}
   {{- end }}
-{{- else }}
-  {{- if $mse4 }}
-    {{- fail "server.mse4 is not available in community edition, use server.malloc.enabled instead" }}
-  {{- end }}
 {{- end }}
 
 {{- if $mse }}
