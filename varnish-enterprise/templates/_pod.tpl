@@ -218,12 +218,10 @@ volumes:
     name: {{ include "varnish-enterprise.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
 {{- end }}
 {{- end }}
-{{- if eq .Values.global.edition "enterprise" }}
-{{- if .Values.cluster.enabled }}
+{{- if and (eq .Values.global.edition "enterprise") .Values.cluster.enabled }}
 - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
   configMap:
     name: {{ include "varnish-enterprise.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
-{{- end }}
 {{- end }}
 {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
 - name: {{ .Release.Name }}-config-cmdfile
@@ -231,11 +229,9 @@ volumes:
     name: {{ include "varnish-enterprise.fullname" . }}-cmdfile
 {{- end }}
 {{- end }}
-{{- if eq .Values.global.edition "enterprise" }}
-{{- if and .Values.server.agent.enabled (not .Values.server.agent.persistence.enabled) (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
+{{- if and (eq .Values.global.edition "enterprise") .Values.server.agent.enabled (not .Values.server.agent.persistence.enabled) (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
 - name: {{ .Release.Name }}-varnish-controller
   emptyDir: {}
-{{- end }}
 {{- end }}
 {{- if .Values.server.extraVolumes }}
   {{- $tp := kindOf .Values.server.extraVolumes }}
@@ -579,8 +575,7 @@ Composing the $varnishArgs list or arguments
     - name: VARNISH_WORKDIR
       value: "{{ .Values.server.workDir }}"
     {{- end }}
-    {{- if eq .Values.global.edition "enterprise" }}
-    {{- if .Values.cluster.enabled }}
+    {{- if and (eq .Values.global.edition "enterprise") .Values.cluster.enabled }}
     - name: VARNISH_CLUSTER_TOKEN
       valueFrom:
         secretKeyRef:
@@ -590,7 +585,6 @@ Composing the $varnishArgs list or arguments
           name: {{ include "varnish-enterprise.fullname" . }}-cluster-secret
           {{- end }}
           key: token
-    {{- end }}
     {{- end }}
     {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
   {{- if gt (len .Values.server.command) 0 }}
@@ -667,13 +661,11 @@ Composing the $varnishArgs list or arguments
       subPath: {{ $k | quote }}
     {{- end }}
     {{- end }}
-    {{- if eq .Values.global.edition "enterprise" }}
-    {{- if .Values.cluster.enabled }}
+    {{- if and (eq .Values.global.edition "enterprise") .Values.cluster.enabled }}
     {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
     - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
       mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
       subPath: {{ $wrappedDefaultVCL | quote }}
-    {{- end }}
     {{- end }}
     {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
     - name: {{ .Release.Name }}-config-cmdfile
