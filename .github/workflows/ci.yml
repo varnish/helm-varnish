@@ -14,6 +14,10 @@ on:
           - varnish-enterprise
           - varnish-controller
           - varnish-controller-router
+      varnish_cache_version:
+        description: "Varnish Cache OSS version to publish (required when publishing varnish-cache, e.g. 9.0.3)"
+        type: string
+        required: false
 
 jobs:
   build_and_push:
@@ -38,10 +42,24 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends bats parallel
+      - name: "Generate community chart"
+        if: matrix.chart == 'varnish-cache'
+        run: |
+          if [ "${{ github.event.inputs.publish }}" = "varnish-cache" ]; then
+            if [ -z "${{ github.event.inputs.varnish_cache_version }}" ]; then
+              echo "Error: varnish_cache_version input is required when publishing varnish-cache"
+              exit 1
+            fi
+            VERSION="${{ github.event.inputs.varnish_cache_version }}"
+          else
+            VERSION="latest"
+          fi
+          bash ci/publish-community.sh "$VERSION" dist/varnish-cache
       - name: "Add Helm dependencies"
         # See also: https://circleci.com/docs/env-vars/#alpine-linux
         run: |
-            cd ${{ matrix.chart }}
+            CHART_DIR=${{ matrix.chart == 'varnish-cache' && 'dist/varnish-cache' || matrix.chart }}
+            cd "$CHART_DIR"
             # Helm is painful https://github.com/helm/helm/issues/8036
             i=0
             yq -r '.dependencies[]?.repository' < Chart.yaml | while read -r p; do
@@ -51,21 +69,23 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
-          if [ -x ${{ matrix.chart }}/test/unit/run.sh ]; then 
+          if [ -x ${{ matrix.chart }}/test/unit/run.sh ]; then
             ${{ matrix.chart }}/test/unit/run.sh -j 50
           fi
-          if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then 
+          if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then
             ${{ matrix.chart }}/test/unit_common/run.sh -j 50
           fi
       - name: Create package
         run: |
-          helm package "${{ matrix.chart }}"
+          CHART_DIR=${{ matrix.chart == 'varnish-cache' && 'dist/varnish-cache' || matrix.chart }}
+          helm package "$CHART_DIR"
           mkdir -p /tmp/artifacts
           cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
       - name: "Check version does not already exist"
         if: ${{ github.event.inputs.publish == matrix.chart }}
         run: |
-          VERSION=$(yq -r '.version' "${{ matrix.chart }}/Chart.yaml")
+          CHART_DIR=${{ matrix.chart == 'varnish-cache' && 'dist/varnish-cache' || matrix.chart }}
+          VERSION=$(yq -r '.version' "$CHART_DIR/Chart.yaml")
           echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
           if helm pull "oci://registry-1.docker.io/varnish/${{ matrix.chart }}" --version "$VERSION" --destination /tmp 2>/dev/null; then
             echo "Error: ${{ matrix.chart }} version $VERSION already exists in the registry"

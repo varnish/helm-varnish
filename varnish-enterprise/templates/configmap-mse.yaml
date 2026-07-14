@@ -1,4 +1,7 @@
-{{- $mseConfig := include "varnish-enterprise.mseConfig" . }}
+{{- $mseConfig := "" }}
+{{- if eq .Values.global.edition "enterprise" }}
+{{- $mseConfig = include "varnish-enterprise.mseConfig" . }}
+{{- end }}
 {{- if not (eq $mseConfig "") }}
 apiVersion: v1
 kind: ConfigMap
