@@ -374,8 +374,6 @@ Composing the $varnishArgs list or arguments
 {{- $malloc := .Values.server.malloc.enabled }}
 {{- if eq .Values.global.edition "enterprise" }}
 {{- $mse4 = .Values.server.mse4.enabled }}
-{{- end }}
-{{- if eq .Values.global.edition "enterprise" }}
   {{- if or (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not $mse4) (not $malloc) ) (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) }}
     {{- $mse = true }}
   {{- else }}
