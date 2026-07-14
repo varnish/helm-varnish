@@ -374,11 +374,7 @@ Composing the $varnishArgs list or arguments
 {{- $malloc := .Values.server.malloc.enabled }}
 {{- if eq .Values.global.edition "enterprise" }}
 {{- $mse4 = .Values.server.mse4.enabled }}
-  {{- if or (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not $mse4) (not $malloc) ) (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) }}
-    {{- $mse = true }}
-  {{- else }}
-    {{- $mse = false }}
-  {{- end }}
+  {{- $mse = or (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not $mse4) (not $malloc) ) (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) }}
   {{- if or (and $malloc $mse) (and $malloc $mse4) (and $mse $mse4) }}
     {{- fail "Only one of these storages can be enabled at the same time: 'server.mse.enabled', 'server.mse4.enabled', 'server.malloc.enabled'" }}
   {{- end }}
