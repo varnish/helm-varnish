@@ -23,7 +23,7 @@ if [ -z "$1" ]; then
 fi
 
 OSS_VERSION="$1"
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(realpath "$(dirname "$0")/..")"
 SRC="$REPO_ROOT/varnish-enterprise"
 OUT="${2:-$REPO_ROOT/dist/varnish-cache}"
 
