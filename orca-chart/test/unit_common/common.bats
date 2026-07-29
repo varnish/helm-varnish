@@ -151,6 +151,91 @@ load _helpers
     [ "${actual}" = '{"limits":{"cpu":"500m"},"requests":{"memory":"256Mi"}}' ]
 }
 
+@test "${kind}: startupProbe rendered from values" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set "kind=${kind}" \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yqj '.spec.template.spec.containers[0].startupProbe')
+    [ "${actual}" = '{"failureThreshold":60,"httpGet":{"path":"/readyz","port":"http"},"periodSeconds":5}' ]
+}
+
+@test "${kind}: livenessProbe rendered from values" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set "kind=${kind}" \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yqj '.spec.template.spec.containers[0].livenessProbe')
+    [ "${actual}" = '{"httpGet":{"path":"/healthz","port":"http"}}' ]
+}
+
+@test "${kind}: readinessProbe rendered from values" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set "kind=${kind}" \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yqj '.spec.template.spec.containers[0].readinessProbe')
+    [ "${actual}" = '{"httpGet":{"path":"/healthz","port":"http"}}' ]
+}
+
+@test "${kind}: startup budget overridable" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set "kind=${kind}" \
+        --set 'startupProbe.failureThreshold=180' \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yq -r '.spec.template.spec.containers[0].startupProbe.failureThreshold')
+    [ "${actual}" = "180" ]
+}
+
+@test "${kind}: probes omitted when set to null" {
+    cd "$(chart_dir)"
+    local rendered
+    rendered=$(helm template \
+        --set "kind=${kind}" \
+        --set 'startupProbe=null' \
+        --set 'livenessProbe=null' \
+        --set 'readinessProbe=null' \
+        --namespace default \
+        --show-only "${template}" \
+        .)
+    local probe
+    for probe in startupProbe livenessProbe readinessProbe; do
+        local actual
+        actual=$(echo "${rendered}" |
+            yq -r ".spec.template.spec.containers[0].${probe}")
+        [ "${actual}" = "null" ]
+    done
+}
+
+# The probes address the listener by name, so the name has to survive a
+# multi-listener config. See the port naming in _pod.tpl.
+@test "${kind}: probe port is declared by the container" {
+    cd "$(chart_dir)"
+    local rendered
+    rendered=$(helm template \
+        --set "kind=${kind}" \
+        --set 'orca.varnish.http[0].port=80' \
+        --set 'orca.varnish.http[1].port=8080' \
+        --namespace default \
+        --show-only "${template}" \
+        .)
+    local probe_port
+    probe_port=$(echo "${rendered}" |
+        yq -r '.spec.template.spec.containers[0].startupProbe.httpGet.port')
+    [ "${probe_port}" = "http" ]
+
+    local declared
+    declared=$(echo "${rendered}" |
+        yq -r "[.spec.template.spec.containers[0].ports[].name] |
+            contains([\"${probe_port}\"])")
+    [ "${declared}" = "true" ]
+}
+
 @test "${kind}: securityContext applied" {
     cd "$(chart_dir)"
     local actual=$((helm template \

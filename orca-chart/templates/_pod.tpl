@@ -49,6 +49,18 @@ spec:
         {{- end }}
       resources:
         {{- toYaml .Values.resources | nindent 8 }}
+      {{- with .Values.startupProbe }}
+      startupProbe:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.livenessProbe }}
+      livenessProbe:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.readinessProbe }}
+      readinessProbe:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if and .Values.extraEnvs (not (empty .Values.extraEnvs)) }}
       env:
         {{- include "orca.toEnv" (merge (dict "envs" .Values.extraEnvs) .) | nindent 8 }}
