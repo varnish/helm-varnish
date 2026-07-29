@@ -19,7 +19,7 @@ The `--set` argument can be used to add configuration values on the command line
 ```sh
 helm install varnish-orca oci://docker.io/varnish/orca-chart \
  --set "orca.varnish.http[0].port=81" \
- --set "service.port=81"
+ --set "service.http.port=81"
 ```
 
 Or simply add `-f values.yaml` to override load the configuration overrides from a `values.yaml` file:
@@ -32,7 +32,8 @@ Here's an example `values.yaml` file:
 
 ```yaml
 service:
-  port: 81
+  http:
+    port: 81
 orca:
   varnish:
     http:
