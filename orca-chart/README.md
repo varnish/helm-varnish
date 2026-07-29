@@ -68,7 +68,7 @@ orca:
 | `podAnnotations` | object | `{}` |  |
 | `podLabels` | object | `{}` |  |
 | `podSecurityContext` | object | `{}` |  |
-| `readinessProbe` | object | `{"httpGet":{"path":"/healthz","port":"http"}}` | Readiness probe for the Orca container. Set to `null` to drop it. Suspended while the startup probe is still failing. |
+| `readinessProbe` | object | `{"httpGet":{"path":"/readyz","port":"http"}}` | Readiness probe for the Orca container. Set to `null` to drop it. Suspended while the startup probe is still failing. |
 | `replicaCount` | int | `1` | Pod replicas |
 | `resources` | object | `{}` | CPU and memory resources to allocate to the pod |
 | `securityContext` | object | `{}` |  |
@@ -154,6 +154,8 @@ The default budget is 5 minutes, `failureThreshold: 60` at `periodSeconds: 5`. I
 helm install varnish-orca oci://docker.io/varnish/orca-chart \
  --set "startupProbe.failureThreshold=180"
 ```
+
+The liveness probe asks `/healthz`, which reports that the process is up. The readiness and startup probes ask `/readyz`, which reports that the pod can actually serve traffic. Keeping the startup probe on `/readyz` also means a pod that never finishes booting is eventually restarted, rather than sitting live but useless because `/healthz` keeps answering.
 
 All three probes address the listener by name as `http`, which always refers to the first entry in `orca.varnish.http`. Any probe can be dropped by setting it to `null`.
 

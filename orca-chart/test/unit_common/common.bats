@@ -178,7 +178,7 @@ load _helpers
         --namespace default \
         --show-only "${template}" \
         .) | yqj '.spec.template.spec.containers[0].readinessProbe')
-    [ "${actual}" = '{"httpGet":{"path":"/healthz","port":"http"}}' ]
+    [ "${actual}" = '{"httpGet":{"path":"/readyz","port":"http"}}' ]
 }
 
 @test "${kind}: startup budget overridable" {

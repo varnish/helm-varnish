@@ -94,9 +94,12 @@ resources: {}
 # Probes. `port: http` refers to the first entry in `orca.varnish.http`, which
 # always carries that name. Set any probe to `null` to drop it from the pod.
 #
+# Liveness asks /healthz, which reports that the process is up. Readiness and
+# startup ask /readyz, which reports that it can actually serve traffic.
+#
 # The startup probe owns the slow part of boot. Kubernetes suspends the
 # liveness and readiness probes for as long as a startup probe is still
-# failing, so the two below only ever see a pod that is already serving, and
+# failing, so neither begins evaluating until the pod has come up once, and
 # the startup budget is what has to cover a cold start.
 #
 # That budget is deliberately generous, because it scales with things the
@@ -118,7 +121,7 @@ livenessProbe:
     port: http
 readinessProbe:
   httpGet:
-    path: /healthz
+    path: /readyz
     port: http
 
 # Autoscaling is supported but generally a poor fit for caches: scale-up adds
