@@ -104,7 +104,7 @@ load _helpers
     [ "${actual}" = "8080" ]
 }
 
-@test "${kind}: multiple HTTP ports get suffixed names" {
+@test "${kind}: extra HTTP ports get suffixed names" {
     cd "$(chart_dir)"
     local actual=$((helm template \
         --set "kind=${kind}" \
@@ -113,7 +113,7 @@ load _helpers
         --namespace default \
         --show-only "${template}" \
         .) | yqj '[.spec.template.spec.containers[0].ports[].name]')
-    [ "${actual}" = '["http-80","http-8080"]' ]
+    [ "${actual}" = '["http","http-8080"]' ]
 }
 
 @test "${kind}: HTTPS port renders when configured" {
@@ -125,6 +125,18 @@ load _helpers
         --show-only "${template}" \
         .) | yqj '.spec.template.spec.containers[0].ports[] | select(.name == "https")')
     [ "${actual}" = '{"name":"https","containerPort":443,"protocol":"TCP"}' ]
+}
+
+@test "${kind}: extra HTTPS ports get suffixed names" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set "kind=${kind}" \
+        --set 'orca.varnish.https[0].port=443' \
+        --set 'orca.varnish.https[1].port=8443' \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yqj '[.spec.template.spec.containers[0].ports[].name]')
+    [ "${actual}" = '["http","https","https-8443"]' ]
 }
 
 @test "${kind}: resources applied" {
