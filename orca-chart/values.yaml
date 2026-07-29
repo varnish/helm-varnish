@@ -103,12 +103,12 @@ resources: {}
 # the startup budget is what has to cover a cold start.
 #
 # That budget is deliberately generous, because it scales with things the
-# chart cannot see: roughly 4s per `orca.virtual_registry` VCL group, plus the
-# artifact firewall's initial ruleset sync, which blocks startup. The sync
-# takes seconds against a warm cache, but minutes on a cold one, more still
-# when several replicas compete for the same CPU. failureThreshold multiplied
-# by periodSeconds is the total, 5 minutes here. Raise failureThreshold if you
-# add registries or run on a slow or contended node.
+# chart cannot see: roughly 4s per entry in `orca.virtual_registry.registries`,
+# plus the artifact firewall's initial ruleset sync, which blocks startup. The
+# sync takes seconds against a warm cache, but minutes on a cold one, more
+# still when several replicas compete for the same CPU. failureThreshold
+# multiplied by periodSeconds is the total, 5 minutes here. Raise
+# failureThreshold if you add registries or run on a slow or contended node.
 startupProbe:
   httpGet:
     path: /readyz

@@ -146,7 +146,9 @@ orca:
 
 A cold *Varnish Orca* pod is not ready the moment the container starts. It compiles one VCL group per entry in `orca.virtual_registry.registries`, roughly 4 seconds each, and the artifact firewall performs an initial ruleset sync that blocks startup. That sync takes seconds against a warm cache, but it can take several minutes on a cold one, longer still when several replicas compete for the same CPU.
 
-The chart handles this with a startup probe rather than by padding the liveness and readiness probes. Kubernetes suspends both of those for as long as a startup probe is still failing, so a slow first boot never trips a restart, and the pod is kept out of the Service until it can actually serve.
+The chart handles this with a startup probe rather than by padding the liveness and readiness probes. Kubernetes suspends both of those for as long as a startup probe is still failing, so a slow first boot never trips a restart, and readiness keeps the pod out of the main Service until it can actually serve.
+
+The headless companion Service that `kind: StatefulSet` creates is deliberately exempt: it sets `publishNotReadyAddresses: true`, so each pod's stable DNS name resolves throughout startup. That is what makes a pod addressable before it is ready, which is the point of the headless Service. Only the main Service gates on readiness.
 
 The default budget is 5 minutes, `failureThreshold: 60` at `periodSeconds: 5`. If your pods are killed mid-boot with `Startup probe failed`, raise `failureThreshold`:
 
