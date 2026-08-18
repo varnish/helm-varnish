@@ -27,7 +27,11 @@ REPO_ROOT="$(realpath "$(dirname "$0")/..")"
 SRC="$REPO_ROOT/varnish-enterprise"
 OUT="${2:-$REPO_ROOT/dist/varnish-cache}"
 
-if ! command -v yq > /dev/null 2>&1; then
+# Allow the caller to override which yq binary to use via YQ=/path/to/yq.
+# This is needed in CI where python-yq and go-yq may both be present.
+YQ="${YQ:-yq}"
+
+if ! command -v "$YQ" > /dev/null 2>&1; then
     echo "Error: yq is required (https://github.com/mikefarah/yq)" >&2
     exit 1
 fi
@@ -45,7 +49,7 @@ cp -r "$SRC" "$OUT"
 
 # Patch Chart.yaml: rename, update description, and set the OSS appVersion.
 # OSS_VERSION is passed via the environment so yq can reference it with strenv().
-OSS_VERSION="$OSS_VERSION" yq -i '
+OSS_VERSION="$OSS_VERSION" "$YQ" -i '
     .name = "varnish-cache" |
     .description = "Varnish Cache Helm Chart" |
     .appVersion = strenv(OSS_VERSION)
@@ -53,7 +57,7 @@ OSS_VERSION="$OSS_VERSION" yq -i '
 
 # Switch edition and image defaults, enable malloc, strip enterprise-only sections.
 # go-yq preserves comments on sections that are not deleted.
-yq -i '
+"$YQ" -i '
     .global.edition = "community" |
     .server.image.repository = "docker.io/varnish" |
     .server.malloc.enabled = true |
