@@ -3178,12 +3178,13 @@ env: {
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | .[ index("-s") + 1 ] | split(",")[1]' |
+        yq -o=json -I=0 '.command' |
+            jq -r -c '.[ index("-s") + 1 ] | split(",")[1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
@@ -3202,17 +3203,19 @@ env: {
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | .[ indices("-s")[0]+1 ] | split(",")[1]' |
+        yq -o=json -I=0 '.command' |
+            jq -r -c '.[ indices("-s")[0]+1 ] | split(",")[1]' |
             tee -a /dev/stderr)
     [ "${actual}" == "2G" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.command |  .[ indices("-s")[1]+1]' |
+        yq -o=json -I=0 '.command' |
+            jq -r -c '.[ indices("-s")[1]+1 ]' |
             tee -a /dev/stderr)
     [ "${actual}" == "Transient=malloc,1G" ]
 
