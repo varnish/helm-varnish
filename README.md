@@ -30,7 +30,7 @@ Example:
 helm package dist/varnish-cache --destination dist/packages
 ```
 
-The script requires `yq` (kislyuk/yq) and `helm`.
+The script requires [`yq`](https://github.com/mikefarah/yq) (go-yq) and `helm`.
 
 ### Other Charts
 

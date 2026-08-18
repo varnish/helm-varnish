@@ -12,7 +12,7 @@
 #              This sets Chart.yaml appVersion and the default image tag.
 # output-dir:  defaults to ./dist/varnish-cache
 #
-# Requires yq (kislyuk/yq) and helm.
+# Requires yq (https://github.com/mikefarah/yq) and helm.
 
 set -e
 
@@ -43,16 +43,17 @@ rm -rf "$OUT"
 mkdir -p "$(dirname "$OUT")"
 cp -r "$SRC" "$OUT"
 
-# Patch Chart.yaml: rename, update description, and set the OSS appVersion
-yq -Y --in-place \
-    --arg version "$OSS_VERSION" '
+# Patch Chart.yaml: rename, update description, and set the OSS appVersion.
+# OSS_VERSION is passed via the environment so yq can reference it with strenv().
+OSS_VERSION="$OSS_VERSION" yq -i '
     .name = "varnish-cache" |
     .description = "Varnish Cache Helm Chart" |
-    .appVersion = $version
+    .appVersion = strenv(OSS_VERSION)
 ' "$OUT/Chart.yaml"
 
-# Switch edition and image defaults, enable malloc, strip enterprise sections
-yq -Y --in-place '
+# Switch edition and image defaults, enable malloc, strip enterprise-only sections.
+# go-yq preserves comments on sections that are not deleted.
+yq -i '
     .global.edition = "community" |
     .server.image.repository = "docker.io/varnish" |
     .server.malloc.enabled = true |
