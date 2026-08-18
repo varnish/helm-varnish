@@ -47,7 +47,7 @@ load _helpers
         --namespace default \
         --show-only templates/statefulset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -62,7 +62,7 @@ load _helpers
         --namespace default \
         --show-only templates/statefulset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
 }
@@ -82,7 +82,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/statefulset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
 }
@@ -98,17 +98,17 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse")' |
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse")' |
             tee -a /dev/stderr)
     [ "${actual}" = "" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
             tee -a /dev/stderr)
     [ "${actual}" = "" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
             .volumeMounts[] | select(.name == "release-name-mse")' |
             tee -a /dev/stderr)
@@ -127,19 +127,19 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse") |
             .spec' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-mse","configMap":{"name":"release-name-varnish-enterprise-mse"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
             .volumeMounts[] | select(.name == "release-name-mse")' |
             tee -a /dev/stderr)
@@ -157,7 +157,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
               .name'  | tee -a /dev/stderr)
     [ "${actual}" = '' ]
@@ -176,7 +176,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
               .name'  | tee -a /dev/stderr)
     [ "${actual}" = 'mse-config' ]
@@ -196,7 +196,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse") |
             .spec' |
             tee -a /dev/stderr)
@@ -207,7 +207,7 @@ rollingUpdate:
             tee -a /dev/stderr)
 
     local actual=$(echo "$containerObject" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-mse")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-mse")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-mse","mountPath":"/data1/mse"}' ]
 }
@@ -224,17 +224,17 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse4")' |
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" = "" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse4")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" = "" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
             .volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
@@ -254,19 +254,19 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse4") |
             .spec' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse4")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-mse4","configMap":{"name":"release-name-varnish-enterprise-mse4"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
             .volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
@@ -285,7 +285,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
               .name'  | tee -a /dev/stderr)
     [ "${actual}" = '' ]
@@ -304,7 +304,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
               .name'  | tee -a /dev/stderr)
     [ "${actual}" = 'mse4-config' ]
@@ -325,7 +325,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse4") |
             .spec' |
             tee -a /dev/stderr)
@@ -336,7 +336,7 @@ rollingUpdate:
             tee -a /dev/stderr)
 
     local actual=$(echo "$containerObject" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-mse4")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-mse4","mountPath":"/data1/mse4"}' ]
 }
@@ -356,14 +356,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-agent") |
             .volumeMounts[]? | select(.name == "release-name-varnish-controller")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"release-name-varnish-controller","mountPath":"/var/lib/varnish-controller"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.volumeClaimTemplates[]? |
             select(.metadata.name == "release-name-varnish-controller") |
             .spec' |
@@ -385,7 +385,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-agent") |
             .volumeMounts[]? | select(.name == "my-varnish-controller-volume")' |
             tee -a /dev/stderr)
@@ -403,7 +403,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
     [ "${actual}" == 'null' ]
 }
 
@@ -421,7 +421,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
     [ "${actual}" == '[{"metadata":{"name":"hello-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}]' ]
 }
 
@@ -444,7 +444,7 @@ rollingUpdate:
 
     local appVersion=$(app_version)
     local actual=$(echo "$object" |
-        yq -c '.spec.volumeClaimTemplates[]| select(.metadata.name == "hello-pv")' | tee -a /dev/stderr)
+        yq -o=json -I=0 '.spec.volumeClaimTemplates[]| select(.metadata.name == "hello-pv")' | tee -a /dev/stderr)
     [ "${actual}" == '{"metadata":{"name":"hello-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
 }
 
@@ -470,7 +470,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates[] | select (.metadata.name == "release-name-pv")' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[] | select (.metadata.name == "release-name-pv")' | tee -a /dev/stderr)
     [ "${actual}" == '{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
 }
 
@@ -501,6 +501,6 @@ rollingUpdate:
 
     local appVersion=$(app_version)
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates[] | select (.metadata.name == "release-name-pv")' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[] | select (.metadata.name == "release-name-pv")' | tee -a /dev/stderr)
     [ "${actual}" == '{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
 }

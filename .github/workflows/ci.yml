@@ -34,8 +34,6 @@ jobs:
           tar xavf /tmp/helm.tar.gz
           mv linux-amd64/helm /usr/local/bin/helm
 
-          pip install yq
-
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends bats parallel
       - name: "Add Helm dependencies"
@@ -51,10 +49,10 @@ jobs:
             helm dependency build
       - name: "Unit tests"
         run: |
-          if [ -x ${{ matrix.chart }}/test/unit/run.sh ]; then 
+          if [ -x ${{ matrix.chart }}/test/unit/run.sh ]; then
             ${{ matrix.chart }}/test/unit/run.sh -j 50
           fi
-          if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then 
+          if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then
             ${{ matrix.chart }}/test/unit_common/run.sh -j 50
           fi
       - name: Create package

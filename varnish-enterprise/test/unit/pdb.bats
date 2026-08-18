@@ -23,22 +23,22 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c 'length > 0' |
+        yq -r -o=json -I=0 'length > 0' |
         tee -a /dev/stderr)
     [ "${actual}" == "true" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.minAvailable' |
+        yq -r -o=json -I=0 '.spec.minAvailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "30%" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.minAvailable | type' |
+        yq -r -o=json -I=0 '.spec.minAvailable | type' |
         tee -a /dev/stderr)
-    [ "${actual}" == "string" ]
+    [ "${actual}" == "!!str" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxUnavailable' |
+        yq -r -o=json -I=0 '.spec.maxUnavailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
@@ -55,22 +55,22 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c 'length > 0' |
+        yq -r -o=json -I=0 'length > 0' |
         tee -a /dev/stderr)
     [ "${actual}" == "true" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.minAvailable' |
+        yq -r -o=json -I=0 '.spec.minAvailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "5" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.minAvailable | type' |
+        yq -r -o=json -I=0 '.spec.minAvailable | type' |
         tee -a /dev/stderr)
-    [ "${actual}" == "number" ]
+    [ "${actual}" == "!!int" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxUnavailable' |
+        yq -r -o=json -I=0 '.spec.maxUnavailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
@@ -86,24 +86,24 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c 'length > 0' |
+        yq -r -o=json -I=0 'length > 0' |
         tee -a /dev/stderr)
     [ "${actual}" == "true" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.minAvailable' |
+        yq -r -o=json -I=0 '.spec.minAvailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxUnavailable' |
+        yq -r -o=json -I=0 '.spec.maxUnavailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "30%" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxUnavailable | type' |
+        yq -r -o=json -I=0 '.spec.maxUnavailable | type' |
         tee -a /dev/stderr)
-    [ "${actual}" == "string" ]
+    [ "${actual}" == "!!str" ]
 }
 
 # Kubernetes only accept maxUnavailable as a string only for percent.
@@ -118,24 +118,24 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c 'length > 0' |
+        yq -r -o=json -I=0 'length > 0' |
         tee -a /dev/stderr)
     [ "${actual}" == "true" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.minAvailable' |
+        yq -r -o=json -I=0 '.spec.minAvailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxUnavailable' |
+        yq -r -o=json -I=0 '.spec.maxUnavailable' |
         tee -a /dev/stderr)
     [ "${actual}" == "5" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxUnavailable | type' |
+        yq -r -o=json -I=0 '.spec.maxUnavailable | type' |
         tee -a /dev/stderr)
-    [ "${actual}" == "number" ]
+    [ "${actual}" == "!!int" ]
 }
 
 @test "PodDisruptionBudget: cannot be enabled without minAvailable or maxUnavailable" {

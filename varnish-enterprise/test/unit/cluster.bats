@@ -39,7 +39,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.spec.template.spec.containers[] |
+        yq -o=json -I=0 -r '.spec.template.spec.containers[] |
                 select(.name == "varnish-enterprise").env[] |
                 select(.name == "VARNISH_CLUSTER_TOKEN")' | tee -a /dev/stderr)
     [ "${actual}" = "" ]
@@ -53,7 +53,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.spec.template.spec.containers[] |
+        yq -o=json -I=0 -r '.spec.template.spec.containers[] |
                 select(.name == "varnish-enterprise").env[] |
                 select(.name == "VARNISH_CLUSTER_TOKEN")' | tee -a /dev/stderr)
     [ "${actual}" = '{"name":"VARNISH_CLUSTER_TOKEN","valueFrom":{"secretKeyRef":{"name":"release-name-varnish-enterprise-cluster-secret","key":"token"}}}' ]
@@ -66,7 +66,7 @@ load _helpers
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
+        yq -o=json -I=0 -r '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
     echo "${actual}" | grep 'include "cluster.vcl";'
     echo "${actual}" | grep 'include "/etc/varnish/default.vcl";'
 }
@@ -78,7 +78,7 @@ load _helpers
         --namespace default \
         --show-only templates/service.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr 'select(.metadata.name == "release-name-varnish-enterprise-peers").spec.ports' | tee -a /dev/stderr)
+        yq -o=json -I=0 -r 'select(.metadata.name == "release-name-varnish-enterprise-peers").spec.ports' | tee -a /dev/stderr)
     [ "${actual}" = '[{"name":"http","port":6081,"targetPort":6081}]' ]
 }
 
@@ -89,7 +89,7 @@ load _helpers
         --namespace default \
         --show-only templates/secret.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.data.token' | tee -a /dev/stderr)
+        yq -o=json -I=0 -r '.data.token' | tee -a /dev/stderr)
     [ "${actual}" != 'null' ]
 }
 
@@ -101,7 +101,7 @@ load _helpers
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
+        yq -o=json -I=0 -r '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
     echo "${actual}" | grep '"release-name-varnish-enterprise-peers:9999"'
 }
 
@@ -113,7 +113,7 @@ load _helpers
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
+        yq -o=json -I=0 -r '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
     echo "${actual}" | grep 'include "/etc/varnish/non-default.vcl";'
 }
 
@@ -137,7 +137,7 @@ load _helpers
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
+        yq -o=json -I=0 -r '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
     echo "${actual}" | grep '"foo-service:6081"'
 
 }
@@ -161,7 +161,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -cr '.spec.template.spec.containers[] |
+        yq -o=json -I=0 -r '.spec.template.spec.containers[] |
                 select(.name == "varnish-enterprise").env[] |
                 select(.name == "VARNISH_CLUSTER_TOKEN")' | tee -a /dev/stderr)
     [ "${actual}" = '{"name":"VARNISH_CLUSTER_TOKEN","valueFrom":{"secretKeyRef":{"name":"foo-secret","key":"token"}}}' ]

@@ -51,13 +51,13 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | xargs | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | xargs | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"name":"release-name-clusterrole"},"rules":[{"apiGroups":[""],"resources":["endpoints"],"verbs":["get","list","watch"]}]}' ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrolebinding")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "release-name-clusterrolebinding")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"release-name-clusterrolebinding"},"roleRef":{"kind":"ClusterRole","name":"release-name-clusterrole","apiGroup":"rbac.authorization.k8s.io"},"subjects":[{"kind":"ServiceAccount","name":"release-name","namespace":"default"}]}' ]
 }
 
@@ -100,12 +100,12 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | xargs | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | xargs | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-enterprise-clusterrole")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "varnish-enterprise-clusterrole")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"name":"varnish-enterprise-clusterrole"},"rules":[{"apiGroups":[""],"resources":["endpoints"],"verbs":["get","list","watch"]}]}' ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-enterprise-clusterrolebinding")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "varnish-enterprise-clusterrolebinding")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"varnish-enterprise-clusterrolebinding"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"varnish-enterprise-clusterrole"},"subjects":[{"kind":"ServiceAccount","name":"varnish-enterprise","namespace":"default"}]}' ]
 }

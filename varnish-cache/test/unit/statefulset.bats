@@ -47,7 +47,7 @@ load _helpers
         --namespace default \
         --show-only templates/statefulset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -62,7 +62,7 @@ load _helpers
         --namespace default \
         --show-only templates/statefulset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
 }
@@ -82,7 +82,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/statefulset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
 }
@@ -98,7 +98,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
     [ "${actual}" == 'null' ]
 }
 
@@ -116,7 +116,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
     [ "${actual}" == '[{"metadata":{"name":"hello-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}]' ]
 }
 
@@ -142,6 +142,6 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates' | tee -a /dev/stderr)
     [ "${actual}" == '[{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}]' ]
 }

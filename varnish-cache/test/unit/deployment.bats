@@ -32,7 +32,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -47,7 +47,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
 }
@@ -67,7 +67,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
 }

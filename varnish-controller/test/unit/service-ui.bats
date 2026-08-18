@@ -11,7 +11,7 @@ load _helpers
         --show-only templates/service-ui.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.metadata.annotations' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.metadata.annotations' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
 
@@ -25,7 +25,7 @@ load _helpers
         --show-only templates/service-ui.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.metadata.annotations' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.metadata.annotations' | tee -a /dev/stderr)
     [ "${actual}" == '{"hello":"world"}' ]
 }
 
@@ -43,6 +43,6 @@ release-name: {{ .Release.Name }}
         --show-only templates/service-ui.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.metadata.annotations' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.metadata.annotations' | tee -a /dev/stderr)
     [ "${actual}" == '{"release-name":"release-name"}' ]
 }

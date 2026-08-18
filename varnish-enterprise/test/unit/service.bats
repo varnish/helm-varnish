@@ -27,7 +27,7 @@ load _helpers
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.externalTrafficPolicy' |
+        yq -r -o=json -I=0 '.spec.externalTrafficPolicy' |
         tee -a /dev/stderr)
 
     [ "${actual}" == "Cluster" ]
@@ -44,7 +44,7 @@ load _helpers
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.externalTrafficPolicy' |
+        yq -r -o=json -I=0 '.spec.externalTrafficPolicy' |
         tee -a /dev/stderr)
 
     [ "${actual}" == "Local" ]
