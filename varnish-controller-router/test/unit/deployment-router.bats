@@ -9,7 +9,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.containers[]? | select(.name == "router")' |
+        yq -r -o=json -I=0 '.spec.template.spec.containers[]? | select(.name == "router")' |
             tee -a /dev/stderr)
     [ "${actual}" != "" ]
 }
@@ -22,7 +22,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.containers[]? | select(.name == "router")' |
+        yq -r -o=json -I=0 '.spec.template.spec.containers[]? | select(.name == "router")' |
             tee -a /dev/stderr)
     [ "${actual}" == "" ]
 }
@@ -43,7 +43,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -65,7 +65,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -89,7 +89,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -107,28 +107,28 @@ release-namespace: to-be-override
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_SERVER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '$(VARNISH_CONTROLLER_NATS_USER):$(VARNISH_CONTROLLER_NATS_PASS)@$(VARNISH_CONTROLLER_NATS_HOST)' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_USER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'varnish-controller' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_PASS") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"secretKeyRef":{"name":"varnish-controller-credentials","key":"nats-varnish-password"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_HOST") | .value' |
             tee -a /dev/stderr)
@@ -146,28 +146,28 @@ release-namespace: to-be-override
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_SERVER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '$(VARNISH_CONTROLLER_NATS_USER):$(VARNISH_CONTROLLER_NATS_PASS)@$(VARNISH_CONTROLLER_NATS_HOST)' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_USER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'varnish-controller' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_PASS") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"secretKeyRef":{"name":"external-secret","key":"nats-password"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_HOST") | .value' |
             tee -a /dev/stderr)
@@ -185,28 +185,28 @@ release-namespace: to-be-override
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_SERVER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '$(VARNISH_CONTROLLER_NATS_USER):$(VARNISH_CONTROLLER_NATS_PASS)@$(VARNISH_CONTROLLER_NATS_HOST)' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_USER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'varnish-controller' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_PASS") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"secretKeyRef":{"name":"varnish-controller-credentials","key":"nats-varnish-password"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_HOST") | .value' |
             tee -a /dev/stderr)
@@ -225,28 +225,28 @@ release-namespace: to-be-override
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_SERVER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '$(VARNISH_CONTROLLER_NATS_USER):$(VARNISH_CONTROLLER_NATS_PASS)@$(VARNISH_CONTROLLER_NATS_HOST)' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_USER") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'varnish-controller' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_PASS") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"secretKeyRef":{"name":"varnish-controller-credentials","key":"nats-varnish-password"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_HOST") | .value' |
             tee -a /dev/stderr)
@@ -264,28 +264,28 @@ release-namespace: to-be-override
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_HOST")' |
             tee -a /dev/stderr)
     [ "${actual}" == '' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_USER")' |
             tee -a /dev/stderr)
     [ "${actual}" == '' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_PASS")' |
             tee -a /dev/stderr)
     [ "${actual}" == '' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_NATS_SERVER") | .value' |
             tee -a /dev/stderr)
@@ -317,7 +317,7 @@ release-namespace: to-be-override
         --set 'global.initContainer.tag=24.04' \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .image' | tee -a /dev/stderr)
 
     [ "${actual}" == 'ubuntu:24.04' ]
@@ -333,17 +333,17 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.image' |
+        yq -r -o=json -I=0 '.image' |
             tee -a /dev/stderr)
     [ "${actual}" = "quay.io/varnish-software/varnish-controller-router:$(app_version)" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.imagePullPolicy' |
+        yq -r -o=json -I=0 '.imagePullPolicy' |
             tee -a /dev/stderr)
     [ "${actual}" = "IfNotPresent" ]
 }
@@ -360,17 +360,17 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.image' |
+        yq -r -o=json -I=0 '.image' |
             tee -a /dev/stderr)
     [ "${actual}" == "quay.io/varnish-software/varnish-controller-router:latest" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.imagePullPolicy' |
+        yq -r -o=json -I=0 '.imagePullPolicy' |
             tee -a /dev/stderr)
     [ "${actual}" == "Always" ]
 }
@@ -388,17 +388,17 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.image' |
+        yq -r -o=json -I=0 '.image' |
             tee -a /dev/stderr)
     [ "${actual}" == "docker-repo.local/varnish-software/varnish-controller-router:latest" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.imagePullPolicy' |
+        yq -r -o=json -I=0 '.imagePullPolicy' |
             tee -a /dev/stderr)
     [ "${actual}" == "Always" ]
 }
@@ -411,7 +411,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.imagePullSecrets' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets' | tee -a /dev/stderr)
     [ "${actual}" == '[{"name":"quay.io-varnish-software"}]' ]
 }
 
@@ -423,7 +423,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "release-name-varnish-controller-router" ]
 }
 
@@ -435,7 +435,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "default" ]
 }
 
@@ -447,7 +447,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
 }
@@ -460,7 +460,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -473,7 +473,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
 }
@@ -486,7 +486,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -503,7 +503,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-controller-router","foo":"bar","hello":"varnish"}' ]
@@ -526,7 +526,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-controller-router","release-name":"release-name","release-namespace":"varnish"}' ]
@@ -549,7 +549,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-controller-router","release-name":"release-name","release-namespace":"default"}' ]
@@ -567,46 +567,46 @@ release-namespace: {{ .Release.Namespace }}
     # .metadata.labels
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-controller-router" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/version"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/version"' |
             tee -a /dev/stderr)
     [ "${actual}" != "" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/managed-by"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/managed-by"' |
             tee -a /dev/stderr)
     [ "${actual}" == "Helm" ]
 
     # .spec.selector.matchLabels
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.selector.matchLabels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.spec.selector.matchLabels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-controller-router" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.selector.matchLabels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.spec.selector.matchLabels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 
     # .spec.template.metadata.labels
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-controller-router" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -619,7 +619,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"edge"}' ]
 }
@@ -632,7 +632,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"release-name-edge"}' ]
 }
@@ -644,7 +644,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
 }
@@ -659,7 +659,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"effect":"NoSchedule","key":"far-network-disk","operator":"Exists"}]' ]
 }
@@ -678,7 +678,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"key":"ban-release-name","operator":"Exists","effect":"NoSchedule"}]' ]
 }
@@ -690,7 +690,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
 }
@@ -704,7 +704,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.affinity' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"foo":"bar"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
@@ -727,7 +727,7 @@ podAntiAffinity:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.affinity' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"app.kubernetes.io/name":"varnish-controller-router","app.kubernetes.io/instance":"release-name"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
@@ -740,7 +740,7 @@ podAntiAffinity:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -754,7 +754,7 @@ podAntiAffinity:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
 }
@@ -773,7 +773,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
 }
@@ -787,21 +787,21 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTP_ROUTING") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'true' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTP_PORT") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '6081' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTP_HOST") | .valueFrom' |
             tee -a /dev/stderr)
@@ -820,7 +820,7 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTP_ROUTING") | .value' |
             tee -a /dev/stderr)
@@ -837,7 +837,7 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTP_PORT") | .value' |
             tee -a /dev/stderr)
@@ -853,7 +853,7 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTPS_ROUTING") | .value' |
             tee -a /dev/stderr)
@@ -870,21 +870,21 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTPS_ROUTING") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'true' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTPS_PORT") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '6443' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTPS_HOST") | .valueFrom' |
             tee -a /dev/stderr)
@@ -902,7 +902,7 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_HTTPS_PORT") | .value' |
             tee -a /dev/stderr)
@@ -918,7 +918,7 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_ROUTING") | .value' |
             tee -a /dev/stderr)
@@ -935,28 +935,28 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_ROUTING") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'true' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_PORT") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '8091' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_HOST") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"fieldRef":{"fieldPath":"status.podIP"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_TLS") | .value' |
             tee -a /dev/stderr)
@@ -974,28 +974,28 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_ROUTING") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == 'true' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_PORT") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '8091' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_HOST") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"fieldRef":{"fieldPath":"status.podIP"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_TLS") | .value' |
             tee -a /dev/stderr)
@@ -1013,7 +1013,7 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_PORT") | .value' |
             tee -a /dev/stderr)
@@ -1031,7 +1031,7 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "VARNISH_CONTROLLER_DNS_TLS") | .value' |
             tee -a /dev/stderr)
@@ -1048,14 +1048,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .command' |
             tee -a /dev/stderr)
     [ "${actual}" == '["/usr/bin/varnish-controller-router"]' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .args' |
             tee -a /dev/stderr)
@@ -1073,14 +1073,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .command' |
             tee -a /dev/stderr)
     [ "${actual}" == '["/usr/bin/varnish-controller-router"]' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .args' |
             tee -a /dev/stderr)
@@ -1100,14 +1100,14 @@ rollingUpdate:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "EXTRA_ENV") | .value' |
             tee -a /dev/stderr)
     [ "${actual}" == '1' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "ANOTHER_EXTRA_ENV") | .value' |
             tee -a /dev/stderr)
@@ -1127,14 +1127,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "FOO")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "BAZ")' |
             tee -a /dev/stderr)
@@ -1159,14 +1159,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "RELEASE_NAME")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"RELEASE_NAME","value":"release-name"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "RELEASE_NAMESPACE")' |
             tee -a /dev/stderr)
@@ -1188,14 +1188,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "FOO")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "BAZ")' |
             tee -a /dev/stderr)
@@ -1219,14 +1219,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "FROM_CONFIGMAP")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FROM_CONFIGMAP","valueFrom":{"configMapKeyRef":{"key":"my-key","name":"my-configmap"}}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .env[]? | select(.name == "FROM_SECRET")' |
             tee -a /dev/stderr)
@@ -1246,7 +1246,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .resources' | tee -a /dev/stderr)
 
@@ -1272,7 +1272,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .resources' | tee -a /dev/stderr)
 
@@ -1298,7 +1298,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .resources' | tee -a /dev/stderr)
 
@@ -1330,7 +1330,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .resources' | tee -a /dev/stderr)
 
@@ -1345,7 +1345,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") |
             .resources' | tee -a /dev/stderr)
 
@@ -1359,7 +1359,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
@@ -1375,7 +1375,7 @@ requests:
         --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .command' | tee -a /dev/stderr)
 
     [ "${actual}" == '["sh","-c","wget -O /etc/varnish-controller-router/asn.mmdb http://example.com/test.mmdb\n"]' ]
@@ -1392,7 +1392,7 @@ requests:
         --set 'router.asn.mmdb_url=http://example.com/test.mmdb' \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .command' | tee -a /dev/stderr)
 
     [ "${actual}" == '["sh","-c","wget -O /etc/varnish-controller-router/geoip.mmdb http://example.com/test.mmdb\nwget -O /etc/varnish-controller-router/asn.mmdb http://example.com/test.mmdb\n"]' ]
@@ -1407,7 +1407,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
@@ -1447,7 +1447,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn")' |
             tee -a /dev/stderr)
 
@@ -1463,7 +1463,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") | .env[]?|
             select(.name == "VARNISH_CONTROLLER_MMDB_FILE")' | tee -a /dev/stderr)
 
@@ -1479,7 +1479,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") | .volumeMounts[]?| select(.name == "release-name-data")' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}' ]
@@ -1494,7 +1494,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.volumes[]? | select(.name == "release-name-data")' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"name":"release-name-data","emptyDir":{}}' ]
@@ -1507,7 +1507,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
@@ -1522,7 +1522,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
@@ -1538,7 +1538,7 @@ requests:
         --set 'router.geoIp.mmdb_url=http://example.com/test.mmdb' \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn") | .command' | tee -a /dev/stderr)
 
     [ "${actual}" == '["sh","-c","wget -O /etc/varnish-controller-router/geoip.mmdb http://example.com/test.mmdb\n"]' ]
@@ -1578,7 +1578,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.initContainers[]? | select(.name == "router-download-geoip-asn")' |
             tee -a /dev/stderr)
 
@@ -1594,7 +1594,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") | .env[]?|
             select(.name == "VARNISH_CONTROLLER_MMDB_ASN_FILE")' | tee -a /dev/stderr)
 
@@ -1610,7 +1610,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "router") | .volumeMounts[]?| select(.name == "release-name-data")' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"name":"release-name-data","mountPath":"/etc/varnish-controller-router"}' ]
@@ -1625,7 +1625,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-router.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.volumes[]? | select(.name == "release-name-data")' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"name":"release-name-data","emptyDir":{}}' ]

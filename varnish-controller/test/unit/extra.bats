@@ -51,13 +51,13 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"name":"release-name-clusterrole"},"rules":[{"apiGroups":[""],"resources":["endpoints"],"verbs":["get","list","watch"]}]}' ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrolebinding")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "release-name-clusterrolebinding")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"release-name-clusterrolebinding"},"roleRef":{"kind":"ClusterRole","name":"release-name-clusterrole","apiGroup":"rbac.authorization.k8s.io"},"subjects":[{"kind":"ServiceAccount","name":"release-name","namespace":"default"}]}' ]
 
     local objects=$((helm template \
@@ -77,12 +77,12 @@ EOF
             tee -a /dev/stderr)
 
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
                 tee -a /dev/stderr)
         [ "${actual}" = 'null' ]
 
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
                 tee -a /dev/stderr)
         [ "${actual}" = 'null' ]
     done
@@ -129,13 +129,13 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "release-name-clusterrole")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"name":"release-name-clusterrole"},"rules":[{"apiGroups":[""],"resources":["endpoints"],"verbs":["get","list","watch"]}]}' ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "release-name-clusterrolebinding")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "release-name-clusterrolebinding")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"release-name-clusterrolebinding"},"roleRef":{"kind":"ClusterRole","name":"release-name-clusterrole","apiGroup":"rbac.authorization.k8s.io"},"subjects":[{"kind":"ServiceAccount","name":"release-name","namespace":"default"}]}' ]
 
     local objects=$((helm template \
@@ -155,12 +155,12 @@ EOF
             tee -a /dev/stderr)
 
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
                 tee -a /dev/stderr)
         [ "${actual}" = 'b341e3a03d6bb568e16c2ccbfdc281924ad1a771b73fd2c4198a54a6ce568ebe' ]
 
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
                 tee -a /dev/stderr)
         [ "${actual}" = 'ba049cef23c6407b1c3866a543d8b6cb6b52e01cc40b18774021761b3560424e' ]
     done
@@ -205,13 +205,13 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-controller-clusterrole")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "varnish-controller-clusterrole")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"name":"varnish-controller-clusterrole"},"rules":[{"apiGroups":[""],"resources":["endpoints"],"verbs":["get","list","watch"]}]}' ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-controller-clusterrolebinding")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "varnish-controller-clusterrolebinding")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"varnish-controller-clusterrolebinding"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"varnish-controller-clusterrole"},"subjects":[{"kind":"ServiceAccount","name":"varnish-controller","namespace":"default"}]}' ]
 
     local objects=$((helm template \
@@ -231,12 +231,12 @@ EOF
             tee -a /dev/stderr)
 
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
                 tee -a /dev/stderr)
         [ "${actual}" = 'null' ]
 
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
                 tee -a /dev/stderr)
         [ "${actual}" = 'null' ]
     done
@@ -283,13 +283,13 @@ EOF
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -c | wc -l | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | tee -a /dev/stderr)
     [ "${actual}" = "2" ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-controller-clusterrole")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "varnish-controller-clusterrole")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRole","metadata":{"name":"varnish-controller-clusterrole"},"rules":[{"apiGroups":[""],"resources":["endpoints"],"verbs":["get","list","watch"]}]}' ]
 
-    local actual=$(echo "$object" | yq -r -c 'select(.metadata.name == "varnish-controller-clusterrolebinding")' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 'select(.metadata.name == "varnish-controller-clusterrolebinding")' | tee -a /dev/stderr)
     [ "${actual}" == '{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"varnish-controller-clusterrolebinding"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"varnish-controller-clusterrole"},"subjects":[{"kind":"ServiceAccount","name":"varnish-controller","namespace":"default"}]}' ]
 
     local objects=$((helm template \
@@ -309,11 +309,11 @@ EOF
             tee -a /dev/stderr)
 
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
                 tee -a /dev/stderr)
         [ "${actual}" = '61d0a598be6c41dded6fd8cfbf3f272331f50ebda6db505b6726f2e4f10aae48' ]
         local actual=$(echo "$object" |
-            yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+            yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
                 tee -a /dev/stderr)
         [ "${actual}" = '4ad4a4ebf47c7cc895886ab0dd01e43217f9a7aa7a9c91038f020af4a89cd038' ]
     done

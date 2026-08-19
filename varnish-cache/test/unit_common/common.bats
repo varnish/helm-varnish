@@ -14,7 +14,7 @@ template=${template:-}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.imagePullSecrets' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets' | tee -a /dev/stderr)
     [ "${actual}" == '[{"name":"quay.io-varnish-software"}]' ]
 }
 
@@ -27,7 +27,7 @@ template=${template:-}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "release-name-varnish-cache" ]
 }
 
@@ -40,7 +40,7 @@ template=${template:-}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "default" ]
 }
 
@@ -53,7 +53,7 @@ template=${template:-}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.securityContext' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.securityContext' | tee -a /dev/stderr)
 
     # Note: values.yaml has 'global.podSecurityContext.fsGroup=999' as the default;
     # we're testing that the values are merged and not replaced.
@@ -71,7 +71,7 @@ template=${template:-}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -96,7 +96,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -118,7 +118,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -142,7 +142,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -160,7 +160,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.labels.hello' |
+        yq -r -o=json -I=0 '.metadata.labels.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
 }
@@ -174,7 +174,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.labels.hello' |
+        yq -r -o=json -I=0 '.metadata.labels.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -188,7 +188,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
 }
@@ -202,7 +202,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -216,7 +216,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
 }
@@ -230,7 +230,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -248,7 +248,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-cache","foo":"bar","hello":"varnish"}' ]
@@ -272,7 +272,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-cache","release-name":"release-name","release-namespace":"varnish"}' ]
@@ -296,7 +296,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-cache","release-name":"release-name","release-namespace":"default"}' ]
@@ -315,46 +315,46 @@ release-namespace: {{ .Release.Namespace }}
     # .metadata.labels
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-cache" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/version"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/version"' |
             tee -a /dev/stderr)
     [ "${actual}" != "" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/managed-by"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/managed-by"' |
             tee -a /dev/stderr)
     [ "${actual}" == "Helm" ]
 
     # .spec.selector.matchLabels
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.selector.matchLabels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.spec.selector.matchLabels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-cache" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.selector.matchLabels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.spec.selector.matchLabels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 
     # .spec.template.metadata.labels
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-cache" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -375,38 +375,39 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.ports[]? | select(.name == "http")' |
+        yq -r -o=json -I=0 '.ports[]? | select(.name == "http")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"http","containerPort":8090,"protocol":"TCP"}' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.startupProbe.tcpSocket.port' |
+        yq -r -o=json -I=0 '.startupProbe.tcpSocket.port' |
             tee -a /dev/stderr)
     [ "${actual}" == "8090" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.readinessProbe.tcpSocket.port' |
+        yq -r -o=json -I=0 '.readinessProbe.tcpSocket.port' |
             tee -a /dev/stderr)
     [ "${actual}" == "8090" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.livenessProbe.tcpSocket.port' |
+        yq -r -o=json -I=0 '.livenessProbe.tcpSocket.port' |
             tee -a /dev/stderr)
     [ "${actual}" == "8090" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-a") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-a") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-a","http=$(VARNISH_HTTP_ADDRESS):8090,HTTP"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.env[]? | select(.name == "VARNISH_HTTP_ADDRESS") | .valueFrom' |
+        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_HTTP_ADDRESS") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"fieldRef":{"fieldPath":"status.podIP"}}' ]
 }
@@ -427,27 +428,28 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.ports[]? | select(.name == "http")' |
+        yq -r -o=json -I=0 '.ports[]? | select(.name == "http")' |
             tee -a /dev/stderr)
     [ "${actual}" == "" ]
 
-    local actual=$(echo "$container" | yq -r -c '.startupProbe' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.startupProbe' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 
-    local actual=$(echo "$container" | yq -r -c '.readinessProbe' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.readinessProbe' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 
-    local actual=$(echo "$container" | yq -r -c '.livenessProbe' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.livenessProbe' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-a")' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-a")' |
             tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
@@ -525,13 +527,14 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-T","127.0.0.1:6082"]' ]
 }
@@ -549,13 +552,14 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-T") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-T","0.0.0.0:9999"]' ]
 }
@@ -580,9 +584,10 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+5]' |
+            .command' |
+            jq -r -c '. as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+5]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-a","proxy=:8088,PROXY","-a","proxy-sock=/tmp/varnish-proxy.sock,user=www,group=www,mode=0700,PROXY"]' ]
@@ -601,9 +606,10 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+            .command' |
+            jq -r -c '. as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-a","althttp=:8888"]' ]
@@ -622,9 +628,10 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+            .command' |
+            jq -r -c '. as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-a","althttp=/tmp/varnish.sock"]' ]
@@ -641,9 +648,10 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a")[1]' |
+            .command' |
+            jq -r -c '. as $cmd | indices("-a")[1]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
@@ -662,14 +670,14 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "FOO")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "BAZ")' |
             tee -a /dev/stderr)
@@ -694,14 +702,14 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "RELEASE_NAME")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"RELEASE_NAME","value":"release-name"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "RELEASE_NAMESPACE")' |
             tee -a /dev/stderr)
@@ -724,14 +732,14 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "FOO")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "BAZ")' |
             tee -a /dev/stderr)
@@ -755,14 +763,14 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "FROM_CONFIGMAP")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FROM_CONFIGMAP","valueFrom":{"configMapKeyRef":{"key":"my-key","name":"my-configmap"}}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .env[]? | select(.name == "FROM_SECRET")' |
             tee -a /dev/stderr)
@@ -780,31 +788,35 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-t","120"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("thread_pool_min=50") as $i | $cmd[$i]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("thread_pool_min=50") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_min=50" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("thread_pool_max=1000") as $i | $cmd[$i]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("thread_pool_max=1000") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_max=1000" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("thread_pool_timeout=120") as $i | $cmd[$i]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("thread_pool_timeout=120") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_timeout=120" ]
 }
@@ -824,31 +836,35 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-t") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-t","240"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("thread_pool_min=300") as $i | $cmd[$i]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("thread_pool_min=300") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_min=300" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("thread_pool_max=5000") as $i | $cmd[$i]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("thread_pool_max=5000") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_max=5000" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("thread_pool_timeout=500") as $i | $cmd[$i]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("thread_pool_timeout=500") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == "thread_pool_timeout=500" ]
 }
@@ -866,9 +882,10 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
+            .command' |
+            jq -r -c '. as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '["-p","feature=+http2"]' ]
@@ -886,9 +903,10 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | index("-d") as $i | $cmd[$i]' |
+            .command' |
+            jq -r -c '. as $cmd | index("-d") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "-d" ]
@@ -910,19 +928,21 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-a","proxy=:8088,PROXY"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | indices("-p")[3] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-p","feature=+http2"]' ]
 }
@@ -942,19 +962,21 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | indices("-a")[1] as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-a","proxy=:8088,PROXY"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-d") as $i | $cmd[$i]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-d") as $i | $cmd[$i]' |
             tee -a /dev/stderr)
     [ "${actual}" == '-d' ]
 }
@@ -970,9 +992,10 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
-            .command | . as $cmd | indices("-a") | length' |
+            .command' |
+            jq -r -c '. as $cmd | indices("-a") | length' |
             tee -a /dev/stderr)
     [ "${actual}" == "1" ]
 }
@@ -990,7 +1013,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-hello")' |
             tee -a /dev/stderr)
 
@@ -1013,7 +1036,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "release-name-hello")' |
             tee -a /dev/stderr)
 
@@ -1033,7 +1056,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .volumeMounts[]? | select(.name == "varnish-data")' |
             tee -a /dev/stderr)
@@ -1057,7 +1080,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .volumeMounts[]? | select(.name == "release-name-data")' |
             tee -a /dev/stderr)
@@ -1079,7 +1102,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.volumes[]? | select(.name == "varnish-data")' |
             tee -a /dev/stderr)
 
@@ -1104,7 +1127,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.volumes[]? | select(.name == "release-name-data")' |
             tee -a /dev/stderr)
 
@@ -1123,28 +1146,29 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-secret"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-secret"' |
             tee -a /dev/stderr)
     [ "${actual}" = '4ad139339508eb77f3875735b8415516f14f388e228071faa1d2b080429cdd9b' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-secret","secret":{"secretName":"release-name-varnish-cache-secret"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-S","/etc/varnish/secret"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-secret")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-secret")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"release-name-config-secret","mountPath":"/etc/varnish/secret","subPath":"secret"}' ]
 }
@@ -1163,28 +1187,29 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-secret"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-secret"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'null' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-secret","secret":{"secretName":"external-secret"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-S") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-S","/etc/varnish/secret"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-secret")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-secret")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"release-name-config-secret","mountPath":"/etc/varnish/secret","subPath":"varnish-password"}' ]
 }
@@ -1273,28 +1298,29 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-secret"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-secret"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'null' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
             tee -a /dev/stderr)
     [ "${actual}" = '' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-S")' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-S")' |
             tee -a /dev/stderr)
     [ "${actual}" == 'null' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-secret")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-secret")' |
             tee -a /dev/stderr)
     [ "${actual}" == '' ]
 }
@@ -1310,28 +1336,29 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'null' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '' ]
 }
@@ -1364,28 +1391,29 @@ backend release-name {
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 }
@@ -1419,28 +1447,29 @@ backend release-name {
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 }
@@ -1490,43 +1519,44 @@ backend release-name {
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","configMap":{"name":"release-name-varnish-cache-vcl-main-vcl"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
 }
@@ -1577,43 +1607,44 @@ backend release-name {
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","configMap":{"name":"release-name-varnish-cache-vcl-main-vcl"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
 }
@@ -1665,43 +1696,44 @@ backend release-name {
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
             tee -a /dev/stderr)
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","configMap":{"name":"release-name-varnish-cache-vcl-main-vcl"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/varnish.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
 }
@@ -1788,18 +1820,19 @@ backend default {
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
 
@@ -1812,7 +1845,7 @@ backend default {
         . || echo "---") |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.data' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data' | tee -a /dev/stderr)
     [ "${actual}" == '{"varnish.vcl":"\nvcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8080\";\n}\n"}' ]
 }
 
@@ -1828,18 +1861,19 @@ backend default {
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" == '' ]
 }
@@ -1861,23 +1895,24 @@ backend default {
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "varnish-vcl-tenant1")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "varnish-vcl-tenant1")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"configMap":{"name":"varnish-vcl-tenant1"},"name":"varnish-vcl-tenant1"}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '
-            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '
+            .command' |
+            jq -r -c '. as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "varnish-vcl-tenant1")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "varnish-vcl-tenant1")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"mountPath":"/etc/varnish/tenant1.vcl","name":"varnish-vcl-tenant1","subpath":"tenant1.vcl"}' ]
 }
@@ -1901,27 +1936,28 @@ vcl.use vcl_main
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-cmdfile"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-cmdfile"' |
             tee -a /dev/stderr)
     [ "${actual}" = '624d35eb30614898dff2f0a0d0b877fb27f394debc7f8316605a9208ed5b1c6d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-cmdfile")' |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-cmdfile")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-cmdfile","configMap":{"name":"release-name-varnish-cache-cmdfile"}}' ]
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | . as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '.command' |
+            jq -r -c '. as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-I","/etc/varnish/cmds.cli"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"release-name-config-cmdfile","mountPath":"/etc/varnish/cmds.cli","subPath":"cmds.cli"}' ]
 }
@@ -1946,17 +1982,18 @@ vcl.use vcl_main
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.command | . as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
+        yq -o=json -I=0 '.command' |
+            jq -r -c '. as $cmd | index("-I") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-I","/etc/varnish/cmdfile"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"release-name-config-cmdfile","mountPath":"/etc/varnish/cmdfile","subPath":"cmds.cli"}' ]
 }
@@ -1975,17 +2012,17 @@ vcl.use vcl_main
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.image' |
+        yq -r -o=json -I=0 '.image' |
             tee -a /dev/stderr)
     [ "${actual}" == "docker-repo.local/varnish-software/varnish-plus:latest" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.imagePullPolicy' |
+        yq -r -o=json -I=0 '.imagePullPolicy' |
             tee -a /dev/stderr)
     [ "${actual}" == "Always" ]
 }
@@ -1998,7 +2035,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -2018,7 +2055,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -2039,7 +2076,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -2062,7 +2099,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -2083,7 +2120,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -2103,7 +2140,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -2124,7 +2161,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -2147,7 +2184,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -2168,7 +2205,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -2184,7 +2221,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -2204,7 +2241,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -2225,7 +2262,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -2248,7 +2285,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -2269,7 +2306,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -2285,7 +2322,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -2305,7 +2342,7 @@ vcl.use vcl_main
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .resources' | tee -a /dev/stderr)
 
@@ -2331,7 +2368,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .resources' | tee -a /dev/stderr)
 
@@ -2357,7 +2394,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .resources' | tee -a /dev/stderr)
 
@@ -2389,7 +2426,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .resources' | tee -a /dev/stderr)
 
@@ -2404,7 +2441,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
             .resources' | tee -a /dev/stderr)
 
@@ -2420,7 +2457,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"edge"}' ]
 }
@@ -2434,7 +2471,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"release-name-edge"}' ]
 }
@@ -2447,7 +2484,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
 }
@@ -2463,7 +2500,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"effect":"NoSchedule","key":"far-network-disk","operator":"Exists"}]' ]
 }
@@ -2483,7 +2520,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"key":"ban-release-name","operator":"Exists","effect":"NoSchedule"}]' ]
 }
@@ -2496,7 +2533,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
 }
@@ -2511,7 +2548,7 @@ requests:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.affinity' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"foo":"bar"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
@@ -2535,7 +2572,7 @@ podAntiAffinity:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.affinity' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"app.kubernetes.io/name":"varnish-cache","app.kubernetes.io/instance":"release-name"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
@@ -2551,11 +2588,11 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
 
@@ -2571,11 +2608,11 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
     [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
 }
 
@@ -2593,11 +2630,11 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
     [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
 }
 
@@ -2612,11 +2649,11 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
 
@@ -2633,11 +2670,11 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
     [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
 }
 
@@ -2655,11 +2692,11 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
     [[ "${actual}" == *"MEMPOOL.sess"* ]]
     [[ "${actual}" == *"sleep 5"* ]]
     [[ "${actual}" == *"sleep 30"* ]]
@@ -2676,7 +2713,7 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "null" ]
@@ -2694,7 +2731,7 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "120" ]
@@ -2712,7 +2749,7 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "120" ]
@@ -2731,7 +2768,7 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "180" ]
@@ -2751,7 +2788,7 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "180" ]
@@ -2772,7 +2809,7 @@ podAntiAffinity:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "180" ]
@@ -2787,7 +2824,7 @@ podAntiAffinity:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa")' |
             tee -a /dev/stderr)
 
@@ -2806,7 +2843,7 @@ podAntiAffinity:
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -2834,7 +2871,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -2859,7 +2896,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -2886,7 +2923,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -2907,7 +2944,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .args' |
             tee -a /dev/stderr)
@@ -2927,7 +2964,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .args' |
             tee -a /dev/stderr)
@@ -2948,7 +2985,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .image' |
             tee -a /dev/stderr)
@@ -2971,7 +3008,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .image' |
             tee -a /dev/stderr)
@@ -2987,7 +3024,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -3007,7 +3044,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -3027,7 +3064,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -3043,7 +3080,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -3063,7 +3100,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -3079,7 +3116,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -3098,7 +3135,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .resources' | tee -a /dev/stderr)
 
@@ -3113,7 +3150,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .resources' | tee -a /dev/stderr)
 
@@ -3133,7 +3170,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .volumeMounts[]? | select(.name == "varnish-data")' |
             tee -a /dev/stderr)
@@ -3157,7 +3194,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .volumeMounts[]? | select(.name == "release-name-data")' |
             tee -a /dev/stderr)
@@ -3205,12 +3242,12 @@ EOF
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'null' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'null' ]
 }
@@ -3257,12 +3294,12 @@ EOF
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'b341e3a03d6bb568e16c2ccbfdc281924ad1a771b73fd2c4198a54a6ce568ebe' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'ba049cef23c6407b1c3866a543d8b6cb6b52e01cc40b18774021761b3560424e' ]
 }
@@ -3307,12 +3344,12 @@ EOF
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'null' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'null' ]
 }
@@ -3359,12 +3396,12 @@ EOF
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrole"' |
             tee -a /dev/stderr)
     [ "${actual}" = 'b1d1b7f802f0736a0666b0947539726b6fec6e737307cfc44ab1880c8e62eb62' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-extra-clusterrolebinding"' |
             tee -a /dev/stderr)
     [ "${actual}" = '7823f0c2674876bd60bca3d758cb320a0ea13090ec80d5aead53cd9ce0e1a53f' ]
 }

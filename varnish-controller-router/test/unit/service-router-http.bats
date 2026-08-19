@@ -9,7 +9,7 @@ load _helpers
         --namespace default \
         --show-only templates/service-router-http.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.name' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.metadata.name' | tee -a /dev/stderr)
 
     [ "${actual}" == "release-name-varnish-controller-router-http" ]
 }
@@ -23,7 +23,7 @@ load _helpers
         --set "router.httpService.enabled=-" \
         --show-only templates/service-router-http.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.name' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.metadata.name' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -37,7 +37,7 @@ load _helpers
         --set "router.httpService.enabled=false" \
         --show-only templates/service-router-http.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.name' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.metadata.name' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -50,7 +50,7 @@ load _helpers
         --show-only templates/service-router-http.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.metadata.annotations' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.metadata.annotations' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
 
@@ -63,7 +63,7 @@ load _helpers
         --show-only templates/service-router-http.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.metadata.annotations' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.metadata.annotations' | tee -a /dev/stderr)
     [ "${actual}" == '{"hello":"world"}' ]
 }
 
@@ -80,6 +80,6 @@ release-name: {{ .Release.Name }}
         --show-only templates/service-router-http.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.metadata.annotations' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.metadata.annotations' | tee -a /dev/stderr)
     [ "${actual}" == '{"release-name":"release-name"}' ]
 }

@@ -12,7 +12,7 @@ load _helpers
         --show-only=charts/postgresql/templates/primary/statefulset.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
     [ "${actual}" == "pullSecretValue" ]
 }
 
@@ -26,7 +26,7 @@ load _helpers
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
     [ "${actual}" == "pullSecretValue" ]
 }
 
@@ -40,7 +40,7 @@ load _helpers
         --show-only templates/deployment-brainz.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
     [ "${actual}" == "pullSecretValue" ]
 }
 
@@ -54,7 +54,7 @@ load _helpers
         --show-only templates/deployment-ui.yaml \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets[0].name' | tee -a /dev/stderr)
     [ "${actual}" == "pullSecretValue" ]
 }
 

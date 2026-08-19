@@ -11,7 +11,7 @@ load _helpers
         --set 'powerdns.config.someSetting=test' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"some-setting=test"* ]]
 }
@@ -26,7 +26,7 @@ load _helpers
         --set 'powerdns.config.anotherBooleanThing=false' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"boolean-thing=yes"* ]]
     [[ "${actual}" == *"another-boolean-thing=no"* ]]
@@ -41,7 +41,7 @@ load _helpers
         --set 'powerdns.config.launch=gsqlite3' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"launch=gsqlite3"* ]]
 }
@@ -55,7 +55,7 @@ load _helpers
         --set 'powerdns.config.launch=' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"launch=remote"* ]]
 }
@@ -69,7 +69,7 @@ load _helpers
         --set 'powerdns.config.remoteConnectionString=' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"remote-connection-string=http:url=http://release-name-varnish-controller-router-dns-backend.default.svc.cluster.local:8091,post_json=1,post=1"* ]]
 }
@@ -84,7 +84,7 @@ load _helpers
         --set 'powerdns.config.remoteConnectionString=' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"remote-connection-string=http:url=http://release-name-varnish-controller-router-dns-backend.default.svc.cluster.local,post_json=1,post=1"* ]]
 }
@@ -99,7 +99,7 @@ load _helpers
         --set 'powerdns.config.remoteConnectionString=' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"remote-connection-string=http:url=https://release-name-varnish-controller-router-dns-backend.default.svc.cluster.local:8091,post_json=1,post=1"* ]]
 }
@@ -115,7 +115,7 @@ load _helpers
         --set 'powerdns.config.remoteConnectionString=' \
         --show-only templates/configmap-powerdns.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.data["pdns.conf"]' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.data["pdns.conf"]' | tee -a /dev/stderr)
 
     [[ "${actual}" == *"remote-connection-string=http:url=https://release-name-varnish-controller-router-dns-backend.default.svc.cluster.local,post_json=1,post=1"* ]]
 }

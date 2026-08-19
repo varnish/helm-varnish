@@ -10,7 +10,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.containers[]? | select(.name == "apigw")' |
+        yq -r -o=json -I=0 '.spec.template.spec.containers[]? | select(.name == "apigw")' |
             tee -a /dev/stderr)
     [ "${actual}" != "" ]
 }
@@ -24,7 +24,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.containers[]? | select(.name == "apigw")' |
+        yq -r -o=json -I=0 '.spec.template.spec.containers[]? | select(.name == "apigw")' |
             tee -a /dev/stderr)
     [ "${actual}" == "" ]
 }
@@ -40,7 +40,7 @@ load _helpers
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -65,7 +65,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -87,7 +87,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -111,7 +111,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .securityContext' | tee -a /dev/stderr)
 
@@ -131,17 +131,17 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.image' |
+        yq -r -o=json -I=0 '.image' |
             tee -a /dev/stderr)
     [ "${actual}" = "quay.io/varnish-software/varnish-controller-api-gw:$(app_version)" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.imagePullPolicy' |
+        yq -r -o=json -I=0 '.imagePullPolicy' |
             tee -a /dev/stderr)
     [ "${actual}" = "IfNotPresent" ]
 }
@@ -159,17 +159,17 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.image' |
+        yq -r -o=json -I=0 '.image' |
             tee -a /dev/stderr)
     [ "${actual}" == "quay.io/varnish-software/varnish-controller-api-gw:latest" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.imagePullPolicy' |
+        yq -r -o=json -I=0 '.imagePullPolicy' |
             tee -a /dev/stderr)
     [ "${actual}" == "Always" ]
 }
@@ -188,17 +188,17 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -c '.image' |
+        yq -r -o=json -I=0 '.image' |
             tee -a /dev/stderr)
     [ "${actual}" == "docker-repo.local/varnish-software/varnish-controller-apigw:latest" ]
 
     local actual=$(echo "$container" |
-        yq -r -c '.imagePullPolicy' |
+        yq -r -o=json -I=0 '.imagePullPolicy' |
             tee -a /dev/stderr)
     [ "${actual}" == "Always" ]
 }
@@ -212,7 +212,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.imagePullSecrets' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets' | tee -a /dev/stderr)
     [ "${actual}" == '[{"name":"quay.io-varnish-software"}]' ]
 }
 
@@ -225,7 +225,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "release-name-varnish-controller" ]
 }
 
@@ -238,7 +238,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "default" ]
 }
 
@@ -251,7 +251,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
 }
@@ -265,7 +265,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -279,7 +279,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
 }
@@ -293,7 +293,7 @@ release-namespace: to-be-override
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.annotations.hello' |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -311,7 +311,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-controller-apigw","foo":"bar","hello":"varnish"}' ]
@@ -335,7 +335,7 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-controller-apigw","release-name":"release-name","release-namespace":"varnish"}' ]
@@ -359,7 +359,7 @@ release-namespace: {{ .Release.Namespace }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-controller-apigw","release-name":"release-name","release-namespace":"default"}' ]
@@ -378,46 +378,46 @@ release-namespace: {{ .Release.Namespace }}
     # .metadata.labels
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-controller-apigw" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/version"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/version"' |
             tee -a /dev/stderr)
     [ "${actual}" != "" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.metadata.labels."app.kubernetes.io/managed-by"' |
+        yq -r -o=json -I=0 '.metadata.labels."app.kubernetes.io/managed-by"' |
             tee -a /dev/stderr)
     [ "${actual}" == "Helm" ]
 
     # .spec.selector.matchLabels
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.selector.matchLabels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.spec.selector.matchLabels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-controller-apigw" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.selector.matchLabels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.spec.selector.matchLabels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 
     # .spec.template.metadata.labels
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels."app.kubernetes.io/name"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels."app.kubernetes.io/name"' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish-controller-apigw" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.metadata.labels."app.kubernetes.io/instance"' |
+        yq -r -o=json -I=0 '.spec.template.metadata.labels."app.kubernetes.io/instance"' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
 }
@@ -432,7 +432,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"edge"}' ]
 }
@@ -446,7 +446,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"release-name-edge"}' ]
 }
@@ -459,7 +459,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
 }
@@ -475,7 +475,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"effect":"NoSchedule","key":"far-network-disk","operator":"Exists"}]' ]
 }
@@ -495,7 +495,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"key":"ban-release-name","operator":"Exists","effect":"NoSchedule"}]' ]
 }
@@ -508,7 +508,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.tolerations' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
 }
@@ -523,7 +523,7 @@ release-namespace: {{ .Release.Namespace }}
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.affinity' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"foo":"bar"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
@@ -547,7 +547,7 @@ podAntiAffinity:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.spec.affinity' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"app.kubernetes.io/name":"varnish-controller","app.kubernetes.io/instance":"release-name"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
@@ -561,7 +561,7 @@ podAntiAffinity:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -576,7 +576,7 @@ podAntiAffinity:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
 }
@@ -596,7 +596,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.strategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
 }
@@ -609,7 +609,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -629,7 +629,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -650,7 +650,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .startupProbe' | tee -a /dev/stderr)
 
@@ -670,7 +670,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -686,7 +686,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -702,7 +702,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .readinessProbe' | tee -a /dev/stderr)
 
@@ -722,7 +722,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -738,7 +738,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -754,7 +754,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .livenessProbe' | tee -a /dev/stderr)
 
@@ -772,14 +772,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .command' |
             tee -a /dev/stderr)
     [ "${actual}" == '["/usr/bin/varnish-controller-api-gw"]' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .args' |
             tee -a /dev/stderr)
@@ -798,14 +798,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .command' |
             tee -a /dev/stderr)
     [ "${actual}" == '["/usr/bin/varnish-controller-api-gw"]' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .args' |
             tee -a /dev/stderr)
@@ -825,14 +825,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "FOO")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "BAZ")' |
             tee -a /dev/stderr)
@@ -858,14 +858,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "RELEASE_NAME")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"RELEASE_NAME","value":"release-name"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "RELEASE_NAMESPACE")' |
             tee -a /dev/stderr)
@@ -887,14 +887,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "FOO")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "BAZ")' |
             tee -a /dev/stderr)
@@ -918,14 +918,14 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "FROM_CONFIGMAP")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FROM_CONFIGMAP","valueFrom":{"configMapKeyRef":{"key":"my-key","name":"my-configmap"}}}' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .env[]? | select(.name == "FROM_SECRET")' |
             tee -a /dev/stderr)
@@ -945,7 +945,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .resources' | tee -a /dev/stderr)
 
@@ -971,7 +971,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .resources' | tee -a /dev/stderr)
 
@@ -997,7 +997,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .resources' | tee -a /dev/stderr)
 
@@ -1029,7 +1029,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .resources' | tee -a /dev/stderr)
 
@@ -1044,7 +1044,7 @@ requests:
         --namespace default \
         --show-only templates/deployment-apigw.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "apigw") |
             .resources' | tee -a /dev/stderr)
 

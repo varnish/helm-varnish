@@ -11,16 +11,16 @@ load _helpers
         --namespace default \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.data."nats-varnish-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."nats-varnish-password"' | tee -a /dev/stderr)
     [ "${actual}" != "" ]
 
-    local actual=$(echo "$object" | yq -r -c '.data."postgresql-admin-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."postgresql-admin-password"' | tee -a /dev/stderr)
     [ "${actual}" != "" ]
 
-    local actual=$(echo "$object" | yq -r -c '.data."postgresql-varnish-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."postgresql-varnish-password"' | tee -a /dev/stderr)
     [ "${actual}" != "" ]
 
-    local actual=$(echo "$object" | yq -r -c '.data."varnish-admin-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."varnish-admin-password"' | tee -a /dev/stderr)
     [ "${actual}" != "" ]
 }
 
@@ -48,7 +48,7 @@ load _helpers
         --namespace default \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.data."nats-varnish-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."nats-varnish-password"' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
 
@@ -62,10 +62,10 @@ load _helpers
         --namespace default \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.data."postgresql-admin-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."postgresql-admin-password"' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 
-    local actual=$(echo "$object" | yq -r -c '.data."postgresql-varnish-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."postgresql-varnish-password"' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
 
@@ -79,10 +79,10 @@ load _helpers
         --namespace default \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.data."postgresql-admin-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."postgresql-admin-password"' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 
-    local actual=$(echo "$object" | yq -r -c '.data."postgresql-varnish-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."postgresql-varnish-password"' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }
 
@@ -96,6 +96,6 @@ load _helpers
         --namespace default \
         . || echo "---") | tee -a /dev/stderr)
 
-    local actual=$(echo "$object" | yq -r -c '.data."varnish-admin-password"' | tee -a /dev/stderr)
+    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data."varnish-admin-password"' | tee -a /dev/stderr)
     [ "${actual}" == "null" ]
 }

@@ -25,24 +25,24 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c 'length > 0' |
+        yq -r -o=json -I=0 'length > 0' |
         tee -a /dev/stderr)
     [ "${actual}" == "true" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.minReplicas' |
+        yq -r -o=json -I=0 '.spec.minReplicas' |
         tee -a /dev/stderr)
     [ "${actual}" == "2" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxReplicas' |
+        yq -r -o=json -I=0 '.spec.maxReplicas' |
         tee -a /dev/stderr)
     [ "${actual}" == "10" ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.maxReplicas | type' |
+        yq -r -o=json -I=0 '.spec.maxReplicas | type' |
         tee -a /dev/stderr)
-    [ "${actual}" == "number" ]
+    [ "${actual}" == "!!int" ]
 }
 
 @test "brainz/HorizontalPodAutoscaler/behavior: can be set" {
@@ -59,7 +59,7 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.behavior' |
+        yq -r -o=json -I=0 '.spec.behavior' |
         tee -a /dev/stderr)
     [ "${actual}" == '{"scaleDown":{"policies":[{"periodSeconds":60,"type":"Pods","value":4}]}}' ]
 }
@@ -83,7 +83,7 @@ scaleDown:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.behavior' |
+        yq -r -o=json -I=0 '.spec.behavior' |
         tee -a /dev/stderr)
     [ "${actual}" == '{"scaleDown":{"policies":[{"type":"Pods","value":4,"periodSeconds":60}]}}' ]
 }
@@ -103,7 +103,7 @@ scaleDown:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.metrics' |
+        yq -r -o=json -I=0 '.spec.metrics' |
         tee -a /dev/stderr)
     [ "${actual}" == '[{"resource":{"name":"cpu","target":{"averageUtilization":50,"type":"Utilization"}},"type":"Resource"}]' ]
 }
@@ -128,7 +128,7 @@ scaleDown:
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.metrics' |
+        yq -r -o=json -I=0 '.spec.metrics' |
         tee -a /dev/stderr)
     [ "${actual}" == '[{"type":"Resources","resource":{"name":"cpu","target":{"type":"Utilization","averageUtilization":50}}}]' ]
 }

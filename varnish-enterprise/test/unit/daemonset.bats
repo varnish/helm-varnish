@@ -49,7 +49,7 @@ load _helpers
         --namespace default \
         --show-only templates/daemonset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
 }
@@ -64,7 +64,7 @@ load _helpers
         --namespace default \
         --show-only templates/daemonset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
 }
@@ -84,7 +84,7 @@ rollingUpdate:
         --namespace default \
         --show-only templates/daemonset.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.updateStrategy' | tee -a /dev/stderr)
+        yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
 }
@@ -132,7 +132,7 @@ rollingUpdate:
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -c '
+        yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-agent") |
             .volumeMounts[]? | select(.name == "my-varnish-controller-volume")' |
             tee -a /dev/stderr)
