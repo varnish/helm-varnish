@@ -62,15 +62,13 @@ orca:
 | `ingress.hosts[0].paths[0].pathType` | string | `"Prefix"` |  |
 | `ingress.tls` | list | `[]` |  |
 | `kind` | string | `"Deployment"` | Workload kind, either `"Deployment"` or `"StatefulSet"`. `StatefulSet` provides stable per-pod DNS via a headless companion service and is the safe choice for horizontally scaling a persistent cache. |
-| `livenessProbe.httpGet.path` | string | `"/"` |  |
-| `livenessProbe.httpGet.port` | string | `"http"` |  |
+| `livenessProbe` | object | `{"httpGet":{"path":"/healthz","port":"http"}}` | Liveness probe for the Orca container. Set to `null` to drop it. Suspended while the startup probe is still failing. |
 | `nameOverride` | string | `""` |  |
 | `nodeSelector` | object | `{}` |  |
 | `podAnnotations` | object | `{}` |  |
 | `podLabels` | object | `{}` |  |
 | `podSecurityContext` | object | `{}` |  |
-| `readinessProbe.httpGet.path` | string | `"/"` |  |
-| `readinessProbe.httpGet.port` | string | `"http"` |  |
+| `readinessProbe` | object | `{"httpGet":{"path":"/readyz","port":"http"}}` | Readiness probe for the Orca container. Set to `null` to drop it. Suspended while the startup probe is still failing. |
 | `replicaCount` | int | `1` | Pod replicas |
 | `resources` | object | `{}` | CPU and memory resources to allocate to the pod |
 | `securityContext` | object | `{}` |  |
@@ -84,6 +82,7 @@ orca:
 | `serviceAccount.automount` | bool | `true` |  |
 | `serviceAccount.create` | bool | `true` |  |
 | `serviceAccount.name` | string | `""` |  |
+| `startupProbe` | object | See [values.yaml](values.yaml) | Startup probe for the Orca container, with a 5 minute budget (`failureThreshold` times `periodSeconds`). Raise `failureThreshold` if you add virtual registries or run on a slow or contended node. Set to `null` to drop it. |
 | `storage.accessModes` | list | `["ReadWriteOnce"]` | Access modes applied to every cache PVC the chart creates |
 | `storage.annotations` | object | `{}` | Extra annotations applied to every cache PVC the chart creates |
 | `storage.labels` | object | `{}` | Extra labels applied to every cache PVC the chart creates |
@@ -142,6 +141,25 @@ orca:
       remotes:
       - url: https://gitlab.com
 ```
+
+## Startup time and probes
+
+A cold *Varnish Orca* pod is not ready the moment the container starts. It compiles one VCL group per entry in `orca.virtual_registry.registries`, roughly 4 seconds each, and the artifact firewall performs an initial ruleset sync that blocks startup. That sync takes seconds against a warm cache, but it can take several minutes on a cold one, longer still when several replicas compete for the same CPU.
+
+The chart handles this with a startup probe rather than by padding the liveness and readiness probes. Kubernetes suspends both of those for as long as a startup probe is still failing, so a slow first boot never trips a restart, and readiness keeps the pod out of the main Service until it can actually serve.
+
+The headless companion Service that `kind: StatefulSet` creates is deliberately exempt: it sets `publishNotReadyAddresses: true`, so each pod's stable DNS name resolves throughout startup. That is what makes a pod addressable before it is ready, which is the point of the headless Service. Only the main Service gates on readiness.
+
+The default budget is 5 minutes, `failureThreshold: 60` at `periodSeconds: 5`. If your pods are killed mid-boot with `Startup probe failed`, raise `failureThreshold`:
+
+```sh
+helm install varnish-orca oci://docker.io/varnish/orca-chart \
+ --set "startupProbe.failureThreshold=180"
+```
+
+The liveness probe asks `/healthz`, which reports that the process is up. The readiness and startup probes ask `/readyz`, which reports that the pod can actually serve traffic. Keeping the startup probe on `/readyz` also means a pod that never finishes booting is eventually restarted, rather than sitting live but useless because `/healthz` keeps answering.
+
+All three probes address the listener by name as `http`, which always refers to the first entry in `orca.varnish.http`. Any probe can be dropped by setting it to `null`.
 
 ## Deploying a custom license
 

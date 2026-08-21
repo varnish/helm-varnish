@@ -31,24 +31,36 @@ spec:
       imagePullPolicy: {{ .Values.image.pullPolicy }}
       command: ["/usr/bin/varnish-supervisor","--config","/etc/varnish-supervisor/config.yaml"]
       ports:
-        {{- $httpPorts := .Values.orca.varnish.http }}
-        {{- $numHttpPorts := len $httpPorts }}
-        {{- range $index, $portConfig := $httpPorts }}
-        - name: {{- if eq $numHttpPorts 1 }} http {{- else }} http-{{ $portConfig.port }} {{- end }}
-          containerPort: {{ $portConfig.port | default 80 }}
+        {{- /* The first listener of each scheme keeps the bare name, so that
+        "http" and "https" always resolve no matter how many listeners are
+        configured. The Services target them by name, as do the default
+        probes. */}}
+        {{- range $index, $portConfig := .Values.orca.varnish.http }}
+        {{- $port := $portConfig.port | default 80 }}
+        - name: {{ if eq $index 0 }}http{{ else }}http-{{ $port }}{{ end }}
+          containerPort: {{ $port }}
           protocol: TCP
         {{- end }}
-        {{- if .Values.orca.varnish.https }}
-        {{- $httpsPorts := .Values.orca.varnish.https }}
-        {{- $numHttpsPorts := len $httpsPorts }}
-        {{- range $index, $portConfig := $httpsPorts }}
-        - name: {{- if eq $numHttpsPorts 1 }} https {{- else }} https-{{ $portConfig.port }} {{- end }}
-          containerPort: {{ $portConfig.port | default 443 }}
+        {{- range $index, $portConfig := .Values.orca.varnish.https }}
+        {{- $port := $portConfig.port | default 443 }}
+        - name: {{ if eq $index 0 }}https{{ else }}https-{{ $port }}{{ end }}
+          containerPort: {{ $port }}
           protocol: TCP
-        {{- end }}
         {{- end }}
       resources:
         {{- toYaml .Values.resources | nindent 8 }}
+      {{- with .Values.startupProbe }}
+      startupProbe:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.livenessProbe }}
+      livenessProbe:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.readinessProbe }}
+      readinessProbe:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- if and .Values.extraEnvs (not (empty .Values.extraEnvs)) }}
       env:
         {{- include "orca.toEnv" (merge (dict "envs" .Values.extraEnvs) .) | nindent 8 }}

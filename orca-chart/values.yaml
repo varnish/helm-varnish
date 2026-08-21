@@ -91,13 +91,37 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
+# Probes. `port: http` refers to the first entry in `orca.varnish.http`, which
+# always carries that name. Set any probe to `null` to drop it from the pod.
+#
+# Liveness asks /healthz, which reports that the process is up. Readiness and
+# startup ask /readyz, which reports that it can actually serve traffic.
+#
+# The startup probe owns the slow part of boot. Kubernetes suspends the
+# liveness and readiness probes for as long as a startup probe is still
+# failing, so neither begins evaluating until the pod has come up once, and
+# the startup budget is what has to cover a cold start.
+#
+# That budget is deliberately generous, because it scales with things the
+# chart cannot see: roughly 4s per entry in `orca.virtual_registry.registries`,
+# plus the artifact firewall's initial ruleset sync, which blocks startup. The
+# sync takes seconds against a warm cache, but minutes on a cold one, more
+# still when several replicas compete for the same CPU. failureThreshold
+# multiplied by periodSeconds is the total, 5 minutes here. Raise
+# failureThreshold if you add registries or run on a slow or contended node.
+startupProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  periodSeconds: 5
+  failureThreshold: 60
 livenessProbe:
   httpGet:
     path: /healthz
     port: http
 readinessProbe:
   httpGet:
-    path: /healthz
+    path: /readyz
     port: http
 
 # Autoscaling is supported but generally a poor fit for caches: scale-up adds
