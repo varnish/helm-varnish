@@ -1,0 +1,741 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "properties": {
+    "nameOverride": {
+      "description": "Override the name of Varnish Cache chart and its components",
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "description": "Override the full name of Varnish Cache chart and its components",
+      "type": "string"
+    },
+    "global": {
+      "description": "global values",
+      "properties": {
+        "imagePullSecrets": {
+          "type": "array"
+        },
+        "podSecurityContext": {
+          "description": "securityContext of the Pod",
+          "properties": {
+            "fsGroup": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "securityContext": {
+          "description": "securityContext for all containers",
+          "properties": {
+            "runAsUser": {
+              "type": "integer"
+            },
+            "runAsNonRoot": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "annotations": {
+          "description": "Sets the annotations for all workload resources",
+          "type": "object"
+        },
+        "podAnnotations": {
+          "description": "Sets the annotations for pod templates",
+          "type": "object"
+        },
+        "labels": {
+          "description": "Sets the labels for all workload resources",
+          "type": "object"
+        },
+        "podLabels": {
+          "description": "Sets the labels for pod templates",
+          "type": "object"
+        },
+        "resources": {
+          "description": "Configures a resource limits for all containers",
+          "properties": {
+            "limits": {
+              "properties": {
+                "cpu": {
+                  "description": "CPU limit",
+                  "type": "string"
+                },
+                "memory": {
+                  "description": "memory limit",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "requests": {
+              "description": "Configures a resource limits for all containers",
+              "properties": {
+                "cpu": {
+                  "description": "CPU requests",
+                  "type": "string"
+                },
+                "memory": {
+                  "description": "memory requests",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },  
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "serviceAccount": {
+      "description": "varnish cache kubernetes service account",
+      "properties": {
+        "create": {
+          "description": "Specifies whether a service account should be created",
+          "type": "boolean"
+        },
+        "labels": {
+          "description": "Labels to add to the service account",
+          "type": "object"
+        },
+        "annotations": {
+          "description": "annotations to add to the service account",
+          "type": "object"
+        },
+        "name": {
+          "description": "name of the service account to use",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "server": {
+      "description": "Configures Varnish Cache server",
+      "properties": {
+        "replicas": {
+          "description": "number of varnish cache server replicas ",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "sets the deployment kind (Deployment, StatefulSet or DaemonSet)",
+          "type": "string",
+          "pattern": "^(Deployment|StatefulSet|DaemonSet)$"
+        },
+        "labels": {
+          "description": "Sets extra labels for the deployment",
+          "type": "object"
+        },
+        "annotations": {
+          "description": "Sets extra annotations for the deployment",
+          "type": "object"
+        },
+        "strategy": {
+          "description": "sets deployment strategy",
+          "type": ["object", "string"]
+        },
+        "updateStrategy": {
+          "description": "Sets the updateStrategy for StatefulSet and DaemonSet",
+          "type": ["object", "string"]
+        },
+        "hostNetwork": {
+          "description": "Enables hostNetwork to expose varnish directly on the node",
+          "type": "boolean"
+        },
+        "shareProcessNamespace": {
+          "description": "Enables shared process namespace",
+          "type": "boolean"
+        },
+        "http": {
+          "description": "port config",
+          "properties": {
+            "enabled": {
+              "description": "enable/disable the http port",
+              "type": "boolean"
+            },
+            "port": {
+              "description": "http port number",
+              "type": "integer"
+            }
+          }
+        },
+        "admin": {
+          "description": "Varnish admin interfact configuration",
+          "properties": {
+            "address": {
+              "description": "address for Varnish management interface",
+              "type": "string"
+            },
+            "port": {
+              "description": "port for Varnish management interface",
+              "type": "integer"
+            }
+          }
+        },
+        "extraListens": {
+          "description": "extra addresses and ports to listen.",
+          "type": "array"          
+        },
+        "extraEnvs": {
+          "description": "Sets the extra environment variables for Varnish Cache",
+          "type": ["object", "string", "array"]
+        },
+        "ttl": {
+          "description": "sets default Time to Live (TTL) for cached objects",
+          "type": "integer"
+        },
+        "minThreads": {
+          "description": "Sets the minimum number of worker threads in each pool",
+          "type": "integer"
+        },
+        "maxThreads": {
+          "description": "Sets the maximum number of worker threads in each pool",
+          "type": "integer"
+        },
+        "threadTimeout": {
+          "description": "Sets the idle threshold where threads idle for at least this long will be destroyed",
+          "type": "integer"
+        },
+        "extraArgs": {
+          "description": "Sets the extra configuration args for Varnish",
+          "type": "array"
+        },
+        "extraInitContainers": {
+          "description": "Declares the extra init containers to run before Varnish containers are run",
+          "type": ["array", "string"]
+        },
+        "extraContainers": {
+          "description": "Declares the extra containers to run within Varnish pods",
+          "type": ["array", "string"]
+        },
+        "extraVolumeClaimTemplates": {
+          "description": "Declares the extra volumeClaimTemplates",
+          "type": ["array", "string"]
+        },
+        "extraVolumeMounts": {
+          "description": "Declares the extra volumes to mount with Varnish container",
+          "type": ["array", "string"]
+        },
+        "extraVolumes": {
+          "description": "Declares the extra volumes to mount to the pod",
+          "type": ["array", "string"]
+        },
+        "secret": {
+          "description": "Sets the Varnish secret",
+          "type": "string"
+        },
+        "secretFrom": {
+          "description": "sets the Varnish secret from Kubernetes secret",
+          "type": "object"
+        },
+        "secretFile": {
+          "description": "Use the content of the given file path as Varnish secret",
+          "type": "string"
+        },
+        "command": {
+          "description": "Sets the command to execute",
+          "type": "array"
+        },
+        "vclConfigPath": {
+          "description": "Configures the path to the default VCL configuration file",
+          "type": "string"
+        },
+        "vclConfig": {
+          "description": "Configures the default VCL",
+          "type": "string"
+        },
+        "vclConfigFile": {
+          "description": "Use the content of the given file path as VCL configuration",
+          "type": "string"
+        },
+        "vclConfigs": {
+          "description": "Define an extra VCL configuration",
+          "type": "object"
+        },
+        "cmdfileConfigPath": {
+          "description": "Configures the path to cmdfile",
+          "type": "string"
+        },
+        "cmdfileConfig": {
+          "description": "Configures the cmdfile",
+          "type": "string"
+        },
+        "commcmdfileConfigFile": {
+          "description": "Use the content of the given file path as a cmdfilee",
+          "type": "string"
+        },
+        "delayedShutdown": {
+          "description": "Configures delayed shutdown for zero-downtime downscaling",
+          "properties": {
+            "method": {
+              "description": "Delayed shutdown metho",
+              "type": "string",
+              "pattern": "^(none|sleep|mempool)$"
+            },
+            "sleep": {
+              "description": "configures 'sleep' delayed shutdown method",
+              "properties": {
+                "seconds": {
+                  "description": "sleep seconds",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "mempool": {
+              "description": "configures 'mempool' delayed shutdown method",
+              "properties": {
+                "pollSeconds": {
+                  "description": "Poll the mempool session every given pollSeconds",
+                  "type": "integer"
+                },
+                "waitSeconds": {
+                  "description": "Wait for the given waitSeconds before fully shutting down",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "image": {
+          "description": "Sets the image and tag to use to deploy Varnish Cache",
+          "properties": {
+            "repository": {
+              "description": "image repository",
+              "type": "string"
+            },
+            "pullPolicy": {
+              "description": "image pull policy",
+              "type": "string",
+              "pattern": "^(IfNotPresent|Always)$"
+            },
+            "tag": {
+              "description": "image tag",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "autoscaling": {
+          "description": "Enables or disables autoscaling",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minReplicas": {
+              "description": "minimum number of replicas to keep active at all time",
+              "type": "integer"
+            },
+            "maxReplicas": {
+              "description": "maximum number of replicas to keep active at all time",
+              "type": "integer"
+            },
+            "behavior": {
+              "description": "configures autoscaling behavior",
+              "type": ["string", "object"]
+            },
+            "metrics": {
+              "description": "Configures the autoscaling metrics",
+              "type": ["string", "object"]
+            }
+          },
+          "type": "object"
+        },
+        "pbd": {
+          "description": "enables or disables the PodDisruptionBudget",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "minAvailable": {
+              "description": "the minimum number of healthy pods to allow for disruption",
+              "type": "integer"
+            },
+            "maxUnavailable": {
+              "description": "the maximum number of healthy pods to allow for disruption",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "service": {
+          "description": "configure the Varnish cache service",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "labels": {
+              "description": "Sets the extra labels for Varnish Cache services",
+              "type": "object"
+            },
+            "annotations": {
+              "description": "Sets the extra annotations for Varnish Cache services",
+              "type": "object"
+            },
+            "type": {
+              "description": "the type of service - ClusterIP or NodePort",
+              "type": "string",
+              "pattern": "^(ClusterIP|NodePort)$"
+            },
+            "internalTrafficPolicy": {
+              "description": "Sets the internal traffic policy for this service",
+              "type": "string",
+              "pattern": "^(Local|Cluster)$"
+            },
+            "externalTrafficPolicy": {
+              "description": "Sets the external traffic policy for this service",
+              "type": "string",
+              "pattern": "^(Local|Cluster)$"
+            },
+            "clusterIP": {
+              "description": "whether to attach a cluster IP to the service",
+              "type": "string",
+              "pattern": "^$|^(?:([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+            },
+            "http": {
+              "description": "Enables or disables the Varnish HTTP service",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "port": {
+                  "description": "http port",
+                  "type": "integer"
+                },
+                "nodePort": {
+                  "description": "exposes service directly at the Node IP on specific port",
+                  "type": "integer"
+                }
+              }
+            },
+            "extraServices": {
+              "description": "enables custom-defined extra services",
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "ingress": {
+          "description": "configures varnish ingress",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "labels": {
+              "description": "Sets the extra labels for Varnish Cache ingress",
+              "type": "object"
+            },
+            "annotations": {
+              "description": "Sets the extra annotations for Varnish Cache ingress",
+              "type": "object"
+            },
+            "ingressClassName": {
+              "description": "Sets the class name for ingress",
+              "type": "string"
+            },
+            "pathType": {
+              "description": "Sets the pathType for Kubernetes 1.19+.",
+              "type": "string",
+              "pattern": "^(Prefix|Exact|ImplementationSpecific)$"
+            },
+            "hosts": {
+              "description": "Configures the hostname the varnish cache instance should respond to",
+              "type": "array"
+            },
+            "tls": {
+              "description": "Configures TLS certificates for Ingress",
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "podAnnotations": {
+          "description": "Sets the extra annotations for Varnish Cache pod template",
+          "type": "object"
+        },
+        "podLabels": {
+          "description": "Sets the extra labels for Varnish Cache pod template",
+          "type": "object"
+        },
+        "securityContext": {
+          "description": "Sets the securityContext of the Varnish Cache container",
+          "type": "object"
+        },
+        "startupProbe": {
+          "description": "Configures a probe for checking if a Pod has started",
+          "type": "object"
+        },
+        "readinessProbe": {
+          "description": "Configures a probe for checking if a Pod has started",
+          "properties": {
+            "initialDelaySeconds": {
+              "description": "Sets the initial delays in seconds until the first probe is performed",
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "description": "Sets the interval in seconds between each probes",
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "description": "Sets the timeout in seconds probe is considered timed out",
+              "type": "integer"
+            },
+            "successThreshold": {
+              "description": "Sets the consecutive successes until a probe is considered a success",
+              "type": "integer"
+            },
+            "failureThreshold": {
+              "description": "Sets the consecutive failures until a probe is considered a failure",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "livenessProbe": {
+          "description": "Configures a probe for checking if a Pod has started",
+          "properties": {
+            "initialDelaySeconds": {
+              "description": "Sets the initial delays in seconds until the first probe is performed",
+              "type": "integer"
+            },
+            "periodSeconds": {
+              "description": "Sets the interval in seconds between each probes",
+              "type": "integer"
+            },
+            "timeoutSeconds": {
+              "description": "Sets the timeout in seconds probe is considered timed out",
+              "type": "integer"
+            },
+            "successThreshold": {
+              "description": "Sets the consecutive successes until a probe is considered a success",
+              "type": "integer"
+            },
+            "failureThreshold": {
+              "description": "Sets the consecutive failures until a probe is considered a failure",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "resources": {
+          "description": "Configures a resource limits for all containers",
+          "properties": {
+            "limits": {
+              "properties": {
+                "cpu": {
+                  "description": "CPU limit",
+                  "type": "string"
+                },
+                "memory": {
+                  "description": "memory limit",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "requests": {
+              "description": "Configures a resource limits for all containers",
+              "properties": {
+                "cpu": {
+                  "description": "CPU requests",
+                  "type": "string"
+                },
+                "memory": {
+                  "description": "memory requests",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            }
+          },  
+          "type": "object"
+        },
+        "nodeSelector": {
+          "description": "Configures a node selector to assign to a Pod",
+          "type": "object"
+        },
+        "tolerations": {
+          "description": "Configures toleration settings for a Pod",
+          "type": "array"
+        },
+        "affinity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "podAntiAffinity": {
+                  "type": "object"
+                },
+                "podAffinity": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": true
+            }
+          ]
+        },
+        "networkPolicy": {
+          "description": "Enable or Disable Network Policy",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "allowIngress": {
+              "description": "Allow all connections from any source",
+              "type": "boolean"
+            },
+            "allowEgress": {
+              "description": "Allow all connections to any destinations",
+              "type": "boolean"
+            },
+            "extraIngress": {
+              "description": "Config custom ingress rules to the NetworkPolicy",
+              "type": "array"
+            },
+            "extraEgress": {
+              "description": "Config custom egress rules to the NetworkPolicy",
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "varnishncsa": {
+          "description": "Configures the Varnish NCSA sidecar",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "image": {
+              "description": "Sets the image and tag to use to deploy Varnish NCSA sidecar",
+              "properties": {
+                "repository": {
+                  "description": "image repository",
+                  "type": "string"
+                },
+                "pullPolicy": {
+                  "description": "image pull policy",
+                  "type": "string",
+                  "pattern": "^(IfNotPresent|Always|-)$"
+                },
+                "tag": {
+                  "description": "image tag",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "securityContext": {
+              "description": "Sets the securityContext of the Varnish NCSA sidecar",
+              "type": "object"
+            },
+            "extraArgs": {
+              "description": "Sets the extra arguments for Varnish NCSA sidecar",
+              "type": "array"
+            },
+            "readinessProbe": {
+              "description": "Configures a probe for checking if a Pod has started",
+              "properties": {
+                "initialDelaySeconds": {
+                  "description": "Sets the initial delays in seconds until the first probe is performed",
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "description": "Sets the interval in seconds between each probes",
+                  "type": "integer"
+                },
+                "timeoutSeconds": {
+                  "description": "Sets the timeout in seconds probe is considered timed out",
+                  "type": "integer"
+                },
+                "successThreshold": {
+                  "description": "Sets the consecutive successes until a probe is considered a success",
+                  "type": "integer"
+                },
+                "failureThreshold": {
+                  "description": "Sets the consecutive failures until a probe is considered a failure",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "livenessProbe": {
+              "description": "Configures a probe for checking if a Pod has started",
+              "properties": {
+                "initialDelaySeconds": {
+                  "description": "Sets the initial delays in seconds until the first probe is performed",
+                  "type": "integer"
+                },
+                "periodSeconds": {
+                  "description": "Sets the interval in seconds between each probes",
+                  "type": "integer"
+                },
+                "timeoutSeconds": {
+                  "description": "Sets the timeout in seconds probe is considered timed out",
+                  "type": "integer"
+                },
+                "successThreshold": {
+                  "description": "Sets the consecutive successes until a probe is considered a success",
+                  "type": "integer"
+                },
+                "failureThreshold": {
+                  "description": "Sets the consecutive failures until a probe is considered a failure",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "resources": {
+              "description": "Configures a resource limits for all containers",
+              "properties": {
+                "limits": {
+                  "properties": {
+                    "cpu": {
+                      "description": "CPU limit",
+                      "type": "string"
+                    },
+                    "memory": {
+                      "description": "memory limit",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "requests": {
+                  "description": "Configures a resource limits for all containers",
+                  "properties": {
+                    "cpu": {
+                      "description": "CPU requests",
+                      "type": "string"
+                    },
+                    "memory": {
+                      "description": "memory requests",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },  
+              "type": "object"
+            }
+
+          },
+          "type": "object"
+        },
+        "extraManifests": {
+          "description": "A list of extra manifests to be deployed alongside with Helm chart",
+          "type": "array"
+        }
+      },
+    "type": "object"
+  }
+},
+  "required": [],
+  "title": "Values",
+  "type": "object"
+}
+
