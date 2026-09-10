@@ -92,16 +92,16 @@ jobs:
 
           # 1. Calculate New Chart Patch Version
           # Split version (X.Y.Z), increment Z (patch), then join back.
-          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ env.CURRENT_CHART_VERSION }}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_CHART_VERSION"
           NEW_PATCH=$((PATCH + 1))
           NEW_CHART_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
           echo "New chart version calculated: $NEW_CHART_VERSION"
           echo "NEW_CHART_VERSION=$NEW_CHART_VERSION" >> "$GITHUB_ENV"
 
-          BRANCH=auto-pr-${{ env.CHART_NAME }}-appversion-${{ env.LATEST_APP_VERSION }}
+          BRANCH="auto-pr-$CHART_NAME-appversion-$LATEST_APP_VERSION"
           echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
 
-          if git ls-remote --exit-code origin $BRANCH; then
+          if git ls-remote --exit-code origin "$BRANCH"; then
             echo "Branch $BRANCH already exists, bailing out."
             exit 0
           fi
@@ -110,24 +110,24 @@ jobs:
           git config --global user.name "github-actions[bot]"
 
           git switch main
-          git switch -c $BRANCH
+          git switch -c "$BRANCH"
 
           # 2. Use yq to safely update appVersion and Chart version
           # yq is more reliable than sed for YAML files.
-          yq -i ".appVersion = \"${{ env.LATEST_APP_VERSION }}\"" "${{ env.CHART_PATH }}"
-          yq -i ".version = \"$NEW_CHART_VERSION\"" "${{ env.CHART_PATH }}"
+          yq -i ".appVersion = \"$LATEST_APP_VERSION\"" "$CHART_PATH"
+          yq -i ".version = \"$NEW_CHART_VERSION\"" "$CHART_PATH"
 
-          if [ -z "$(git diff "${{ env.CHART_PATH }}")" ]; then
-            echo "${{ env.CHART_PATH }} seems up-to-date. Skipping PR creation."
+          if [ -z "$(git diff "$CHART_PATH")" ]; then
+            echo "$CHART_PATH seems up-to-date. Skipping PR creation."
             exit 0
           fi
 
-          git add "${{ env.CHART_PATH }}"
-          git commit -m "Bump ${{ env.CHART_NAME }} appVersion to ${{ env.LATEST_APP_VERSION }} and chart version to $NEW_CHART_VERSION"
-          git push origin $BRANCH
+          git add "$CHART_PATH"
+          git commit -m "Bump $CHART_NAME appVersion to $LATEST_APP_VERSION and chart version to $NEW_CHART_VERSION"
+          git push origin "$BRANCH"
 
           gh pr create \
-            --title "[${{ env.CHART_NAME }}] Bump appVersion to ${{ env.LATEST_APP_VERSION }} (Chart $NEW_CHART_VERSION)" \
-            --body "Automated PR to update the Helm Chart's \`appVersion\` to \`${{ env.LATEST_APP_VERSION }}\` and bump the chart \`version\` to \`$NEW_CHART_VERSION\` in \`${{ env.CHART_PATH }}\`." \
+            --title "[$CHART_NAME] Bump appVersion to $LATEST_APP_VERSION (Chart $NEW_CHART_VERSION)" \
+            --body "Automated PR to update the Helm Chart's \`appVersion\` to \`$LATEST_APP_VERSION\` and bump the chart \`version\` to \`$NEW_CHART_VERSION\` in \`$CHART_PATH\`." \
             --base main \
-            --head $BRANCH
+            --head "$BRANCH"
