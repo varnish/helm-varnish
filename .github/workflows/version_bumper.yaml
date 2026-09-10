@@ -25,7 +25,7 @@ jobs:
         chart_details:
           - chart_dir: 'orca-chart'
             docker_image: 'varnish/orca:latest'
-            version_command: 'varnish-supervisor --version'
+            version_command: 'varnish-supervisor --version | head -n 1'
           - chart_dir: 'varnish-enterprise'
             docker_image: 'varnish/varnish-enterprise:latest'
             version_command: varnishd -V 2>&1 | sed -En 's/.*varnish-plus-(\S+).*/\1/p'
