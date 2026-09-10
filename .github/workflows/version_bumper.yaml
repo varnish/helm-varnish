@@ -56,6 +56,13 @@ jobs:
           # Get latest app version
           LATEST_APP_VERSION=$(docker run --rm "$DOCKER_IMAGE" sh -c "$VERSION_CMD" | xargs)
 
+          # Anything but a bare version means the command's output format
+          # changed, and it would end up in a branch name and in appVersion.
+          if [[ ! "$LATEST_APP_VERSION" =~ ^[0-9A-Za-z._+-]+$ ]]; then
+            echo "::error::$DOCKER_IMAGE reported '$LATEST_APP_VERSION', which is not a version."
+            exit 1
+          fi
+
           # Clean up any leading/trailing whitespace from the version strings
           CURRENT_APP_VERSION=$(echo "$CURRENT_APP_VERSION" | xargs)
 
