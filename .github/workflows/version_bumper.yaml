@@ -54,6 +54,13 @@ jobs:
           CURRENT_APP_VERSION=$(yq '.appVersion' "$CHART_PATH")
           CURRENT_CHART_VERSION=$(yq '.version' "$CHART_PATH")
 
+          # The patch bump needs three numbers. A failed $(( )) survives set -e,
+          # so without this the PR step would push a version like "1.8.".
+          if [[ ! "$CURRENT_CHART_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=$CHART_PATH::version '$CURRENT_CHART_VERSION' is not X.Y.Z."
+            exit 1
+          fi
+
           # Get latest app version
           LATEST_APP_VERSION=$(docker run --rm "$DOCKER_IMAGE" sh -c "$VERSION_CMD" | xargs)
 
