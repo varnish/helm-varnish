@@ -62,7 +62,7 @@ load _helpers
     [ "${actual}" = "3" ]
 }
 
-@test "Validation: store size > book_size + 1G is allowed (default book_size)" {
+@test "Validation: store size > book_size + the 1G floor is allowed (default book_size)" {
     cd "$(chart_dir)"
     local actual=$((helm template \
         --set kind=StatefulSet \
@@ -75,7 +75,7 @@ load _helpers
     [ "${actual}" = "true" ]
 }
 
-@test "Validation: store size <= book_size + 1G fails (default book_size)" {
+@test "Validation: store size <= book_size + the 1G floor fails (default book_size)" {
     cd "$(chart_dir)"
     run helm template \
         --set kind=StatefulSet \
@@ -85,10 +85,10 @@ load _helpers
         --namespace default \
         .
     [ "${status}" -ne 0 ]
-    [[ "${output}" == *"must be greater than book_size + 1G"* ]]
+    [[ "${output}" == *"must be greater than book_size plus filesystem overhead"* ]]
 }
 
-@test "Validation: store size at the boundary fails (5G + 1G == 6G)" {
+@test "Validation: store size at the floor boundary fails (5G + 1G == 6G)" {
     cd "$(chart_dir)"
     run helm template \
         --set kind=StatefulSet \
@@ -98,7 +98,7 @@ load _helpers
         --namespace default \
         .
     [ "${status}" -ne 0 ]
-    [[ "${output}" == *"must be greater than book_size + 1G"* ]]
+    [[ "${output}" == *"must be greater than book_size plus filesystem overhead"* ]]
 }
 
 @test "Validation: custom book_size respected (size 4G with book_size 2G allowed)" {
@@ -126,7 +126,7 @@ load _helpers
         --namespace default \
         .
     [ "${status}" -ne 0 ]
-    [[ "${output}" == *"must be greater than book_size + 1G"* ]]
+    [[ "${output}" == *"must be greater than book_size plus filesystem overhead"* ]]
 }
 
 @test "Validation: lowercase units accepted in size check" {
@@ -169,4 +169,32 @@ load _helpers
         .
     [ "${status}" -ne 0 ]
     [[ "${output}" == *"\"tiny\""* ]]
+}
+
+@test "Validation: the proportional reserve applies above the 1G floor" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_size=98G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"must be greater than book_size plus filesystem overhead"* ]]
+}
+
+@test "Validation: a large store with room for the proportional reserve is allowed" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=1000G \
+        --set orca.varnish.storage.stores[0].book_size=20G \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yq -r '.spec.volumeClaimTemplates[0].spec.resources.requests.storage')
+    [ "${actual}" = "1000Gi" ]
 }
