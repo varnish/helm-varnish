@@ -3,8 +3,8 @@ apiVersion: v2
 name: orca-chart
 description: Varnish Orca Helm chart
 type: application
-version: 0.2.10
-appVersion: 0.18.1
+version: 0.2.11
+appVersion: 0.19.0
 maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software
