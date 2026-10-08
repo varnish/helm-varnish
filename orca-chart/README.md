@@ -98,6 +98,7 @@ orca:
 | `orca.varnish.http[0].port` | int | `80` | On what port(s) should Varnish listen for HTTP requests
 | `orca.varnish.storage.stores` | list | `[]` | Persistent cache stores. Each entry gets a PVC sized to `size` and mounted at `path`. See [Deploying with persistent storage](#deploying-with-persistent-storage). |
 | `tolerations` | list | `[]` |  |
+| `topologySpreadConstraints` | list | `[]` | [Topology spread constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) for the pods. A constraint without a `labelSelector` selects the pods of this release. |
 | `volumeMounts` | list | `[]` |  |
 | `volumes` | list | `[]` |  |
 
