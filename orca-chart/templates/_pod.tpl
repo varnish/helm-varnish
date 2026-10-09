@@ -143,4 +143,16 @@ spec:
   tolerations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+  {{- with .Values.topologySpreadConstraints }}
+  topologySpreadConstraints:
+    {{- /* Without a labelSelector a constraint counts no pods and spreads
+    nothing, so default it to the pods of this release. */}}
+    {{- range . }}
+    {{- $constraint := deepCopy . }}
+    {{- if not (hasKey $constraint "labelSelector") }}
+    {{- $_ := set $constraint "labelSelector" (dict "matchLabels" (include "helm.selectorLabels" $ | fromYaml)) }}
+    {{- end }}
+    {{- toYaml (list $constraint) | nindent 4 }}
+    {{- end }}
+  {{- end }}
 {{- end -}}

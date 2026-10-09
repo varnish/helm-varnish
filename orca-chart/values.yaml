@@ -170,6 +170,14 @@ tolerations: []
 
 affinity: {}
 
+# Spreads the pods across zones, nodes or other topology domains. A constraint
+# without a labelSelector selects the pods of this release.
+# topologySpreadConstraints:
+#   - maxSkew: 1
+#     topologyKey: topology.kubernetes.io/zone
+#     whenUnsatisfiable: ScheduleAnyway
+topologySpreadConstraints: []
+
 orca:
   acme: {}
   git_mirror: {}

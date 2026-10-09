@@ -317,6 +317,46 @@ load _helpers
     [ "${actual}" = "kubernetes.io/hostname" ]
 }
 
+@test "${kind}: topologySpreadConstraints omitted by default" {
+    cd "$(chart_dir)"
+    local actual=$((helm template release-name \
+        --set "kind=${kind}" \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yqj '.spec.template.spec | has("topologySpreadConstraints")')
+    [ "${actual}" = "false" ]
+}
+
+@test "${kind}: topologySpreadConstraints selects the release's pods by default" {
+    cd "$(chart_dir)"
+    local actual=$((helm template release-name \
+        --set "kind=${kind}" \
+        --set 'topologySpreadConstraints[0].maxSkew=1' \
+        --set 'topologySpreadConstraints[0].topologyKey=topology.kubernetes.io/zone' \
+        --set 'topologySpreadConstraints[0].whenUnsatisfiable=DoNotSchedule' \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yqj '.spec.template.spec.topologySpreadConstraints')
+    [ "${actual}" = '[{"labelSelector":{"matchLabels":{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"orca-chart"}},"maxSkew":1,"topologyKey":"topology.kubernetes.io/zone","whenUnsatisfiable":"DoNotSchedule"}]' ]
+}
+
+@test "${kind}: topologySpreadConstraints keeps a labelSelector that is set" {
+    cd "$(chart_dir)"
+    local actual=$((helm template release-name \
+        --set "kind=${kind}" \
+        --set 'topologySpreadConstraints[0].maxSkew=1' \
+        --set 'topologySpreadConstraints[0].topologyKey=kubernetes.io/hostname' \
+        --set 'topologySpreadConstraints[0].whenUnsatisfiable=ScheduleAnyway' \
+        --set 'topologySpreadConstraints[0].labelSelector.matchLabels.tier=cache' \
+        --set 'topologySpreadConstraints[1].maxSkew=2' \
+        --set 'topologySpreadConstraints[1].topologyKey=topology.kubernetes.io/zone' \
+        --set 'topologySpreadConstraints[1].whenUnsatisfiable=ScheduleAnyway' \
+        --namespace default \
+        --show-only "${template}" \
+        .) | yqj '[.spec.template.spec.topologySpreadConstraints[].labelSelector.matchLabels | keys]')
+    [ "${actual}" = '[["tier"],["app.kubernetes.io/instance","app.kubernetes.io/name"]]' ]
+}
+
 @test "${kind}: extraEnvs as map" {
     cd "$(chart_dir)"
     local actual=$((helm template \
