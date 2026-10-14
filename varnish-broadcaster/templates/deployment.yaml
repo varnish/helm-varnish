@@ -1,0 +1,179 @@
+{{- include "broadcaster.validate" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm.fullname" . }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "helm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "helm.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helm.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # Write the nodes file once so it exists before broadcaster starts.
+      initContainers:
+        - name: discovery-init
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["varnish-discovery"]
+          args:
+            {{- include "broadcaster.discoveryArgs" . | nindent 12 }}
+            - -once
+          {{- with .Values.discovery.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: nodes
+              mountPath: /etc/broadcaster
+      containers:
+        - name: broadcaster
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["broadcaster"]
+          args:
+            - -cfg
+            - /etc/broadcaster/nodes.conf
+            # discovery rewrites the nodes file, pick up the changes
+            - -confwatch
+            - 2s
+            - -pid
+            - /tmp/broadcaster.pid
+            {{- if not .Values.broadcaster.tls.enabled }}
+            - -port
+            - "8088"
+            {{- end }}
+            - -mgmt-port
+            - "8089"
+            - -mgmt-host
+            - {{ ternary "0.0.0.0" "127.0.0.1" .Values.broadcaster.mgmt.enabled }}
+            - -timeout
+            - {{ .Values.broadcaster.timeout | quote }}
+            - -log
+            - {{ .Values.broadcaster.logLevel | quote }}
+            {{- if .Values.broadcaster.async }}
+            - -a
+            {{- end }}
+            {{- if .Values.broadcaster.tls.enabled }}
+            - -https-port
+            - "8443"
+            - -crt
+            - /etc/broadcaster-tls/tls.crt
+            - -key
+            - /etc/broadcaster-tls/tls.key
+            {{- end }}
+            {{- with .Values.broadcaster.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.extraEnvs }}
+          env:
+            {{- include "broadcaster.toEnv" (merge (dict "envs" .Values.extraEnvs) .) | nindent 12 }}
+          {{- end }}
+          ports:
+            {{- if .Values.broadcaster.tls.enabled }}
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+            {{- else }}
+            - name: http
+              containerPort: 8088
+              protocol: TCP
+            {{- end }}
+            {{- if .Values.broadcaster.mgmt.enabled }}
+            - name: mgmt
+              containerPort: 8089
+              protocol: TCP
+            {{- end }}
+          {{- if kindIs "invalid" .Values.livenessProbe }}
+          livenessProbe:
+            {{- include "broadcaster.defaultProbe" . | nindent 12 }}
+          {{- else if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if kindIs "invalid" .Values.readinessProbe }}
+          readinessProbe:
+            {{- include "broadcaster.defaultProbe" . | nindent 12 }}
+          {{- else if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: nodes
+              mountPath: /etc/broadcaster
+              readOnly: true
+            {{- if .Values.broadcaster.tls.enabled }}
+            - name: tls
+              mountPath: /etc/broadcaster-tls
+              readOnly: true
+            {{- end }}
+        - name: discovery
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["varnish-discovery"]
+          args:
+            {{- include "broadcaster.discoveryArgs" . | nindent 12 }}
+          {{- with .Values.discovery.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: nodes
+              mountPath: /etc/broadcaster
+      volumes:
+        - name: nodes
+          emptyDir: {}
+        {{- if .Values.broadcaster.tls.enabled }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.broadcaster.tls.secret }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
