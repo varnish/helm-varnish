@@ -1611,10 +1611,12 @@ cluster:
 
   # Sets the number of [primaries](https://docs.varnish-software.com/varnish-enterprise/features/cluster/#primaries)
   # for each object. Must be a strictly positive integer. If unset, the Varnish Enterprise default is used.
+  # Availability: 1.8.6
   # Type: integer
   primaries:
 
   # Sets the [fallback](https://docs.varnish-software.com/varnish-enterprise/features/cluster/#fallback)
   # level. Must be a positive integer (zero included). If unset, the Varnish Enterprise default is used.
+  # Availability: 1.8.6
   # Type: integer
   fallback:
