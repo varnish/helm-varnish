@@ -189,3 +189,82 @@ Declares the YAML field.
 {{- (dict $fieldName $fieldValue) | toYaml }}
 {{- end }}
 {{- end }}
+
+{{/*
+Stringifies a number, without the float notation YAML integers get (1000000 -> "1000000", not "1e+06").
+*/}}
+{{- define "varnish-enterprise.intString" }}
+{{- if and (kindIs "float64" .) (eq . (floor .)) }}
+{{- int64 . }}
+{{- else }}
+{{- . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Validates the cluster configuration and declares the environment variables
+consumed by cluster_auto_dns.vcl.
+*/}}
+{{- define "varnish-enterprise.clusterEnv" }}
+{{- $cluster := .Values.cluster }}
+{{- if not .Values.server.http.enabled }}
+{{- fail "'server.http.enabled' must be true for clustering to work" }}
+{{- end }}
+{{- if not (kindIs "bool" $cluster.trace) }}
+{{- fail (printf "cluster.trace must be a boolean, got '%v'" $cluster.trace) }}
+{{- end }}
+{{- $primaries := "" }}
+{{- if not (kindIs "invalid" $cluster.primaries) }}
+{{- $primaries = include "varnish-enterprise.intString" $cluster.primaries }}
+{{- end }}
+{{- if and (ne $primaries "") (or (not (regexMatch "^[0-9]+$" $primaries)) (lt (atoi $primaries) 1)) }}
+{{- fail (printf "cluster.primaries must be a strictly positive integer, got '%s'" $primaries) }}
+{{- end }}
+{{- $fallback := "" }}
+{{- if not (kindIs "invalid" $cluster.fallback) }}
+{{- $fallback = include "varnish-enterprise.intString" $cluster.fallback }}
+{{- end }}
+{{- if and (ne $fallback "") (not (regexMatch "^[0-9]+$" $fallback)) }}
+{{- fail (printf "cluster.fallback must be a positive integer, got '%s'" $fallback) }}
+{{- end }}
+{{- $extraEnvNames := list }}
+{{- if kindIs "map" .Values.server.extraEnvs }}
+{{- $extraEnvNames = keys .Values.server.extraEnvs }}
+{{- else if kindIs "slice" .Values.server.extraEnvs }}
+{{- range .Values.server.extraEnvs }}
+{{- $extraEnvNames = append $extraEnvNames .name }}
+{{- end }}
+{{- end }}
+{{- range $extraEnvNames }}
+{{- if hasPrefix "VARNISH_CLUSTER_" . }}
+{{- fail (printf "server.extraEnvs: '%s' is managed by the chart when cluster.enabled is true, use the cluster.* values instead" .) }}
+{{- end }}
+{{- end }}
+- name: VARNISH_CLUSTER_TOKEN
+  valueFrom:
+    secretKeyRef:
+      {{- if $cluster.secretName }}
+      name: {{ $cluster.secretName }}
+      {{- else }}
+      name: {{ include "varnish-enterprise.fullname" . }}-cluster-secret
+      {{- end }}
+      key: token
+- name: VARNISH_CLUSTER_PEER_DOMAIN
+  {{- if $cluster.headlessServiceName }}
+  value: "{{ $cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
+  {{- else }}
+  value: "{{ include "varnish-enterprise.fullname" . }}-peers:{{ .Values.server.http.port }}"
+  {{- end }}
+{{- if $cluster.trace }}
+- name: VARNISH_CLUSTER_TRACE
+  value: "true"
+{{- end }}
+{{- if ne $primaries "" }}
+- name: VARNISH_CLUSTER_PRIMARIES
+  value: {{ $primaries | quote }}
+{{- end }}
+{{- if ne $fallback "" }}
+- name: VARNISH_CLUSTER_FALLBACK
+  value: {{ $fallback | quote }}
+{{- end }}
+{{- end }}

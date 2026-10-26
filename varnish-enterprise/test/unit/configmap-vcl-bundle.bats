@@ -373,12 +373,11 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/configmap-vcl.yaml \
         . | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
-    [[ "${actual}" != *"import activedns"* ]]
-    [[ "${actual}" != *"cluster.vcl"* ]]
+    [[ "${actual}" != *"cluster_auto_dns.vcl"* ]]
     [[ "${actual}" != *"vcl_init"* ]]
 }
 
-@test "vcl-bundle: router.vcl imports activedns when cluster enabled" {
+@test "vcl-bundle: router.vcl includes cluster_auto_dns.vcl when cluster enabled" {
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -389,79 +388,8 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
-    [[ "${actual}" == *"import activedns;"* ]]
-    [[ "${actual}" == *'include "cluster.vcl";'* ]]
-}
-
-@test "vcl-bundle: router.vcl has vcl_init with cluster setup when cluster enabled" {
-    cd "$(chart_dir)"
-    local actual=$( (helm template \
-        --namespace default \
-        --set "cluster.enabled=true" \
-        --set "server.http.enabled=true" \
-        --set "server.vcls.routes[0].hostnames[0]=foo.com" \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
-    [[ "${actual}" == *"sub vcl_init {"* ]]
-    [[ "${actual}" == *"cluster.subscribe"* ]]
-    [[ "${actual}" == *"VARNISH_CLUSTER_TOKEN"* ]]
-}
-
-@test "vcl-bundle: router.vcl uses default peers service name when cluster.headlessServiceName unset" {
-    cd "$(chart_dir)"
-    local actual=$( (helm template \
-        --namespace default \
-        --set "cluster.enabled=true" \
-        --set "server.http.enabled=true" \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
-    [[ "${actual}" == *"-peers:"* ]]
-}
-
-@test "vcl-bundle: router.vcl uses cluster.headlessServiceName when set" {
-    cd "$(chart_dir)"
-    local actual=$( (helm template \
-        --namespace default \
-        --set "cluster.enabled=true" \
-        --set "server.http.enabled=true" \
-        --set "cluster.headlessServiceName=my-peers-svc" \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
-    [[ "${actual}" == *'"my-peers-svc:'* ]]
-}
-
-@test "vcl-bundle: router.vcl includes trace opt when cluster.trace enabled" {
-    cd "$(chart_dir)"
-    local actual=$( (helm template \
-        --namespace default \
-        --set "cluster.enabled=true" \
-        --set "server.http.enabled=true" \
-        --set "cluster.trace=true" \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
-    [[ "${actual}" == *'cluster_opts.set("trace", "true")'* ]]
-}
-
-@test "vcl-bundle: router.vcl has no trace opt when cluster.trace disabled" {
-    cd "$(chart_dir)"
-    local actual=$(helm template \
-        --namespace default \
-        --set "cluster.enabled=true" \
-        --set "server.http.enabled=true" \
-        --set "cluster.trace=false" \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --show-only templates/configmap-vcl.yaml \
-        . | tee -a /dev/stderr |
-        yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
-    [[ "${actual}" != *'"trace"'* ]]
+    [[ "${actual}" == *'include "cluster_auto_dns.vcl";'* ]]
+    [[ "${actual}" != *"vcl_init"* ]]
 }
 
 # ── Deployment: volumes and mounts ────────────────────────────────────────────
