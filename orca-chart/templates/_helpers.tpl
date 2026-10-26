@@ -150,9 +150,11 @@ do not collide.
 
 {{/*
 Validates each store's size: it is required (a PVC with no storage request is
-rejected by dynamic provisioners) and must be strictly greater than book_size +
-1G filesystem overhead. Mirrors the supervisor's runtime check so the failure
-surfaces during helm render instead of as a CrashLoopBackOff.
+rejected by dynamic provisioners) and must be strictly greater than book_size
+plus filesystem overhead, which the supervisor takes as 3% of size with a 1G
+floor. Mirrors the supervisor's runtime check, in the same order of operations
+so the two agree at the boundary, and surfaces the failure during helm render
+instead of as a CrashLoopBackOff.
 */}}
 {{- define "orca.validateStoreSizes" -}}
 {{- $oneGB := 1073741824 -}}
@@ -163,9 +165,11 @@ surfaces during helm render instead of as a CrashLoopBackOff.
   {{- $bookSizeStr := default "5G" $store.book_size -}}
   {{- $size := include "orca.parseSizeToBytes" $store.size | atoi -}}
   {{- $bookSize := include "orca.parseSizeToBytes" $bookSizeStr | atoi -}}
-  {{- $minSize := add $bookSize $oneGB -}}
+  {{- $overhead := mul (div $size 100) 3 -}}
+  {{- if lt $overhead $oneGB -}}{{- $overhead = $oneGB -}}{{- end -}}
+  {{- $minSize := add $bookSize $overhead -}}
   {{- if le $size $minSize -}}
-  {{- fail (printf "store %q: size %q must be greater than book_size + 1G filesystem overhead (book_size=%q)" $store.name (toString $store.size) $bookSizeStr) -}}
+  {{- fail (printf "store %q: size %q must be greater than book_size plus filesystem overhead, which is 3%% of size with a 1G floor (book_size=%q)" $store.name (toString $store.size) $bookSizeStr) -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}
