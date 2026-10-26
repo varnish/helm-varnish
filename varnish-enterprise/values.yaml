@@ -23,6 +23,12 @@ global:
   #     - name: registry-quay-k7c2f4m2d5
   imagePullSecrets: []
 
+  # Controls which feature set is active.
+  # "enterprise" enables MSE, MSE4, agent, initAgent, otel, cluster, and NATS features.
+  # "community" restricts to features available in open-source Varnish Cache.
+  # This value is overridden to "community" when publishing the varnish-cache chart.
+  edition: enterprise
+
   # Overrides the default busybox initContainer image.
   initContainer:
     # The image to use for the initContainer.
@@ -438,9 +444,9 @@ server:
   mse:
     # Enables Massive Storage Engine. Only one of `server.mse.enabled` or `server.mse4.enabled` must be enabled.
     #
-    # When set to a string "-", `server.mse.enabled` will be set to an opposite value of `server.mse4.enabled` (i.e. automatically disabling MSE when MSE4 is enabled, and vice versa)
+    # When set to a string "-", or null, `server.mse.enabled` will be set to an opposite value of `server.mse4.enabled` (i.e. automatically disabling MSE when MSE4 is enabled, and vice versa)
     # Availability: v1.6.1
-    # Type: boolean or string
+    # Type: boolean, string or null
     enabled: "-"
 
     # Sets the amount of memory to use for MSE. The value can be set as either a percentage (e.g., "80%"),
@@ -604,6 +610,15 @@ server:
 
       # Sets the storage size for Persistence Volume Claim for MSE4.
       storageSize: "10Gi"
+
+  malloc:
+    # Enables malloc storage, the default storage engine for open-source varnish:
+    enabled: false
+    # Sets the size of the malloc. Default is unbounded.
+    size: ~
+    transient:
+      # Sets the size of the transient buffer. Default is unbounded.
+      size: ~
 
   # Sets the Varnish secret for accessing the varnishd admin interface. Either this value or
   # `server.secretFrom` can be set.
