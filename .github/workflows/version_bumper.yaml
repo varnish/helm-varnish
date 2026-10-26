@@ -73,6 +73,12 @@ jobs:
 
           # Clean up any leading/trailing whitespace from the version strings
           CURRENT_APP_VERSION=$(echo "$CURRENT_APP_VERSION" | xargs)
+          LATEST_APP_VERSION=$(echo "$LATEST_APP_VERSION" | xargs)
+
+          if [ -z "$LATEST_APP_VERSION" ]; then
+            echo "::error file=$CHART_PATH::Could not determine latest app version for $CHART_NAME (docker run or version extraction may have failed)."
+            exit 1
+          fi
 
           echo "Processing Chart: $CHART_NAME (${{ matrix.chart_details.chart_dir }})"
           echo "Current appVersion: $CURRENT_APP_VERSION"
