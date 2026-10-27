@@ -177,6 +177,10 @@ server:
       subPath: home.vcl
 ```
 
+#### Using as a subchart
+
+`varnish-cache` and `varnish-enterprise` share their named templates (`varnish-common.*`). When both are dependencies of the same parent chart, use releases built from the same `varnish-common` revision, as Helm keeps only one definition per template name.
+
 ## Support
 
 Community support for Varnish Helm Chart is provided via [GitHub](https://github.com/varnish/helm-varnish-cache).
@@ -320,7 +324,7 @@ For example:
 ```yaml
 global:
   podSecurityContext:
-    fsGroup: 999
+    fsGroup: 1000
 ```
 
 This securityContext will be set on all Pods within this chart. For setting securityContext on all containers, see `global.securityContext`.
@@ -336,7 +340,7 @@ For example:
 ```yaml
 global:
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
     runAsNonRoot: true
 ```
 
@@ -417,6 +421,13 @@ Configures update strategy for updating Pods when a change is made to the manife
 
 Whether to enable shared PID namespace between all containers in a Pod. This is useful for a scenario where it is necessary to send a signal to a process across a container.
 
+**server.workDir**
+
+- Type: string
+- Default: `""`
+
+Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to "-", the Pod name is used. When empty, varnishd runs without `-n` and uses the Varnish default, so `varnishstat`, `varnishadm` and `varnishlog` work without `-n` in `kubectl exec` and in extra containers.
+
 **server.http.enabled**
 
 - Type: boolean
@@ -430,6 +441,68 @@ Configures Varnish to listen for HTTP traffic.
 - Default: `6081`
 
 Configures the TCP port on which Varnish will listen for HTTP traffic. This port is used for Varnish to bind to within a container. To change the port exposed via service to other applications, see `server.service.http.port`.
+
+**server.http.address**
+
+- Type: string
+- Default: `0.0.0.0`
+
+Configures the address on which Varnish will listen for HTTP traffic. Ignored when `server.http.podIP` is `true`.
+
+**server.http.podIP**
+
+- Type: boolean
+- Default: `true`
+
+Configures Varnish to listen for HTTP traffic on the Pod IP address instead of `server.http.address`. Note that this makes port forwarding with kubectl harder.
+
+**server.tls.enabled**
+
+- Type: boolean
+- Default: `false`
+
+Configures Varnish to listen for HTTPS traffic using native TLS. When enabled, `server.tls.config` should also be set. Certificates may be mounted into the Pod using `server.extraVolumeMounts` and `server.extraVolumes`.
+
+**server.tls.port**
+
+- Type: number
+- Default: `6443`
+
+Configures the TCP port on which Varnish will listen for HTTPS traffic. This port is used for Varnish to bind to within a container. To change the port exposed via service to other applications, see `server.service.https.port`.
+
+**server.tls.address**
+
+- Type: string
+- Default: `0.0.0.0`
+
+Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when `server.tls.config` is empty.
+
+**server.tls.config**
+
+- Type: template string
+
+The TLS configuration, passed to varnishd with `-A`. It is recommended to reference the port with the `{{ .Values.server.tls.port }}` template string to keep the configuration in sync with the service.
+
+For example:
+
+```yaml
+server:
+  tls:
+    enabled: true
+    config: |
+      frontend = {
+        host = ""
+        port = "{{ .Values.server.tls.port }}"
+      }
+
+      pem-file = "/etc/varnish/certs/example.pem"
+```
+
+**server.tls.configFile**
+
+- Type: string
+
+Uses the content of the given file as `server.tls.config`. The file is parsed as a template string and must be placed inside the `files/` directory of the Helm chart. Overrides `server.tls.config` if set.
 
 **server.admin.address**
 
@@ -548,10 +621,30 @@ Sets the threshold in seconds where idle threads are destroyed after least this 
 
 **server.extraArgs**
 
-- Type: array of strings
+- Type: string or array of strings
 - Default: `[]`
 
-Sets the extra arguments to the varnishd.
+Sets the extra arguments to the varnishd. Each string (and each string item of a list) is split on whitespace into separate arguments, so values containing spaces cannot be passed through `server.extraArgs`; use `server.parameters` or a cmdfile instead.
+
+Since chart 0.2.0, list items are split on whitespace as in the Varnish Enterprise chart; previously, each list item was passed to varnishd unchanged.
+
+**server.parameters**
+
+- Type: object
+
+Sets Varnish parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.
+
+For example:
+
+```yaml
+server:
+  parameters:
+    backendIdleTimeout: "60"
+    feature:
+      - "+http2"
+```
+
+will result in `-p backend_idle_timeout=60 -p feature=+http2`.
 
 **server.extraInitContainers**
 
@@ -674,6 +767,55 @@ server:
   vclConfig: ""
 ```
 
+**server.vcls.routes**
+
+- Type: array of objects
+
+Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig`, `server.vclConfigFile`, `server.vclConfigs` and `server.cmdfileConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname) and `hostnames`. A route without hostnames is a catch-all and must be the last one.
+
+For example:
+
+```yaml
+server:
+  vcls:
+    routes:
+      - name: foo-site
+        hostnames:
+          - foo.com
+          - www.foo.com
+        vclContent: |
+          vcl 4.1;
+          backend default { .host = "foo-backend"; }
+      - vclContent: |
+          vcl 4.1;
+          backend default none;
+          sub vcl_recv { return (synth(404)); }
+```
+
+**server.vcls.includes**
+
+- Type: object of template string
+
+Shared VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs. Each key is a filename and each value a template string. Requires `server.vcls.routes`. Route VCLs include them with a relative path, as plain filenames are looked up in `vcl_path` instead.
+
+For example:
+
+```yaml
+server:
+  vcls:
+    includes:
+      helpers.vcl: |
+        sub common_recv { }
+    routes:
+      - hostnames:
+          - foo.com
+        vclContent: |
+          vcl 4.1;
+          include "./helpers.vcl";
+          backend default none;
+          sub vcl_recv { call common_recv; }
+```
+
 **server.vclConfigPath**
 
 - Type: string
@@ -749,7 +891,7 @@ For example:
 ```yaml
 server:
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
 ```
 
 This securityContext will be set on the Varnish Cache container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
@@ -1108,7 +1250,7 @@ For example:
 ```yaml
 server:
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
 ```
 
 This securityContext will be set on the varnishncsa container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
@@ -1213,6 +1355,62 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the varnishncsa container.
 
+**server.otel.enabled**
+
+- Type: boolean
+- Default: `false`
+
+Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in the official `varnish` image since 9.0.3.
+
+**server.otel.image.repository**
+
+- Type: string
+- Default: `-`
+
+Sets the image repository of the OTEL sidecar. The image must be the same Varnish version as the server. When set to "-", `server.image.repository` is used.
+
+**server.otel.image.pullPolicy**
+
+- Type: string
+- Default: `-`
+
+Sets the [imagePullPolicy][k8s-pod-v1-containers] of the OTEL sidecar. When set to "-", `server.image.pullPolicy` is used.
+
+**server.otel.image.tag**
+
+- Type: string
+- Default: `-`
+
+Sets the image tag of the OTEL sidecar. When set to "-", `server.image.tag` is used.
+
+**server.otel.securityContext**
+
+- Type: object
+
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container. This securityContext will be set on the OTEL container.
+
+**server.otel.resources**
+
+- Type: object
+
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the OTEL container.
+
+**server.otel.env**
+
+- Type: object, array of objects, or template string
+
+Sets environment variables of the OTEL container, typically to configure the OpenTelemetry exporters. See also the [OpenTelemetry environment variables specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/).
+
+For example:
+
+```yaml
+server:
+  otel:
+    enabled: true
+    env:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+```
+
 **server.service**
 
 - Type: object
@@ -1268,6 +1466,12 @@ Sets the external traffic policy for this service. externalTrafficPolicy describ
 
 Sets a custom [Service ClusterIP][k8s-service-clusterip]. This value can be set as either an IP address, or a literal string "None". Only applicable when `server.service.type` is set to ClusterIP. When set to "None", Kubernetes will create a Headless Service, skipping the Kubernetes proxying mechanism.
 
+**server.service.loadBalancerIP**
+
+- Type: string
+
+Sets a pre-allocated IP address for use in LoadBalancer.
+
 **server.service.http.enabled**
 
 - Type: boolean
@@ -1287,6 +1491,26 @@ Sets the port to expose HTTP service.
 - Type: number
 
 Sets the port to expose HTTP service directly on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).
+
+**server.service.https.enabled**
+
+- Type: boolean
+- Default: `false`
+
+Enables HTTPS service. Requires `server.tls.enabled`.
+
+**server.service.https.port**
+
+- Type: number
+- Default: `443`
+
+Sets the port to expose HTTPS service.
+
+**server.service.https.nodePort**
+
+- Type: number
+
+Sets the port to expose HTTPS service directly on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).
 
 **server.service.extraServices**
 

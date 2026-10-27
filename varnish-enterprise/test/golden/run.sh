@@ -33,7 +33,7 @@ render() {
   helm template golden "$CHART_DIR" \
     --namespace default \
     --kube-version "$KUBE_VERSION" \
-    --values "$1" |
+    --values "$1" 2> >(grep -v 'symbolic link' >&2) |
     sed -e "s/${version//./\\.}/CHART_VERSION/g" \
       -e "s/${app_version//./\\.}/APP_VERSION/g" \
       -e 's/[[:space:]]*$//' \

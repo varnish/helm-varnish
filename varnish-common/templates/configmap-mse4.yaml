@@ -1,0 +1,12 @@
+{{- $mse4Config := include "varnish-common.mse4Config" . }}
+{{- if not (eq $mse4Config "") }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "varnish-common.fullname" . }}-mse4
+  labels:
+    {{- include "varnish-common.labels" . | nindent 4 }}
+data:
+  mse4.conf: |
+    {{- $mse4Config | nindent 4 }}
+{{- end }}

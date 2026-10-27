@@ -11,13 +11,16 @@ global:
   #imagePullSecrets:
   #  - name: private-pull-secrets
 
-  # Sets the securityContext of the Pod.
+  # Sets the securityContext of the Pod. 1000 is the varnish group in the
+  # official varnish image.
   podSecurityContext:
-    fsGroup: 999
+    fsGroup: 1000
 
-  # Sets the securityContext for all containers.
+  # Sets the securityContext for all containers. 1000 is the varnish user in
+  # the official varnish image; varnish-otel fails to start with a user that
+  # does not exist in the image.
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
     runAsNonRoot: true
 
   # Sets the annotations for all workload resources.
@@ -86,9 +89,53 @@ server:
   # https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
   shareProcessNamespace: false
 
+  # Sets the Varnish working directory (the -n argument), relative to
+  # /var/lib/varnish. Setting this to "-" uses the Pod name, and setting it to
+  # "" leaves out -n (Varnish default).
+  workDir: ""
+
   http:
     enabled: true
     port: 6081
+
+    # Sets the address to listen to for HTTP. Ignored when `podIP` is true.
+    address: "0.0.0.0"
+
+    # Listens to the Pod IP address instead of `address`. Note that this makes
+    # port forwarding with kubectl harder.
+    podIP: true
+
+  tls:
+    # Enables native TLS in Varnish and listens to HTTPS traffic. When enabled,
+    # `server.tls.config` should also be set. Certificates can be mounted into
+    # the Pod using `server.extraVolumeMounts` and `server.extraVolumes`.
+    enabled: false
+
+    # Sets the port Varnish listens to for HTTPS traffic. This is also the
+    # targetPort of the HTTPS service (see `server.service.https`).
+    port: 6443
+
+    # Sets the address to listen to for HTTPS. Only used when `config` is empty.
+    address: "0.0.0.0"
+
+    # The TLS configuration (passed to varnishd with -A). Can be set as a
+    # templated string. Referencing `{{ .Values.server.tls.port }}` keeps the
+    # configuration in sync with the service.
+    config: ""
+    #config: |
+    #  frontend = {
+    #    host = ""
+    #    port = "{{ .Values.server.tls.port }}"
+    #  }
+    #
+    #  pem-file = "/etc/varnish/certs/example.pem"
+
+    # Use the content of the given file path as TLS configuration. The file will
+    # be parsed as templated string. Will override "server.tls.config" if set.
+    # Note that the file must be placed inside the files/ directory in the Helm
+    # chart itself.
+    configFile: ""
+    #configFile: "files/tls.cfg"
 
   admin:
     # Sets the address for Varnish management interface to listens to.
@@ -168,7 +215,20 @@ server:
   threadTimeout: 120
 
   # Sets the extra configuration args for Varnish.
+  # Each string (and each string item of a list) is split on whitespace into
+  # separate arguments, so values containing spaces cannot be passed through
+  # extraArgs; use server.parameters or a cmdfile instead.
+  # Type: string or array of strings
   extraArgs: []
+
+  # Sets Varnish parameters (the -p argument). Names are converted from
+  # camelCase to snake_case (e.g. "backendIdleTimeout" becomes
+  # "backend_idle_timeout"), and arrays are joined with a comma.
+  parameters: {}
+  #parameters:
+  #  backendIdleTimeout: "60"
+  #  feature:
+  #    - "+http2"
 
   # Declares the extra init containers to run before Varnish pods are run. Can be set
   # as either a YAML list or a templated string.
@@ -271,6 +331,35 @@ server:
   #      .port = "8080";
   #    }
 
+  # Per-domain VCL routing. When routes are set, a routing VCL and a cmdfile are
+  # generated, superseding `server.vclConfig*`. `server.cmdfileConfig` and
+  # `server.cmdfileConfigFile` must not be set when routes are set.
+  vcls:
+    # Ordered list of per-domain VCLs. Each entry must set vclContent. Entries
+    # without hostnames act as a catch-all and must be the last route. The name
+    # defaults to the first hostname, or "any".
+    routes: []
+    #routes:
+    #  - name: foo-site
+    #    hostnames:
+    #      - foo.com
+    #      - www.foo.com
+    #    vclContent: |
+    #      vcl 4.1;
+    #      backend default none;
+    #      sub vcl_recv { return (synth(200)); }
+    #  - vclContent: |
+    #      vcl 4.1;
+    #      backend default none;
+    #      sub vcl_recv { return (synth(404)); }
+
+    # Shared VCL files placed in /etc/varnish/vcls/ that route VCLs can include.
+    # Each key is a filename, each value a templated string.
+    includes: {}
+    #includes:
+    #  helpers.vcl: |
+    #    sub common_recv { }
+
   # Configures the path to cmdfile. This configuration option also affects
   # the location where `cmdfileConfig` is mounted (if present).
   cmdfileConfigPath: "/etc/varnish/cmds.cli"
@@ -284,6 +373,11 @@ server:
   # chart itself.
   cmdfileConfigFile: ""
   #cmdfileConfigFile: "files/cmds.cli"
+
+  # Sets the number of seconds Kubernetes waits for Varnish to shut down before
+  # sending SIGKILL. When `server.delayedShutdown` is used, set this higher than
+  # the longest delayed shutdown. 0 uses the Kubernetes default.
+  terminationGracePeriodSeconds: 0
 
   # Delays stopping of the Varnish Cache container by the given seconds.
   # Deprecated: use `server.delayedShutdown` instead
@@ -406,6 +500,9 @@ server:
     # See also https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
     clusterIP: ""
 
+    # Sets a pre-allocated IP address for use in LoadBalancer.
+    loadBalancerIP: ""
+
     # Enables or disables the Varnish HTTP service.
     http:
       enabled: true
@@ -423,6 +520,18 @@ server:
       #
       # See also https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
       #nodePort: 30080
+
+    # Enables or disables the Varnish HTTPS service.
+    https:
+      # Requires `server.tls.enabled`.
+      enabled: false
+
+      # Sets the port to listen HTTPS service to.
+      port: 443
+
+      # Expose the service directly at the Node IP address at a specific port.
+      # Only applicable when service type is set to "NodePort".
+      #nodePort: 30443
 
     # Enables custom-defined extra services.
     #
@@ -667,6 +776,34 @@ server:
     #  requests:
     #    cpu: 100m
     #    memory: 128Mi
+
+  # Configures the Varnish OTEL sidecar.
+  otel:
+    # Runs /usr/bin/varnish-otel in a sidecar to export Varnish logs and metrics
+    # to an OTLP (OpenTelemetry Protocol) endpoint. varnish-otel is included in
+    # the official varnish image since 9.0.3.
+    enabled: false
+
+    # Sets the image to use for the OTEL sidecar. "-" inherits the value from
+    # `server.image`. The image must be the same Varnish version as the server.
+    image:
+      repository: "-"
+      pullPolicy: "-"
+      tag: "-"
+
+    # Sets the securityContext of the OTEL container.
+    securityContext: {}
+
+    # Configures resource limits for the OTEL container.
+    resources: {}
+
+    # Sets environment variables for the OTEL container, typically to configure
+    # the OpenTelemetry exporters. Can be set as an object, an array of objects,
+    # or a templated string.
+    # See also https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
+    env:
+    #env:
+    #  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
 
 # A list of extra manifests to be deployed alongside with Helm chart.
 #

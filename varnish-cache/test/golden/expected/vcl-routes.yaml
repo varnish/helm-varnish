@@ -1,0 +1,300 @@
+---
+# Source: varnish-cache/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: golden-varnish-cache
+  labels:
+    helm.sh/chart: varnish-cache-CHART_VERSION
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: varnish-cache/templates/configmap-vcl.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-cache-vcl-bundle-router
+  labels:
+    helm.sh/chart: varnish-cache-CHART_VERSION
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  router.vcl: |
+    vcl 4.1;
+    backend default none;
+    sub vcl_recv {
+      set req.http.No-Port-Host = regsub(req.http.host, ":\d+$", "");
+      # foo: foo.example.com
+      if (req.http.No-Port-Host == "foo.example.com") {
+        return(vcl(foo));
+      }
+      # any: catch-all
+      return(vcl(any));
+    }
+---
+# Source: varnish-cache/templates/configmap-vcl.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-cache-vcl-bundle-cmds
+  labels:
+    helm.sh/chart: varnish-cache-CHART_VERSION
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  cmds.cli: |
+    vcl.load route_foo_0 /etc/varnish/vcls/foo.vcl
+    vcl.label foo route_foo_0
+    vcl.load route_any_0 /etc/varnish/vcls/any.vcl
+    vcl.label any route_any_0
+    vcl.load router_0 /etc/varnish/vcls/router.vcl
+    vcl.use router_0
+---
+# Source: varnish-cache/templates/configmap-vcl.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-cache-vcl-bundle-foo
+  labels:
+    helm.sh/chart: varnish-cache-CHART_VERSION
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  foo.vcl: |
+    vcl 4.1;
+    include "./helpers.vcl";
+    backend default none;
+    sub vcl_recv { call common_recv; return (synth(200)); }
+---
+# Source: varnish-cache/templates/configmap-vcl.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-cache-vcl-bundle-any
+  labels:
+    helm.sh/chart: varnish-cache-CHART_VERSION
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  any.vcl: |
+    vcl 4.1;
+    backend default none;
+    sub vcl_recv { return (synth(404)); }
+---
+# Source: varnish-cache/templates/configmap-vcl.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-cache-vcl-bundle-include-helpers-vcl
+  labels:
+    helm.sh/chart: varnish-cache-CHART_VERSION
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  helpers.vcl: |
+    sub common_recv { }
+---
+# Source: varnish-cache/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: golden-varnish-cache
+  labels:
+    helm.sh/chart: varnish-cache-CHART_VERSION
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: NodePort
+  internalTrafficPolicy: Cluster
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: http
+      port: 80
+      targetPort: 6081
+  selector:
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/instance: golden
+---
+# Source: varnish-cache/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: golden-varnish-cache
+  labels:
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: varnish-cache
+    app.kubernetes.io/version: APP_VERSION
+    helm.sh/chart: varnish-cache-CHART_VERSION
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: varnish-cache
+      app.kubernetes.io/instance: golden
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: golden
+        app.kubernetes.io/name: varnish-cache
+      annotations:
+        checksum/golden-vcl-bundle: f100db064d290ee6898e1cbbf58dc79c1fa57636a2d7238020ca78e38927af8b
+    spec:
+      serviceAccountName: golden-varnish-cache
+      securityContext:
+        fsGroup: 1000
+      shareProcessNamespace: false
+      containers:
+        - name: varnish-cache
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "docker.io/varnish:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 6081
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 6081
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 6081
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          command:
+            - /usr/sbin/varnishd
+            - -F
+            - -T
+            - 127.0.0.1:6082
+            - -I
+            - /etc/varnish/vcls/cmds.cli
+            - -f
+            - ""
+            - -p
+            - thread_pool_max=1000
+            - -p
+            - thread_pool_min=50
+            - -p
+            - thread_pool_timeout=120
+            - -t
+            - "120"
+            - -a
+            - http=$(POD_IP):6081
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+            - name: golden-config-vcl-bundle-router
+              mountPath: /etc/varnish/vcls/router.vcl
+              subPath: router.vcl
+            - name: golden-config-vcl-bundle-cmds
+              mountPath: /etc/varnish/vcls/cmds.cli
+              subPath: cmds.cli
+            - name: golden-config-vcl-bundle-foo
+              mountPath: /etc/varnish/vcls/foo.vcl
+              subPath: foo.vcl
+            - name: golden-config-vcl-bundle-any
+              mountPath: /etc/varnish/vcls/any.vcl
+              subPath: any.vcl
+            - name: golden-config-vcl-bundle-include-helpers-vcl
+              mountPath: /etc/varnish/vcls/helpers.vcl
+              subPath: helpers.vcl
+        - name: varnish-cache-ncsa
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "docker.io/varnish:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/bin/varnishncsa"]
+          args:
+            - -c
+          env:
+            - name: VSM_NOPID
+              value: "1"
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3"
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3"
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      volumes:
+      - name: golden-varnish-vsm
+        emptyDir:
+          medium: "Memory"
+      - name: golden-config-shared
+        emptyDir:
+          medium: "Memory"
+      - name: golden-config-vcl-bundle-router
+        configMap:
+          name: golden-varnish-cache-vcl-bundle-router
+      - name: golden-config-vcl-bundle-cmds
+        configMap:
+          name: golden-varnish-cache-vcl-bundle-cmds
+      - name: golden-config-vcl-bundle-foo
+        configMap:
+          name: golden-varnish-cache-vcl-bundle-foo
+      - name: golden-config-vcl-bundle-any
+        configMap:
+          name: golden-varnish-cache-vcl-bundle-any
+      - name: golden-config-vcl-bundle-include-helpers-vcl
+        configMap:
+          name: golden-varnish-cache-vcl-bundle-include-helpers-vcl
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: varnish-cache
+                  app.kubernetes.io/instance: golden
+              topologyKey: kubernetes.io/hostname

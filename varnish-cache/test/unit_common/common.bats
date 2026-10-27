@@ -55,9 +55,9 @@ template=${template:-}
         . || echo "---") | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.securityContext' | tee -a /dev/stderr)
 
-    # Note: values.yaml has 'global.podSecurityContext.fsGroup=999' as the default;
+    # Note: values.yaml has 'global.podSecurityContext.fsGroup=1000' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"fsGroup":999,"hello":"world"}' ]
+    [ "${actual}" == '{"fsGroup":1000,"hello":"world"}' ]
 }
 
 @test "${kind}: inherits securityContext from global and server" {
@@ -124,7 +124,7 @@ release-namespace: {{ .Release.Namespace }}
 
     # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":999}' ]
+    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":1000}' ]
 }
 
 @test "${kind}: inherits securityContext from global and server with both as a templated string" {
@@ -404,10 +404,10 @@ release-namespace: {{ .Release.Namespace }}
             .command' |
             jq -r -c '. as $cmd | index("-a") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '["-a","http=$(VARNISH_HTTP_ADDRESS):8090,HTTP"]' ]
+    [ "${actual}" == '["-a","http=$(POD_IP):8090"]' ]
 
     local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_HTTP_ADDRESS") | .valueFrom' |
+        yq -r -o=json -I=0 '.env[]? | select(.name == "POD_IP") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"fieldRef":{"fieldPath":"status.podIP"}}' ]
 }
@@ -2902,7 +2902,7 @@ release-namespace: {{ .Release.Namespace }}
 
     # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":999}' ]
+    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":1000}' ]
 }
 
 @test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with both as a templated string" {
@@ -2944,12 +2944,13 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .args' |
+            jq -r -c 'index(["--help"])' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '["--help"]' ]
+    [ "${actual}" != "null" ]
 }
 
 @test "${kind}/varnishncsa/extraArgs: can be configured as string" {
@@ -2964,12 +2965,13 @@ release-namespace: to-be-override
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
+        yq -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .args' |
+            jq -r -c 'index(["--help"])' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '--help' ]
+    [ "${actual}" != "null" ]
 }
 
 @test "${kind}/varnishncsa/image: inherit from varnish-cache by default" {
@@ -3036,6 +3038,7 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
         --set 'server.varnishncsa.startupProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.startupProbe.periodSeconds=20' \
         --set 'server.varnishncsa.startupProbe.timeoutSeconds=2' \
@@ -3048,7 +3051,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t 3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be configured" {
@@ -3056,6 +3059,7 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
         --set 'server.varnishncsa.readinessProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.readinessProbe.periodSeconds=20' \
         --set 'server.varnishncsa.readinessProbe.timeoutSeconds=2' \
@@ -3068,7 +3072,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t 3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be disabled" {
@@ -3092,6 +3096,7 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
         --set 'server.varnishncsa.livenessProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.livenessProbe.periodSeconds=20' \
         --set 'server.varnishncsa.livenessProbe.timeoutSeconds=2' \
@@ -3104,7 +3109,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/usr/bin/varnishncsa","-d","-t 3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/livenessProbe: can be disabled" {

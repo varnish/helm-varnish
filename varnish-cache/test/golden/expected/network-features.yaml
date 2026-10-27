@@ -83,13 +83,13 @@ spec:
     spec:
       serviceAccountName: golden-varnish-cache
       securityContext:
-        fsGroup: 999
+        fsGroup: 1000
       shareProcessNamespace: false
       containers:
         - name: varnish-cache
           securityContext:
             runAsNonRoot: true
-            runAsUser: 999
+            runAsUser: 1000
           image: "docker.io/varnish:APP_VERSION"
           imagePullPolicy: IfNotPresent
           ports:
@@ -112,46 +112,51 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
-          command:
-            - /usr/sbin/varnishd
-            - -F
-            - -a
-            - http=$(VARNISH_HTTP_ADDRESS):6081,HTTP
-            - -f
-            - /etc/varnish/default.vcl
-            - -T
-            - 127.0.0.1:6082
-            - -t
-            - "120"
-            - -p
-            - thread_pool_min=50
-            - -p
-            - thread_pool_max=1000
-            - -p
-            - thread_pool_timeout=120
           env:
-            - name: VARNISH_HTTP_ADDRESS
+            - name: POD_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+          command:
+            - /usr/sbin/varnishd
+            - -F
+            - -T
+            - 127.0.0.1:6082
+            - -f
+            - /etc/varnish/default.vcl
+            - -p
+            - thread_pool_max=1000
+            - -p
+            - thread_pool_min=50
+            - -p
+            - thread_pool_timeout=120
+            - -t
+            - "120"
+            - -a
+            - http=$(POD_IP):6081
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
         - name: varnish-cache-ncsa
           securityContext:
             runAsNonRoot: true
-            runAsUser: 999
+            runAsUser: 1000
           image: "docker.io/varnish:APP_VERSION"
           imagePullPolicy: IfNotPresent
-          command: ["varnishncsa"]
+          command: ["/usr/bin/varnishncsa"]
           args:
             - -c
+          env:
+            - name: VSM_NOPID
+              value: "1"
           readinessProbe:
             exec:
               command:
-                - /usr/bin/varnishncsa
-                - -d
-                - -t 3
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -160,9 +165,9 @@ spec:
           livenessProbe:
             exec:
               command:
-                - /usr/bin/varnishncsa
-                - -d
-                - -t 3
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -171,8 +176,13 @@ spec:
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
       volumes:
       - name: golden-varnish-vsm
+        emptyDir:
+          medium: "Memory"
+      - name: golden-config-shared
         emptyDir:
           medium: "Memory"
       affinity:
