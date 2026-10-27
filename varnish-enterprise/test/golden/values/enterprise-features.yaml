@@ -1,0 +1,34 @@
+# Features only available in the Varnish Enterprise chart (for now).
+server:
+  kind: StatefulSet
+  replicas: 3
+  workDir: /var/lib/varnish/golden
+  parameters:
+    default_ttl: 60
+  terminationGracePeriodSeconds: 45
+  licenseSecret: varnish-license
+  tls:
+    enabled: true
+    config: |
+      frontend = {
+        host = ""
+        port = "6443"
+      }
+      pem-file = "/etc/varnish/certs/example.pem"
+  mse:
+    enabled: true
+    persistence:
+      enabled: true
+      storageSize: 20Gi
+  otel:
+    enabled: true
+  agent:
+    enabled: true
+    persistence:
+      enabled: true
+    autoRemove:
+      method: vcli
+  secret: s3cr3t
+cluster:
+  enabled: true
+  secretName: cluster-token

@@ -1,0 +1,11 @@
+# Features only available in the Varnish Cache chart (for now).
+server:
+  service:
+    internalTrafficPolicy: Local
+  networkPolicy:
+    enabled: true
+    extraIngress:
+      - from:
+          - podSelector:
+              matchLabels:
+                app: frontend

@@ -55,6 +55,11 @@ jobs:
           if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then
             ${{ matrix.chart }}/test/unit_common/run.sh -j 50
           fi
+      - name: "Golden tests"
+        run: |
+          if [ -x ${{ matrix.chart }}/test/golden/run.sh ]; then
+            ${{ matrix.chart }}/test/golden/run.sh
+          fi
       - name: Create package
         run: |
           helm package "${{ matrix.chart }}"
