@@ -34,23 +34,37 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
     done
 }
 
-@test "Flavor: ignores Enterprise-only values" {
+@test "Flavor: rejects Enterprise-only values" {
     cd "$(chart_dir)"
 
-    local object
-    object=$(helm template \
-        --set 'server.kind=StatefulSet' \
-        --set 'cluster.enabled=true' \
-        --set 'server.mse4.enabled=true' \
-        --set 'server.mse4.persistence.enabled=true' \
-        --set 'server.agent.enabled=true' \
-        --set 'server.licenseSecret=license' \
-        --namespace default \
-        . 2>/dev/null)
-    echo "$object" >&2
+    for value in \
+        'cluster.enabled=true' \
+        'server.mse.enabled=true' \
+        'server.mse4.enabled=true' \
+        'server.agent.enabled=true' \
+        'server.initAgent.enabled=true' \
+        'server.licenseSecret=license' \
+        'server.baseUrl=http://example.com'; do
+        run helm template --set "${value}" --namespace default .
+        [ "$status" -ne 0 ]
+        [[ "$output" == *"want null"* || "$output" == *"Expected: null"* ]]
+    done
+}
 
-    local matches=$(echo "$object" | grep -iE "${ENTERPRISE_ONLY}" || true)
-    [ -z "${matches}" ]
+@test "Flavor: accepts null Enterprise-only values" {
+    cd "$(chart_dir)"
+
+    for value in \
+        'cluster=null' \
+        'server.mse=null' \
+        'server.mse4=null' \
+        'server.agent=null' \
+        'server.initAgent=null' \
+        'server.licenseSecret=null' \
+        'server.baseUrl=null'; do
+        run helm template --set "${value}" --namespace default .
+        [ "$status" -eq 0 ]
+    done
 }
 
 @test "Flavor: shutdown_delay delayed shutdown is rejected" {
