@@ -39,6 +39,33 @@ spec:
         resources:
           requests:
             storage: {{ include "orca.varnishSizeToK8sQuantity" $store.size | quote }}
+    {{- /* A book_path earns its own claim: putting the book's small random IO
+    on a faster device than the store's sequential IO is the whole point, so the
+    class and modes fall back to the shared defaults rather than being fixed to
+    them. */}}
+    {{- if eq (include "orca.storeHasBookVolume" $store) "true" }}
+    {{- $bookVolume := default (dict) $store.book_volume }}
+    - metadata:
+        name: orca-book-{{ $store.name }}
+        labels:
+          {{- include "helm.selectorLabels" $ | nindent 10 }}
+          {{- with $.Values.storage.labels }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        {{- with $.Values.storage.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml ($bookVolume.accessModes | default $.Values.storage.accessModes | default (list "ReadWriteOnce")) | nindent 10 }}
+        {{- with (default $.Values.storage.storageClassName $bookVolume.storageClassName) }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ include "orca.varnishSizeToK8sQuantity" $bookVolume.size | quote }}
+    {{- end }}
   {{- end }}
   {{- end }}
 {{- end -}}

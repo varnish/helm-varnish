@@ -198,11 +198,30 @@ orca:
     # `size` must be strictly greater than `book_size` plus that reserve.
     # `book_size` defaults to 5G, so `size` must be greater than 6G unless
     # `book_size` is overridden.
+    #
+    # `book_path` puts the book, the index of what is cached, on a volume of
+    # its own, which is what MSE4 recommends when a fast device is available
+    # for its small random IO and a large one for the store's sequential IO.
+    # It needs a `book_volume` block, which is read by the chart alone and
+    # never reaches the configuration: `size` for the second PVC (at least
+    # `book_size`, with room to spare if the book is ever resized), and
+    # optional `storageClassName` and `accessModes` that otherwise fall back
+    # to the top-level `storage:` block. Setting `book_path` takes the book
+    # out of the store's budget, so `size` then covers the store alone and
+    # only has to clear the filesystem reserve.
     storage:
       stores: []
       # - name: store1
       #   path: /var/lib/varnish-supervisor/storage/store1
       #   size: 100G
+      # - name: store2
+      #   path: /var/lib/varnish-supervisor/storage/store2
+      #   size: 100G
+      #   book_size: 5G
+      #   book_path: /var/lib/varnish-supervisor/book/store2
+      #   book_volume:
+      #     size: 10G
+      #     storageClassName: fast-nvme
   virtual_registry:
     registries:
     - name: dockerhub

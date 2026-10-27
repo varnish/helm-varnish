@@ -269,6 +269,41 @@ orca:
 
 Scaling up creates a new empty PVC for the new replica (which cold-starts while the existing replicas keep their warm cache). Scaling down does *not* delete PVCs by default.
 
+### Putting the book on its own volume
+
+A store's book is the index MSE4 keeps of what is cached. Its IO is small and random where the store's is large and sequential, and MSE4 recommends splitting the two across devices when they are not alike. That is what `book_path` is for: a fast local SSD for the book, a large or network-backed volume for the store.
+
+Setting `book_path` on a store makes the chart render a second PVC per replica, `orca-book-<store-name>`, mounted at that path. It needs a `book_volume` block alongside it:
+
+```yaml
+kind: StatefulSet
+replicaCount: 3
+storage:
+  storageClassName: bulk
+orca:
+  varnish:
+    storage:
+      stores:
+      - name: store1
+        path: /var/lib/varnish-supervisor/storage/store1
+        size: 1T
+        book_size: 20G
+        book_path: /var/lib/varnish-supervisor/book/store1
+        book_volume:
+          size: 50G
+          storageClassName: fast-nvme
+```
+
+* `book_volume` is read by the chart alone. It is stripped before the configuration is written, since unknown keys there are rejected.
+* `book_volume.size` is required and must be at least `book_size`. Leave headroom above it if the book may be resized later: MSE4 builds the new book before replacing the old one, so a resize needs room for both at once.
+* `book_volume.storageClassName` and `book_volume.accessModes` fall back to the top-level `storage:` block when unset, so only the one that differs has to be named.
+* `book_path` must sit outside `path`, otherwise its volume would mount inside the store's.
+* The mount is what creates the directory. A missing `book_path` is refused rather than created, so that a volume which failed to mount is reported instead of being quietly filled on whatever filesystem the mount point sits on.
+
+Setting `book_path` also changes what `size` means. The book is no longer carved out of it, so `size` covers the store alone and only has to clear the filesystem reserve (3% with a 1G floor). The chart's validation follows that, so a `size` the rule rejected before may become valid once `book_path` is set.
+
+Removing `book_path` later moves the book back onto the store's volume and shrinks the store to make room, which drops the objects at the tail.
+
 ### Cache data survives `helm upgrade` and `helm uninstall`
 
 The StatefulSet's `persistentVolumeClaimRetentionPolicy` defaults to `Retain`, so PVCs created from `volumeClaimTemplates` are preserved across `helm upgrade` and `helm uninstall`. If you no longer need the cache data, delete the PVCs manually:

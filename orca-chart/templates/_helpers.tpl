@@ -79,6 +79,12 @@ It also supports storing TLS certificates in secrets before mounting them into t
       {{- end -}}
     {{- end -}}
   {{- end -}}
+  {{- /* book_volume describes the PVC the chart renders for a book_path, which
+  the supervisor knows nothing about. Its decoding rejects unknown keys, so the
+  key is dropped here rather than passed through. */ -}}
+  {{- range $i, $store := dig "varnish" "storage" "stores" (list) $cfg -}}
+    {{- $_ := unset $store "book_volume" -}}
+  {{- end -}}
   {{- toYaml $cfg -}}
 {{- end -}}
 
@@ -149,12 +155,23 @@ do not collide.
 {{- end -}}
 
 {{/*
+Returns "true" when a store keeps its book on a volume of its own. The
+supervisor decides that by comparing the two device IDs at runtime, which a
+render cannot see, but book_path settles it here: the chart gives that path a
+PVC of its own, so the two are never the same device.
+*/}}
+{{- define "orca.storeHasBookVolume" -}}
+{{- if .book_path -}}true{{- end -}}
+{{- end -}}
+
+{{/*
 Validates each store's size: it is required (a PVC with no storage request is
 rejected by dynamic provisioners) and must be strictly greater than book_size
 plus filesystem overhead, which the supervisor takes as 3% of size with a 1G
-floor. Mirrors the supervisor's runtime check, in the same order of operations
-so the two agree at the boundary, and surfaces the failure during helm render
-instead of as a CrashLoopBackOff.
+floor. A store with its own book volume drops book_size from that minimum,
+since size then covers the store alone. Mirrors the supervisor's runtime check,
+in the same order of operations so the two agree at the boundary, and surfaces
+the failure during helm render instead of as a CrashLoopBackOff.
 */}}
 {{- define "orca.validateStoreSizes" -}}
 {{- $oneGB := 1073741824 -}}
@@ -167,9 +184,50 @@ instead of as a CrashLoopBackOff.
   {{- $bookSize := include "orca.parseSizeToBytes" $bookSizeStr | atoi -}}
   {{- $overhead := mul (div $size 100) 3 -}}
   {{- if lt $overhead $oneGB -}}{{- $overhead = $oneGB -}}{{- end -}}
-  {{- $minSize := add $bookSize $overhead -}}
-  {{- if le $size $minSize -}}
-  {{- fail (printf "store %q: size %q must be greater than book_size plus filesystem overhead, which is 3%% of size with a 1G floor (book_size=%q)" $store.name (toString $store.size) $bookSizeStr) -}}
+  {{- if eq (include "orca.storeHasBookVolume" $store) "true" -}}
+    {{- if le $size $overhead -}}
+    {{- fail (printf "store %q: size %q must be greater than the filesystem overhead, which is 3%% of size with a 1G floor; book_size is not counted because book_path puts the book on its own volume" $store.name (toString $store.size)) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- if le $size (add $bookSize $overhead) -}}
+    {{- fail (printf "store %q: size %q must be greater than book_size plus filesystem overhead, which is 3%% of size with a 1G floor (book_size=%q)" $store.name (toString $store.size) $bookSizeStr) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validates each store's book volume. book_path puts the book on a device of its
+own, which only means something if the chart gives it a PVC, so book_volume.size
+is required alongside it and has to hold book_size. The path has to be outside
+the store's own, since a book under it would be a second volume mounted inside
+the first.
+*/}}
+{{- define "orca.validateBookVolumes" -}}
+{{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) -}}
+  {{- $bookVolume := default (dict) $store.book_volume -}}
+  {{- if not $store.book_path -}}
+    {{- if not (empty $bookVolume) -}}
+    {{- fail (printf "store %q: 'book_volume' needs 'book_path'; without it the book stays on the store's volume and is sized out of 'size'" $store.name) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $path := clean $store.path -}}
+    {{- $bookPath := clean $store.book_path -}}
+    {{- if eq $bookPath $path -}}
+    {{- fail (printf "store %q: 'book_path' %q is the store's own path; leave it unset to keep the book on the store's volume" $store.name (toString $store.book_path)) -}}
+    {{- end -}}
+    {{- if hasPrefix (printf "%s/" $path) $bookPath -}}
+    {{- fail (printf "store %q: 'book_path' %q is inside the store's path %q, so its volume would mount inside the store's; give it a path of its own" $store.name (toString $store.book_path) (toString $store.path)) -}}
+    {{- end -}}
+    {{- if not $bookVolume.size -}}
+    {{- fail (printf "store %q: 'book_volume.size' is required when 'book_path' is set; it renders a PVC that needs a storage request" $store.name) -}}
+    {{- end -}}
+    {{- $bookSizeStr := default "5G" $store.book_size -}}
+    {{- $bookSize := include "orca.parseSizeToBytes" $bookSizeStr | atoi -}}
+    {{- $volumeSize := include "orca.parseSizeToBytes" $bookVolume.size | atoi -}}
+    {{- if lt $volumeSize $bookSize -}}
+    {{- fail (printf "store %q: 'book_volume.size' %q is smaller than book_size %q, so the book would not fit on it" $store.name (toString $bookVolume.size) $bookSizeStr) -}}
+    {{- end -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -190,6 +248,7 @@ on the chosen kind.
 {{- fail "persistent storage requires 'kind: StatefulSet'; 'kind: Deployment' is for memory-only caches" -}}
 {{- end -}}
 {{- include "orca.validateStoreNames" . -}}
+{{- include "orca.validateBookVolumes" . -}}
 {{- include "orca.validateStoreSizes" . -}}
 {{- end -}}
 
