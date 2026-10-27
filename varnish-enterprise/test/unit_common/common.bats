@@ -461,6 +461,11 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c '.[index(["-a", "http=$(POD_IP):8090"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'http=$(POD_IP):8090' ]
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.env[] | select(.name == "POD_IP") | .valueFrom.fieldRef.fieldPath' |
+            tee -a /dev/stderr)
+    [ "${actual}" == 'status.podIP' ]
 }
 
 @test "${kind}/http: can be disabled" {

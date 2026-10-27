@@ -1,0 +1,13 @@
+{{- $extraManifests := .Values.extraManifests }}
+{{- if not (empty $extraManifests) }}
+{{- range $v := $extraManifests }}
+---
+# Name: {{ $v.name }}
+{{- $tp := kindOf $v.data }}
+{{- if eq $tp "string" }}
+{{ tpl $v.data $ }}
+{{- else }}
+{{ toYaml $v.data }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -70,7 +70,7 @@ metadata:
 data:
   foo.vcl: |
     vcl 4.1;
-    include "helpers.vcl";
+    include "./helpers.vcl";
     backend default none;
     sub vcl_recv { call common_recv; return (synth(200)); }
 ---
@@ -151,7 +151,7 @@ spec:
         app.kubernetes.io/instance: golden
         app.kubernetes.io/name: varnish-enterprise
       annotations:
-        checksum/golden-vcl-bundle: 0c07e38629675568b626c1271695130fc4c64841f8b58c754afc78446a58e412
+        checksum/golden-vcl-bundle: 958ea3ea183690657909e49fc49e444649ccae01597849433e4d25c51365ee07
     spec:
       serviceAccountName: golden-varnish-enterprise
       securityContext:

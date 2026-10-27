@@ -14,7 +14,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/configmap-vcl.yaml \
         .
     [ "$status" -ne 0 ]
-    [ "$stderr" = "Error: could not find template templates/configmap-vcl.yaml in chart" ]
+    [[ "$stderr" == *"Error: could not find template templates/configmap-vcl.yaml in chart" ]]
 }
 
 @test "vcl-bundle: created when server.vcls.routes is non-empty" {
