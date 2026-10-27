@@ -1,4 +1,4 @@
-# Features only available in the Varnish Cache chart (for now).
+# NetworkPolicy and Service traffic policies.
 server:
   service:
     internalTrafficPolicy: Local

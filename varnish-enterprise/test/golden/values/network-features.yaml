@@ -1,0 +1,11 @@
+# NetworkPolicy and Service traffic policies.
+server:
+  service:
+    internalTrafficPolicy: Local
+  networkPolicy:
+    enabled: true
+    extraIngress:
+      - from:
+          - podSelector:
+              matchLabels:
+                app: frontend

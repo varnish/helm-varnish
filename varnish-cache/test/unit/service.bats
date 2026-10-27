@@ -34,3 +34,20 @@ load _helpers
 
     [ "${actual}" == "Local" ]
 }
+
+@test "Service/internalTrafficPolicy: can be changed by user, for example Local" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.service.internalTrafficPolicy=Local' \
+        --namespace default \
+        --show-only templates/service.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.internalTrafficPolicy' |
+        tee -a /dev/stderr)
+
+    [ "${actual}" == "Local" ]
+}

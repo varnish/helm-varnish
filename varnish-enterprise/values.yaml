@@ -940,6 +940,11 @@ server:
     #         nodePort: 30888
     extraServices: []
 
+    # Sets the internalTrafficPolicy for the Services. Can be either `Cluster` or `Local`.
+    # If unset, the Kubernetes default (`Cluster`) is used.
+    # Availability: v1.9.0
+    internalTrafficPolicy: ""
+
     # Sets the externalTrafficPolicy for the Services. Can be either `Cluster` or `Local`.
     externalTrafficPolicy: Cluster
 
@@ -1123,6 +1128,49 @@ server:
               app.kubernetes.io/name: {{ include "varnish-enterprise.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
+
+  # Configures a [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+  # for the Varnish Enterprise Pods.
+  # Availability: v1.9.0
+  networkPolicy:
+    # Enables the NetworkPolicy.
+    enabled: false
+
+    # Allows all connections from any source. Set to false when using `extraIngress`.
+    allowIngress: true
+
+    # Allows all connections to any destination. Set to false when using `extraEgress`.
+    allowEgress: true
+
+    # A list of ingress rules that conforms to the Kubernetes
+    # [NetworkPolicyIngressRule](https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/network-policy-v1/#NetworkPolicySpec)
+    # definition. Only used when `allowIngress` is false.
+    # Type: array
+    # Example:
+    #   extraIngress:
+    #     - from:
+    #         - podSelector:
+    #             matchLabels:
+    #               component: apache
+    #       ports:
+    #         - port: 8080
+    #           protocol: TCP
+    extraIngress: []
+
+    # A list of egress rules that conforms to the Kubernetes
+    # [NetworkPolicyEgressRule](https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/network-policy-v1/#NetworkPolicySpec)
+    # definition. Only used when `allowEgress` is false.
+    # Type: array
+    # Example:
+    #   extraEgress:
+    #     - to:
+    #         - podSelector:
+    #             matchLabels:
+    #               component: apache
+    #       ports:
+    #         - port: 80
+    #           protocol: TCP
+    extraEgress: []
 
   # Configures the Varnish NCSA sidecar.
   varnishncsa:
