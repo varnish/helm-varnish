@@ -1,4 +1,4 @@
-{{- define "varnish-cache.vclConfig" -}}
+{{- define "varnish-common.vclConfig" -}}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if and (hasKey .Values.server.vclConfigs $defaultVcl) (not (eq (get .Values.server.vclConfigs $defaultVcl) "")) }}
 {{- if (not (eq .Values.server.vclConfig "")) }}
@@ -19,7 +19,7 @@
 {{- end }}
 {{- end }}
 
-{{- define "varnish-cache.cmdfileConfig" -}}
+{{- define "varnish-common.cmdfileConfig" -}}
 {{- if (not (eq .Values.server.cmdfileConfigFile "")) -}}
 {{- $cmdfileConfigFile := (.Files.Get .Values.server.cmdfileConfigFile) }}
 {{- if (eq $cmdfileConfigFile "") }}
@@ -31,7 +31,7 @@
 {{- end }}
 {{- end }}
 
-{{- define "varnish-cache.secretConfig" -}}
+{{- define "varnish-common.secretConfig" -}}
 {{- if (not (eq .Values.server.secretFile "")) -}}
 {{- $secretFile := (.Files.Get .Values.server.secretFile) }}
 {{- if (eq $secretFile "") }}

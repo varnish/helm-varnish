@@ -1,4 +1,4 @@
-{{- define "varnish-enterprise.msePersistenceConfig" -}}
+{{- define "varnish-common.msePersistenceConfig" -}}
 {{- $reqSizeStr := .Values.server.mse.persistence.storageSize }}
 {{- $bookSizeStr := .Values.server.mse.persistence.bookSize }}
 {{- $storeSizeStr := .Values.server.mse.persistence.storeSize }}
@@ -9,9 +9,9 @@
 {{- else if not $storeSizeStr -}}
 {{- fail "Store size must be set in values to configure MSE persistence: 'server.mse.persistence.storeSize'" -}}
 {{- end -}}
-{{- $reqSize := include "varnish-enterprise.sizeStrToNumber" (merge (dict "sizeStr" $reqSizeStr)) -}}
-{{- $bookSize := include "varnish-enterprise.sizeStrPercentToNumber" (merge (dict "sizeStr" $bookSizeStr "baseSize" $reqSize)) -}}
-{{- $storeSize := include "varnish-enterprise.sizeStrPercentToNumber" (merge (dict "sizeStr" $storeSizeStr "baseSize" $reqSize)) -}}
+{{- $reqSize := include "varnish-common.sizeStrToNumber" (merge (dict "sizeStr" $reqSizeStr)) -}}
+{{- $bookSize := include "varnish-common.sizeStrPercentToNumber" (merge (dict "sizeStr" $bookSizeStr "baseSize" $reqSize)) -}}
+{{- $storeSize := include "varnish-common.sizeStrPercentToNumber" (merge (dict "sizeStr" $storeSizeStr "baseSize" $reqSize)) -}}
 {{- if gt (add $bookSize $storeSize) (atoi $reqSize) -}}
 {{- fail (printf "'server.mse.persistence.bookSize' and 'server.mse.persistence.storeSize' cannot exceed 'server.mse.persistence.storageSize' (%s + %s > %s)" $bookSize $storeSize $reqSize) -}}
 {{- end -}}
@@ -33,7 +33,7 @@ env: {
 };
 {{- end }}
 
-{{- define "varnish-enterprise.mseConfig" -}}
+{{- define "varnish-common.mseConfig" -}}
 {{- if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
 {{- if (not (eq .Values.server.mse.configFile "")) -}}
 {{- $mseConfigFile := (.Files.Get .Values.server.mse.configFile) }}
@@ -44,12 +44,12 @@ env: {
 {{- else if (not (eq .Values.server.mse.config "")) -}}
 {{- tpl .Values.server.mse.config . }}
 {{- else if .Values.server.mse.persistence.enabled }}
-{{- include "varnish-enterprise.msePersistenceConfig" . }}
+{{- include "varnish-common.msePersistenceConfig" . }}
 {{- end }}
 {{- end }}
 {{- end }}
 
-{{- define "varnish-enterprise.mse4PersistenceConfig" -}}
+{{- define "varnish-common.mse4PersistenceConfig" -}}
 {{- $reqSizeStr := .Values.server.mse4.persistence.storageSize }}
 {{- $bookSizeStr := .Values.server.mse4.persistence.bookSize }}
 {{- $storeSizeStr := .Values.server.mse4.persistence.storeSize }}
@@ -60,9 +60,9 @@ env: {
 {{- else if not $storeSizeStr -}}
 {{- fail "Store size must be set in values to configure MSE4 persistence: 'server.mse4.persistence.storeSize'" -}}
 {{- end -}}
-{{- $reqSize := include "varnish-enterprise.sizeStrToNumber" (merge (dict "sizeStr" $reqSizeStr)) -}}
-{{- $bookSize := include "varnish-enterprise.sizeStrPercentToNumber" (merge (dict "sizeStr" $bookSizeStr "baseSize" $reqSize)) -}}
-{{- $storeSize := include "varnish-enterprise.sizeStrPercentToNumber" (merge (dict "sizeStr" $storeSizeStr "baseSize" $reqSize)) -}}
+{{- $reqSize := include "varnish-common.sizeStrToNumber" (merge (dict "sizeStr" $reqSizeStr)) -}}
+{{- $bookSize := include "varnish-common.sizeStrPercentToNumber" (merge (dict "sizeStr" $bookSizeStr "baseSize" $reqSize)) -}}
+{{- $storeSize := include "varnish-common.sizeStrPercentToNumber" (merge (dict "sizeStr" $storeSizeStr "baseSize" $reqSize)) -}}
 {{- if gt (add $bookSize $storeSize) (atoi $reqSize) -}}
 {{- fail (printf "'server.mse4.persistence.bookSize' and 'server.mse4.persistence.storeSize' cannot exceed 'server.mse4.persistence.storageSize' (%s + %s > %s)" $bookSize $storeSize $reqSize) -}}
 {{- end -}}
@@ -81,7 +81,7 @@ env: {
 };
 {{- end }}
 
-{{- define "varnish-enterprise.mse4Config" -}}
+{{- define "varnish-common.mse4Config" -}}
 {{- if .Values.server.mse4.enabled }}
 {{- if (not (eq .Values.server.mse4.configFile "")) -}}
 {{- $mse4ConfigFile := (.Files.Get .Values.server.mse4.configFile) }}
@@ -92,12 +92,12 @@ env: {
 {{- else if (not (eq .Values.server.mse4.config "")) -}}
 {{- tpl .Values.server.mse4.config . }}
 {{- else if .Values.server.mse4.persistence.enabled }}
-{{- include "varnish-enterprise.mse4PersistenceConfig" . }}
+{{- include "varnish-common.mse4PersistenceConfig" . }}
 {{- end }}
 {{- end }}
 {{- end }}
 
-{{- define "varnish-enterprise.tlsConfig" -}}
+{{- define "varnish-common.tlsConfig" -}}
 {{- if (not (eq .Values.server.tls.configFile "")) -}}
 {{- $tlsConfigFile := (.Files.Get .Values.server.tls.configFile) }}
 {{- if (eq $tlsConfigFile "") }}
@@ -109,8 +109,8 @@ env: {
 {{- end }}
 {{- end }}
 
-{{- define "varnish-enterprise.vclConfig" -}}
-{{- include "varnish-enterprise.vclBundleConflictCheck" . }}
+{{- define "varnish-common.vclConfig" -}}
+{{- include "varnish-common.vclBundleConflictCheck" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if and (hasKey .Values.server.vclConfigs $defaultVcl) (not (eq (get .Values.server.vclConfigs $defaultVcl) "")) }}
 {{- if (not (eq .Values.server.vclConfig "")) }}
@@ -135,12 +135,12 @@ env: {
 Normalizes a route object's name for use as a VCL filename and Varnish label.
 Takes a route object as context. Replaces non-alphanumeric characters with underscores.
 */}}
-{{- define "varnish-enterprise.vclBundleK8sName" -}}
+{{- define "varnish-common.vclBundleK8sName" -}}
 {{- $s := regexReplaceAll "[^a-z0-9]" (. | lower) "-" -}}
 {{- regexReplaceAll "^-+|-+$" $s "" -}}
 {{- end -}}
 
-{{- define "varnish-enterprise.vclBundleNormalizeName" -}}
+{{- define "varnish-common.vclBundleNormalizeName" -}}
 {{- if .name -}}
 {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" .name -}}
 {{- fail (printf "server.vcls.routes: name '%s' contains path traversal sequence" .name) -}}
@@ -156,7 +156,7 @@ any
 {{/*
 Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings.
 */}}
-{{- define "varnish-enterprise.vclBundleConflictCheck" -}}
+{{- define "varnish-common.vclBundleConflictCheck" -}}
   {{- if empty .Values.server.vcls.routes -}}
     {{- if not (empty .Values.server.vcls.includes) -}}
       {{- fail "'server.vcls.includes' requires 'server.vcls.routes' to be set" -}}
@@ -177,7 +177,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- if not (empty .Values.server.vclConfigs) -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigs'" -}}
     {{- end -}}
-    {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") -}}
+    {{- if not (eq (include "varnish-common.cmdfileConfig" .) "") -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'/'server.cmdfileConfigFile'" -}}
     {{- end -}}
     {{- if not (eq .Values.server.cmdfileConfigPath "/etc/varnish/cmds.cli") -}}
@@ -194,12 +194,12 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- if empty .hostnames -}}
         {{- $catchAllSeen = true -}}
       {{- end -}}
-      {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . -}}
+      {{- $name := include "varnish-common.vclBundleNormalizeName" . -}}
       {{- if hasKey $seen $name -}}
         {{- fail (printf "server.vcls.routes: duplicate normalized name '%s' — routes must produce unique names" $name) -}}
       {{- end -}}
       {{- $_ := set $seen $name true -}}
-      {{- $k8sName := include "varnish-enterprise.vclBundleK8sName" $name -}}
+      {{- $k8sName := include "varnish-common.vclBundleK8sName" $name -}}
       {{- if hasKey $seenK8s $k8sName -}}
         {{- fail (printf "server.vcls.routes: duplicate k8s name '%s' — routes must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
@@ -211,7 +211,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" $filename -}}
         {{- fail (printf "server.vcls.includes: filename '%s' contains path traversal sequence" $filename) -}}
       {{- end -}}
-      {{- $k8sName := include "varnish-enterprise.vclBundleK8sName" $filename -}}
+      {{- $k8sName := include "varnish-common.vclBundleK8sName" $filename -}}
       {{- if hasKey $seenIncludeK8s $k8sName -}}
         {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
@@ -223,7 +223,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
   {{- end -}}
 {{- end -}}
 
-{{- define "varnish-enterprise.cmdfileConfig" -}}
+{{- define "varnish-common.cmdfileConfig" -}}
 {{- if (not (eq .Values.server.cmdfileConfigFile "")) -}}
 {{- $cmdfileConfigFile := (.Files.Get .Values.server.cmdfileConfigFile) }}
 {{- if (eq $cmdfileConfigFile "") }}
@@ -235,7 +235,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
 {{- end }}
 {{- end }}
 
-{{- define "varnish-enterprise.secretConfig" -}}
+{{- define "varnish-common.secretConfig" -}}
 {{- if empty .Values.server.secretFrom }}
 {{- if (not (eq .Values.server.secretFile "")) -}}
 {{- $secretFile := (.Files.Get .Values.server.secretFile) }}

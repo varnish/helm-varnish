@@ -5,13 +5,13 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "varnish-cache.fullname" . }}
+  name: {{ include "varnish-common.fullname" . }}
   labels:
-    {{- include "varnish-cache.labels" . | nindent 4 }}
+    {{- include "varnish-common.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{ include "varnish-cache.selectorLabels" . | nindent 6 }}
+      {{ include "varnish-common.selectorLabels" . | nindent 6 }}
 {{- if .Values.server.pdb.minAvailable }}
   minAvailable: {{ .Values.server.pdb.minAvailable }}
 {{- end }}
