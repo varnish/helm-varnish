@@ -295,14 +295,25 @@ orca:
 ```
 
 * `book_volume` is read by the chart alone. It is stripped before the configuration is written, since unknown keys there are rejected.
-* `book_volume.size` is required and must be at least `book_size`. Leave headroom above it if the book may be resized later: MSE4 builds the new book before replacing the old one, so a resize needs room for both at once.
+* `book_volume.size` is required and has to be greater than `book_size` plus that volume's own filesystem reserve (3% with a 1G floor), for the same reason `size` does: a volume formatted to exactly `book_size` has less than that free. Leave more headroom still if the book may be resized later, since MSE4 builds the new book before replacing the old one and needs room for both at once.
 * `book_volume.storageClassName` and `book_volume.accessModes` fall back to the top-level `storage:` block when unset, so only the one that differs has to be named.
-* `book_path` must sit outside `path`, otherwise its volume would mount inside the store's.
+* Every `path` and `book_path` becomes a volume mount on the one container, so they all have to be distinct and none may sit inside another.
 * The mount is what creates the directory. A missing `book_path` is refused rather than created, so that a volume which failed to mount is reported instead of being quietly filled on whatever filesystem the mount point sits on.
 
-Setting `book_path` also changes what `size` means. The book is no longer carved out of it, so `size` covers the store alone and only has to clear the filesystem reserve (3% with a 1G floor). The chart's validation follows that, so a `size` the rule rejected before may become valid once `book_path` is set.
+`size` still has to cover `book_size` even with `book_path` set. The book is taken out of the store's budget only once the two paths turn out to be on different devices, which is decided at run time by comparing them, and separate PVCs are not a promise of that: a provisioner that hands out directories on one node filesystem, `local-path` among them, backs both claims with the same device. The chart cannot tell which you have, so it keeps `book_size` in the minimum. Being wrong that way asks for a slightly larger store than you needed; the other way renders a config that will not start.
 
-Removing `book_path` later moves the book back onto the store's volume and shrinks the store to make room, which drops the objects at the tail.
+#### Adding or removing a book volume on a running release
+
+`spec.volumeClaimTemplates` is immutable on an existing StatefulSet, so adding `book_path` to a store that is already deployed, or taking it away, makes `helm upgrade` fail rather than migrate. Both need the StatefulSet replaced:
+
+```sh
+kubectl delete statefulset <release> --cascade=orphan
+helm upgrade <release> ...
+```
+
+`--cascade=orphan` leaves the pods and the PVCs in place, so the cached data survives and the new StatefulSet adopts them. Plan it as a maintenance step, and check your `persistentVolumeClaimRetentionPolicy` first if you have changed it from the default.
+
+Removing the split means dropping `book_path` and `book_volume` together. Dropping `book_path` alone is refused, since `book_volume` would no longer describe anything. The book then moves back onto the store's volume and the store is shrunk to make room, which drops the objects at the tail.
 
 ### Cache data survives `helm upgrade` and `helm uninstall`
 

@@ -203,12 +203,16 @@ orca:
     # its own, which is what MSE4 recommends when a fast device is available
     # for its small random IO and a large one for the store's sequential IO.
     # It needs a `book_volume` block, which is read by the chart alone and
-    # never reaches the configuration: `size` for the second PVC (at least
-    # `book_size`, with room to spare if the book is ever resized), and
-    # optional `storageClassName` and `accessModes` that otherwise fall back
-    # to the top-level `storage:` block. Setting `book_path` takes the book
-    # out of the store's budget, so `size` then covers the store alone and
-    # only has to clear the filesystem reserve.
+    # never reaches the configuration: `size` for the second PVC (greater
+    # than `book_size` plus that volume's own reserve, with room to spare if
+    # the book is ever resized), and optional `storageClassName` and
+    # `accessModes` that otherwise fall back to the top-level `storage:`
+    # block. `size` goes on covering `book_size`, because whether the book is
+    # really on another device is settled at run time and separate PVCs do
+    # not promise it. Every `path` and `book_path` becomes a volume mount, so
+    # they have to be distinct and must not nest. Adding or removing
+    # `book_path` on a running release needs the StatefulSet replaced; see
+    # the README.
     storage:
       stores: []
       # - name: store1
