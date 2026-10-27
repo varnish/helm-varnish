@@ -5,3 +5,7 @@ chart_dir() {
 app_version() {
   yq -r '.appVersion' < "${BATS_TEST_DIRNAME}"/../../Chart.yaml
 }
+
+chart_name() {
+  yq -r '.name' < "${BATS_TEST_DIRNAME}"/../../Chart.yaml
+}
