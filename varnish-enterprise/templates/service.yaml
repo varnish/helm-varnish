@@ -82,7 +82,7 @@ spec:
   selector:
     {{- include "varnish.selectorLabels" . | nindent 4 }}
 {{- end }}
-{{- if and .Values.cluster.enabled (not .Values.cluster.headlessServiceName) }}
+{{- if and (include "varnish.clusterEnabled" .) (not .Values.cluster.headlessServiceName) }}
 ---
 {{- if not .Values.server.http.enabled }}
 {{- fail "'server.http.enabled must be true for clustering to work" }}

@@ -8,3 +8,5 @@ appVersion: 9.0.0
 maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software
+annotations:
+  varnish.com/flavor: cache

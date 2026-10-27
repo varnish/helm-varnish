@@ -43,9 +43,9 @@ spec:
       {{- include "varnish.affinity" . | indent 6 }}
       {{- include "varnish.tolerations" . | indent 6 }}
       {{- include "varnish.terminationGracePeriodSeconds" . | indent 6 }}
-  {{- $msePersistenceEnabled := (and (or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled))) .Values.server.mse.persistence.enabled) }}
-  {{- $mse4PersistenceEnabled := (and .Values.server.mse4.enabled .Values.server.mse4.persistence.enabled) }}
-  {{- $agentPersistenceEnabled := (and .Values.server.agent.persistence.enabled (eq .Values.server.agent.persistence.enableWithVolumeName "")) }}
+  {{- $msePersistenceEnabled := (and (include "varnish.mseEnabled" .) .Values.server.mse.persistence.enabled) }}
+  {{- $mse4PersistenceEnabled := (and (include "varnish.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}
+  {{- $agentPersistenceEnabled := (and (include "varnish.isEnterprise" .) .Values.server.agent.persistence.enabled (eq .Values.server.agent.persistence.enableWithVolumeName "")) }}
   {{- $extraVolumeClaimsEnabled := (not (empty .Values.server.extraVolumeClaimTemplates)) }}
   {{- if or $msePersistenceEnabled $mse4PersistenceEnabled $agentPersistenceEnabled $extraVolumeClaimsEnabled }}
   volumeClaimTemplates:
