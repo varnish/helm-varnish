@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "The templates are shared with the Varnish Enterprise chart. Reject the values of features that only exist in Varnish Enterprise, as they would otherwise be silently ignored. global is left alone, as it is shared with the other charts of a parent chart.",
+  "type": "object",
+  "properties": {
+    "cluster": false,
+    "server": {
+      "type": "object",
+      "properties": {
+        "mse": false,
+        "mse4": false,
+        "agent": false,
+        "initAgent": false,
+        "licenseSecret": false,
+        "baseUrl": false
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+../../../varnish-common/test/unit/otel.bats
