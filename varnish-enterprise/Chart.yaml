@@ -8,3 +8,5 @@ appVersion: 6.0.18r6
 maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software
+annotations:
+  varnish.com/flavor: enterprise

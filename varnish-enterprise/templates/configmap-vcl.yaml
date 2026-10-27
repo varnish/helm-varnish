@@ -28,7 +28,7 @@ data:
 {{- end }}
 {{- end }}
 
-{{- if .Values.cluster.enabled }}
+{{- if (include "varnish-common.clusterEnabled" .) }}
 {{- if not .Values.server.http.enabled }}
 {{- fail "'server.http.enabled must be true for clustering to work" }}
 {{- end }}
@@ -78,7 +78,7 @@ metadata:
 data:
   router.vcl: |
     vcl 4.1;
-    {{- if .Values.cluster.enabled }}
+    {{- if (include "varnish-common.clusterEnabled" .) }}
 
     import activedns;
 
@@ -86,7 +86,7 @@ data:
     {{- end }}
 
     backend default none;
-    {{- if .Values.cluster.enabled }}
+    {{- if (include "varnish-common.clusterEnabled" .) }}
 
     sub vcl_init {
       {{- if .Values.cluster.trace }}
