@@ -34,7 +34,7 @@ env: {
 {{- end }}
 
 {{- define "varnish-common.mseConfig" -}}
-{{- if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}
+{{- if include "varnish-common.mseEnabled" . }}
 {{- if (not (eq .Values.server.mse.configFile "")) -}}
 {{- $mseConfigFile := (.Files.Get .Values.server.mse.configFile) }}
 {{- if (eq $mseConfigFile "") }}
@@ -82,7 +82,7 @@ env: {
 {{- end }}
 
 {{- define "varnish-common.mse4Config" -}}
-{{- if .Values.server.mse4.enabled }}
+{{- if include "varnish-common.mse4Enabled" . }}
 {{- if (not (eq .Values.server.mse4.configFile "")) -}}
 {{- $mse4ConfigFile := (.Files.Get .Values.server.mse4.configFile) }}
 {{- if (eq $mse4ConfigFile "") }}
@@ -162,7 +162,7 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- fail "'server.vcls.includes' requires 'server.vcls.routes' to be set" -}}
     {{- end -}}
   {{- else -}}
-    {{- if .Values.server.agent.enabled -}}
+    {{- if (include "varnish-common.agentEnabled" .) -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.agent.enabled'" -}}
     {{- end -}}
     {{- if not (eq .Values.server.vclConfigPath "/etc/varnish/default.vcl") -}}
