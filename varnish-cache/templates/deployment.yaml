@@ -8,38 +8,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "varnish-cache.fullname" . }}
-  {{- include "varnish-cache.serverLabels" . | nindent 2 }}
-  {{- include "varnish-cache.serverAnnotations" . | nindent 2 }}
+  name: {{ include "varnish.fullname" . }}
+  {{- include "varnish.serverLabels" . | nindent 2 }}
+  {{- include "varnish.serverAnnotations" . | nindent 2 }}
 spec:
   {{- if not .Values.server.autoscaling.enabled }}
   replicas: {{ .Values.server.replicas }}
   {{- end }}
-  {{- include "varnish-cache.strategy" . | indent 2 }}
+  {{- include "varnish.strategy" . | indent 2 }}
   selector:
     matchLabels:
-      {{- include "varnish-cache.selectorLabels" . | nindent 6 }}
+      {{- include "varnish.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- include "varnish-cache.podLabels" . | nindent 6 }}
-      {{- include "varnish-cache.podAnnotations" . | nindent 6 }}
+      {{- include "varnish.podLabels" . | nindent 6 }}
+      {{- include "varnish.podAnnotations" . | nindent 6 }}
     spec:
-      {{- include "varnish-cache.podImagePullSecrets" . | indent 6 }}
-      {{- include "varnish-cache.podServiceAccount" . | indent 6 }}
-      {{- include "varnish-cache.podSecurityContext" . | indent 6 }}
+      {{- include "varnish.podImagePullSecrets" . | indent 6 }}
+      {{- include "varnish.podServiceAccount" . | indent 6 }}
+      {{- include "varnish.podSecurityContext" . | indent 6 }}
       shareProcessNamespace: {{ .Values.server.shareProcessNamespace | toJson }}
       containers:
-        {{- include "varnish-cache.serverContainer" . | indent 8 }}
-        {{- include "varnish-cache.ncsaContainer" . | indent 8 }}
-        {{- include "varnish-cache.extraContainers" . | indent 8 }}
+        {{- include "varnish.serverContainer" . | indent 8 }}
+        {{- include "varnish.ncsaContainer" . | indent 8 }}
+        {{- include "varnish.extraContainers" . | indent 8 }}
       {{- if .Values.server.hostNetwork }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       {{- end }}
-      {{- include "varnish-cache.initContainers" . | indent 6 }}
-      {{- include "varnish-cache.podVolumes" . | indent 6 }}
-      {{- include "varnish-cache.nodeSelector" . | indent 6 }}
-      {{- include "varnish-cache.affinity" . | indent 6 }}
-      {{- include "varnish-cache.tolerations" . | indent 6 }}
-      {{- include "varnish-cache.terminationGracePeriodSeconds" . | indent 6 }}
+      {{- include "varnish.initContainers" . | indent 6 }}
+      {{- include "varnish.podVolumes" . | indent 6 }}
+      {{- include "varnish.nodeSelector" . | indent 6 }}
+      {{- include "varnish.affinity" . | indent 6 }}
+      {{- include "varnish.tolerations" . | indent 6 }}
+      {{- include "varnish.terminationGracePeriodSeconds" . | indent 6 }}
 {{- end }}

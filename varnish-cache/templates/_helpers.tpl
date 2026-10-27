@@ -3,7 +3,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "varnish-cache.name" -}}
+{{- define "varnish.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -12,7 +12,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "varnish-cache.fullname" -}}
+{{- define "varnish.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -28,14 +28,14 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "varnish-cache.chart" -}}
+{{- define "varnish.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Sets up the Varnish Cache image and its overrides (if any)
 */}}
-{{- define "varnish-cache.image" }}
+{{- define "varnish.image" }}
 {{- $base := .base | default dict }}
 {{- $image := .image | default dict }}
 image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{- if eq $image.tag "-" }}{{ default .Chart.AppVersion $base.tag }}{{ else }}{{ default $.Chart.AppVersion $image.tag }}{{ end }}"
@@ -45,7 +45,7 @@ imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else 
 {{/*
 Sets extra envs from either an array, an object, or a string.
 */}}
-{{- define "varnish-cache.toEnv" }}
+{{- define "varnish.toEnv" }}
 {{- $tp := kindOf .envs }}
 {{- if eq $tp "string" }}
 {{- tpl .envs . | trim | nindent 0 }}
@@ -62,7 +62,7 @@ Sets extra envs from either an array, an object, or a string.
 {{/*
 Declares the YAML field.
 */}}
-{{- define "varnish-cache.toYamlField" }}
+{{- define "varnish.toYamlField" }}
 {{- $section := default "server" .section }}
 {{- $fieldName := .fieldName }}
 {{- $fieldKey := default $fieldName .fieldKey }}

@@ -1,16 +1,16 @@
 {{/*
 Sets up Pod annotations
 */}}
-{{- define "varnish-enterprise.podAnnotations" }}
+{{- define "varnish.podAnnotations" }}
 {{- $section := default "server" .section }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $mseConfig := include "varnish-enterprise.mseConfig" . }}
-{{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
-{{- $tlsConfig := include "varnish-enterprise.tlsConfig" . }}
-{{- $vclConfig := include "varnish-enterprise.vclConfig" . }}
+{{- $mseConfig := include "varnish.mseConfig" . }}
+{{- $mse4Config := include "varnish.mse4Config" . }}
+{{- $tlsConfig := include "varnish.tlsConfig" . }}
+{{- $vclConfig := include "varnish.vclConfig" . }}
 {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
-{{- $secretConfig := include "varnish-enterprise.secretConfig" . }}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
+{{- $secretConfig := include "varnish.secretConfig" . }}
 {{- $extraManifests := .Values.extraManifests }}
 {{- $checksum := dict }}
 {{- if not (eq $mseConfig "") }}
@@ -59,7 +59,7 @@ Sets up Pod annotations
 {{- end }}
 {{- end }}
 {{- end }}
-{{- include "varnish-enterprise.toYamlField"
+{{- include "varnish.toYamlField"
   (merge
     (dict
       "section" $section
@@ -72,7 +72,7 @@ Sets up Pod annotations
 {{/*
 Sets up Pod affinity depending on whether a YAML map or a string is given.
 */}}
-{{- define "varnish-enterprise.affinity" -}}
+{{- define "varnish.affinity" -}}
 {{- if .Values.server.affinity }}
 affinity:
   {{- $tp := kindOf .Values.server.affinity }}
@@ -87,7 +87,7 @@ affinity:
 {{/*
 Sets up Pod tolerations depending on whether a YAML map or a string is given.
 */}}
-{{- define "varnish-enterprise.tolerations" -}}
+{{- define "varnish.tolerations" -}}
 {{- if .Values.server.tolerations }}
 tolerations:
   {{- $tp := kindOf .Values.server.tolerations }}
@@ -104,7 +104,7 @@ Sets up terminationGracePeriodSeconds based on whether there's an explicit
 terminationGracePeriodSeconds, or 60 seconds after delayedHaltSeconds if
 present.
 */}}
-{{- define "varnish-enterprise.terminationGracePeriodSeconds" -}}
+{{- define "varnish.terminationGracePeriodSeconds" -}}
 {{- if not (empty .Values.server.terminationGracePeriodSeconds) }}
 terminationGracePeriodSeconds: {{ .Values.server.terminationGracePeriodSeconds }}
 {{- else if not (empty .Values.server.delayedHaltSeconds) }}
@@ -115,7 +115,7 @@ terminationGracePeriodSeconds: {{ add .Values.server.delayedHaltSeconds 60 }}
 {{/*
 Declares the Pod's imagePullSecrets
 */}}
-{{- define "varnish-enterprise.podImagePullSecrets" }}
+{{- define "varnish.podImagePullSecrets" }}
 {{- with .Values.global.imagePullSecrets }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
@@ -125,7 +125,7 @@ imagePullSecrets:
 {{/*
 Declares the Pod's volume mounts.
 */}}
-{{- define "varnish-enterprise.podVolumes" }}
+{{- define "varnish.podVolumes" }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 volumes:
@@ -140,20 +140,20 @@ volumes:
   secret:
     secretName: {{ .Values.server.licenseSecret }}
 {{- end}}
-{{- if not (eq (include "varnish-enterprise.mseConfig" .) "") }}
+{{- if not (eq (include "varnish.mseConfig" .) "") }}
 - name: {{ .Release.Name }}-config-mse
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-mse
+    name: {{ include "varnish.fullname" . }}-mse
 {{- end }}
-{{- if not (eq (include "varnish-enterprise.mse4Config" .) "") }}
+{{- if not (eq (include "varnish.mse4Config" .) "") }}
 - name: {{ .Release.Name }}-config-mse4
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-mse4
+    name: {{ include "varnish.fullname" . }}-mse4
 {{- end }}
-{{- if not (eq (include "varnish-enterprise.tlsConfig" .) "") }}
+{{- if not (eq (include "varnish.tlsConfig" .) "") }}
 - name: {{ .Release.Name }}-config-tls
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-tls
+    name: {{ include "varnish.fullname" . }}-tls
 {{- end }}
 {{- if and (not (empty .Values.server.secretFrom)) (not (eq .Values.server.secret "")) }}
 {{- fail "Either 'server.secret' or 'server.secretFrom' can be set." }}
@@ -167,52 +167,52 @@ volumes:
 - name: {{ .Release.Name }}-config-secret
   secret:
     secretName: {{ .Values.server.secretFrom.name | quote }}
-{{- else if not (eq (include "varnish-enterprise.secretConfig" .) "") }}
+{{- else if not (eq (include "varnish.secretConfig" .) "") }}
 - name: {{ .Release.Name }}-config-secret
   secret:
-    secretName: {{ include "varnish-enterprise.fullname" . }}-secret
+    secretName: {{ include "varnish.fullname" . }}-secret
 {{- end }}
 {{- if not (empty .Values.server.vcls.routes) }}
 - name: {{ .Release.Name }}-config-vcl-bundle-router
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-router
+    name: {{ include "varnish.fullname" . }}-vcl-bundle-router
 - name: {{ .Release.Name }}-config-vcl-bundle-cmds
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-vcl-bundle-cmds
+    name: {{ include "varnish.fullname" . }}-vcl-bundle-cmds
 {{- range .Values.server.vcls.routes }}
-{{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-- name: {{ $.Release.Name }}-config-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+{{- $name := include "varnish.vclBundleNormalizeName" . }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-{{ include "varnish.vclBundleK8sName" $name }}
   configMap:
-    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+    name: {{ include "varnish.fullname" $ }}-vcl-bundle-{{ include "varnish.vclBundleK8sName" $name }}
 {{- end }}
 {{- range $filename, $_ := .Values.server.vcls.includes }}
-- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish.vclBundleK8sName" $filename }}
   configMap:
-    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
+    name: {{ include "varnish.fullname" $ }}-vcl-bundle-include-{{ include "varnish.vclBundleK8sName" $filename }}
 {{- end }}
 {{- else }}
-{{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
+{{- if not (eq (include "varnish.vclConfig" .) "") }}
 - name: {{ .Release.Name }}-config-vcl
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-vcl
+    name: {{ include "varnish.fullname" . }}-vcl
 {{- end }}
 {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
 {{- if not (empty $vclConfigs) }}
 {{- range $k, $v := $vclConfigs }}
 - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
   configMap:
-    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
+    name: {{ include "varnish.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
 {{- end }}
 {{- end }}
 {{- if .Values.cluster.enabled }}
 - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
   configMap:
-    name: {{ include "varnish-enterprise.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
+    name: {{ include "varnish.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
 {{- end }}
-{{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
+{{- if not (eq (include "varnish.cmdfileConfig" .) "") }}
 - name: {{ .Release.Name }}-config-cmdfile
   configMap:
-    name: {{ include "varnish-enterprise.fullname" . }}-cmdfile
+    name: {{ include "varnish.fullname" . }}-cmdfile
 {{- end }}
 {{- end }}
 {{- if and .Values.server.agent.enabled (not .Values.server.agent.persistence.enabled) (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
@@ -232,7 +232,7 @@ volumes:
 {{/*
 Declares the probe for Varnish Enterprise pod
 */}}
-{{- define "varnish-enterprise.varnishPodProbe" }}
+{{- define "varnish.varnishPodProbe" }}
 {{- $section := default "server" .section }}
 {{- $probeName := .probeName }}
 {{- $probe := (get (get .Values $section) $probeName) }}
@@ -260,10 +260,10 @@ Declares the probe for Varnish Enterprise pod
 {{/*
 Declares the Varnish Enterprise container
 */}}
-{{- define "varnish-enterprise.serverContainer" -}}
-{{- $mseConfig := include "varnish-enterprise.mseConfig" . }}
-{{- $mse4Config := include "varnish-enterprise.mse4Config" . }}
-{{- $cmdfileConfig := include "varnish-enterprise.cmdfileConfig" . }}
+{{- define "varnish.serverContainer" -}}
+{{- $mseConfig := include "varnish.mseConfig" . }}
+{{- $mse4Config := include "varnish.mse4Config" . }}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath -}}
 {{/*
 Composing the $varnishArgs list or arguments
@@ -429,8 +429,8 @@ Composing the $varnishArgs list or arguments
   {{- $varnishArgs = concat $varnishArgs (list "-a" $extraArg) }}
 {{- end -}}
 - name: {{ .Chart.Name }}
-  {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
-  {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
+  {{- include "varnish.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
+  {{- include "varnish.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
   ports:
     {{- if .Values.server.http.enabled }}
     - name: http
@@ -459,10 +459,10 @@ Composing the $varnishArgs list or arguments
       hostPort: {{ .hostPort }}
       {{- end }}
     {{- end }}
-  {{- include "varnish-enterprise.varnishPodProbe" (merge (dict "probeName" "startupProbe") .) | nindent 2 }}
-  {{- include "varnish-enterprise.varnishPodProbe" (merge (dict "probeName" "livenessProbe") .) | nindent 2 }}
-  {{- include "varnish-enterprise.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
-  {{- include "varnish-enterprise.resources" (merge (dict "section" "server") .) | nindent 2 }}
+  {{- include "varnish.varnishPodProbe" (merge (dict "probeName" "startupProbe") .) | nindent 2 }}
+  {{- include "varnish.varnishPodProbe" (merge (dict "probeName" "livenessProbe") .) | nindent 2 }}
+  {{- include "varnish.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
+  {{- include "varnish.resources" (merge (dict "section" "server") .) | nindent 2 }}
   env:
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
@@ -527,11 +527,11 @@ Composing the $varnishArgs list or arguments
           {{- if .Values.cluster.secretName }}
           name: {{ .Values.cluster.secretName }}
           {{- else }}
-          name: {{ include "varnish-enterprise.fullname" . }}-cluster-secret
+          name: {{ include "varnish.fullname" . }}-cluster-secret
           {{- end }}
           key: token
     {{- end }}
-    {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
+    {{- include "varnish.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
   {{- if gt (len .Values.server.command) 0 }}
   command:
     {{- .Values.server.command | toYaml | nindent 4 }}
@@ -550,17 +550,17 @@ Composing the $varnishArgs list or arguments
       readOnly: true
       subPath: varnish-enterprise.lic
     {{- end}}
-    {{- if not (eq (include "varnish-enterprise.mseConfig" .) "") }}
+    {{- if not (eq (include "varnish.mseConfig" .) "") }}
     - name: {{ .Release.Name }}-config-mse
       mountPath: /etc/varnish/mse.conf
       subPath: mse.conf
     {{- end }}
-    {{- if not (eq (include "varnish-enterprise.mse4Config" .) "") }}
+    {{- if not (eq (include "varnish.mse4Config" .) "") }}
     - name: {{ .Release.Name }}-config-mse4
       mountPath: /etc/varnish/mse4.conf
       subPath: mse4.conf
     {{- end }}
-    {{- if not (eq (include "varnish-enterprise.tlsConfig" .) "") }}
+    {{- if not (eq (include "varnish.tlsConfig" .) "") }}
     - name: {{ .Release.Name }}-config-tls
       mountPath: /etc/varnish/tls.conf
       subPath: tls.conf
@@ -569,7 +569,7 @@ Composing the $varnishArgs list or arguments
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: {{ .Values.server.secretFrom.key | quote }}
-    {{- else if not (eq (include "varnish-enterprise.secretConfig" .) "") }}
+    {{- else if not (eq (include "varnish.secretConfig" .) "") }}
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: secret
@@ -582,18 +582,18 @@ Composing the $varnishArgs list or arguments
       mountPath: /etc/varnish/vcls/cmds.cli
       subPath: cmds.cli
     {{- range .Values.server.vcls.routes }}
-    {{- $name := include "varnish-enterprise.vclBundleNormalizeName" . }}
-    - name: {{ $.Release.Name }}-config-vcl-bundle-{{ include "varnish-enterprise.vclBundleK8sName" $name }}
+    {{- $name := include "varnish.vclBundleNormalizeName" . }}
+    - name: {{ $.Release.Name }}-config-vcl-bundle-{{ include "varnish.vclBundleK8sName" $name }}
       mountPath: /etc/varnish/vcls/{{ $name }}.vcl
       subPath: {{ $name }}.vcl
     {{- end }}
     {{- range $filename, $_ := .Values.server.vcls.includes }}
-    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-enterprise.vclBundleK8sName" $filename }}
+    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish.vclBundleK8sName" $filename }}
       mountPath: /etc/varnish/vcls/{{ $filename }}
       subPath: {{ base $filename }}
     {{- end }}
     {{- else }}
-    {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
+    {{- if not (eq (include "varnish.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
       mountPath: {{ .Values.server.vclConfigPath | quote }}
       subPath: {{ $defaultVcl }}
@@ -612,7 +612,7 @@ Composing the $varnishArgs list or arguments
       mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
       subPath: {{ $wrappedDefaultVCL | quote }}
     {{- end }}
-    {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
+    {{- if not (eq (include "varnish.cmdfileConfig" .) "") }}
     - name: {{ .Release.Name }}-config-cmdfile
       mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
       subPath: cmds.cli
@@ -674,12 +674,12 @@ Composing the $varnishArgs list or arguments
 {{/*
 Declares the Varnish NCSA container
 */}}
-{{- define "varnish-enterprise.ncsaContainer" -}}
+{{- define "varnish.ncsaContainer" -}}
 {{- if .Values.server.varnishncsa.enabled }}
 - name: {{ .Chart.Name }}-ncsa
-  {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
-  {{- include "varnish-enterprise.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
-  {{- include "varnish-enterprise.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
+  {{- include "varnish.securityContext" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
+  {{- include "varnish.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
+  {{- include "varnish.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
   {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
   args: {{- toYaml ( concat (list "-n"  "$(VARNISH_WORKDIR)" ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
@@ -749,12 +749,12 @@ Declares the Varnish NCSA container
 {{/*
 Declares the Varnish Otel container
 */}}
-{{- define "varnish-enterprise.otelContainer" -}}
+{{- define "varnish.otelContainer" -}}
 {{- if .Values.server.otel.enabled }}
 - name: {{ .Chart.Name }}-otel
-  {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server.otel") .) | nindent 2 }}
-  {{- include "varnish-enterprise.image" (merge (dict "base" .Values.server.image "image" .Values.server.otel.image) .) | nindent 2 }}
-  {{- include "varnish-enterprise.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
+  {{- include "varnish.securityContext" (merge (dict "section" "server.otel") .) | nindent 2 }}
+  {{- include "varnish.image" (merge (dict "base" .Values.server.image "image" .Values.server.otel.image) .) | nindent 2 }}
+  {{- include "varnish.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
   command: ["/usr/bin/varnish-otel"]
   env:
     {{- if eq .Values.server.workDir "-" }}
@@ -767,7 +767,7 @@ Declares the Varnish Otel container
       value: "{{ .Values.server.workDir }}"
     {{- end }}
   {{- if .Values.server.otel.env }}
-    {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.otel.env) .) | nindent 4 }}
+    {{- include "varnish.toEnv" (merge (dict "envs" .Values.server.otel.env) .) | nindent 4 }}
   {{- end }}
   volumeMounts:
     - name: {{ .Release.Name }}-varnish-vsm
@@ -780,11 +780,11 @@ Declares the Varnish Otel container
 {{/*
 Declares the Varnish Controller Agent container
 */}}
-{{- define "varnish-enterprise.agentContainer" -}}
+{{- define "varnish.agentContainer" -}}
 {{- if .Values.server.agent.enabled }}
 - name: {{ .Chart.Name }}-agent
-  {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server.agent") .) | nindent 2 }}
-  {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.agent.image) .) | nindent 2 }}
+  {{- include "varnish.securityContext" (merge (dict "section" "server.agent") .) | nindent 2 }}
+  {{- include "varnish.image" (merge (dict "image" .Values.server.agent.image) .) | nindent 2 }}
   env:
     - name: VARNISH_CONTROLLER_VARNISH_HOST
       valueFrom:
@@ -819,7 +819,7 @@ Declares the Varnish Controller Agent container
     - name: VARNISH_CONTROLLER_LOG
       value: {{ .Values.server.agent.logLevel | quote }}
     {{- end }}
-    {{- include "varnish-enterprise.natsServer" . | indent 4 }}
+    {{- include "varnish.natsServer" . | indent 4 }}
     {{- if and .Values.server.agent.tags (not (empty .Values.server.agent.tags)) }}
     - name: VARNISH_CONTROLLER_TAGS
       value: {{ .Values.server.agent.tags | join "," | quote }}
@@ -843,8 +843,8 @@ Declares the Varnish Controller Agent container
     - name: VARNISH_CONTROLLER_PRIVATE_TOKEN
       value: {{ .Values.server.agent.privateToken | quote }}
     {{- end }}
-    {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.agent.extraEnvs) .) | nindent 4 }}
-  {{- include "varnish-enterprise.resources" (merge (dict "section" "server.agent") .) | nindent 2 }}
+    {{- include "varnish.toEnv" (merge (dict "envs" .Values.server.agent.extraEnvs) .) | nindent 4 }}
+  {{- include "varnish.resources" (merge (dict "section" "server.agent") .) | nindent 2 }}
   command: ["/usr/bin/varnish-controller-agent"]
   {{- if and .Values.server.agent.extraArgs (not (empty .Values.server.agent.extraArgs)) }}
   args: {{- toYaml .Values.server.agent.extraArgs | nindent 4 }}
@@ -858,14 +858,14 @@ Declares the Varnish Controller Agent container
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: {{ .Values.server.secretFrom.key | quote }}
-    {{- else if not (eq (include "varnish-enterprise.secretConfig" .) "") }}
+    {{- else if not (eq (include "varnish.secretConfig" .) "") }}
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: secret
     {{- else }}
     {{ fail "Secret must be set to enable Varnish Controller agent: 'server.secret' or 'secret.secretFrom'" }}
     {{- end }}
-    {{- if not (eq (include "varnish-enterprise.vclConfig" .) "") }}
+    {{- if not (eq (include "varnish.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
       mountPath: {{ .Values.server.vclConfigPath | quote }}
       subPath: {{ osBase .Values.server.vclConfigPath }}
@@ -878,7 +878,7 @@ Declares the Varnish Controller Agent container
       subPath: {{ $k | quote }}
     {{- end }}
     {{- end }}
-    {{- if not (eq (include "varnish-enterprise.cmdfileConfig" .) "") }}
+    {{- if not (eq (include "varnish.cmdfileConfig" .) "") }}
     - name: {{ .Release.Name }}-config-cmdfile
       mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
       subPath: cmds.cli
@@ -904,11 +904,11 @@ Declares the Varnish Controller Agent container
 {{/*
 Declares the Varnish Controller VCLI container for agent auto-removal
 */}}
-{{- define "varnish-enterprise.vcliContainer" -}}
+{{- define "varnish.vcliContainer" -}}
 {{- if and .Values.server.agent.enabled (eq .Values.server.agent.autoRemove.method "vcli") }}
 - name: {{ .Chart.Name }}-vcli
-  {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server.agent.autoRemove.vcli") .) | nindent 2 }}
-  {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.agent.autoRemove.vcli.image) .) | nindent 2 }}
+  {{- include "varnish.securityContext" (merge (dict "section" "server.agent.autoRemove.vcli") .) | nindent 2 }}
+  {{- include "varnish.image" (merge (dict "image" .Values.server.agent.autoRemove.vcli.image) .) | nindent 2 }}
   command:
     - /bin/sh
     - -c
@@ -965,9 +965,9 @@ Declares the Varnish Controller VCLI container for agent auto-removal
     {{- end }}
     {{- end }}
     {{- if .Values.server.agent.autoRemove.vcli.extraEnvs }}
-    {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.agent.autoRemove.vcli.extraEnvs) .) | nindent 4 }}
+    {{- include "varnish.toEnv" (merge (dict "envs" .Values.server.agent.autoRemove.vcli.extraEnvs) .) | nindent 4 }}
     {{- end }}
-  {{- include "varnish-enterprise.resources" (merge (dict "section" "server.agent.autoRemove.vcli") .) | nindent 2 }}
+  {{- include "varnish.resources" (merge (dict "section" "server.agent.autoRemove.vcli") .) | nindent 2 }}
   volumeMounts:
     - name: {{ .Release.Name }}-config-shared
       mountPath: /etc/varnish/shared
@@ -1003,7 +1003,7 @@ Declares the Varnish Controller VCLI container for agent auto-removal
 {{/*
 Declares the Varnish extra container
 */}}
-{{- define "varnish-enterprise.extraContainers" -}}
+{{- define "varnish.extraContainers" -}}
 {{- if .Values.server.extraContainers }}
 {{- $tp := kindOf .Values.server.extraContainers }}
 {{- if eq $tp "string" }}
@@ -1017,12 +1017,12 @@ Declares the Varnish extra container
 {{/*
 Declares the Varnish init containers
 */}}
-{{- define "varnish-enterprise.initContainers" -}}
+{{- define "varnish.initContainers" -}}
 {{- if or (and .Values.server.agent.enabled .Values.server.initAgent.enabled) .Values.server.extraInitContainers .Values.server.mse.persistence.enabled .Values.server.mse4.persistence.enabled}}
 initContainers:
 {{- if .Values.server.mse.persistence.enabled }}
   - name: mse-config
-    {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    {{- include "varnish.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
     command:
      - /bin/busybox
      - sh
@@ -1037,7 +1037,7 @@ initContainers:
 {{- end }}
 {{- if .Values.server.mse4.persistence.enabled }}
   - name: mse4-config
-    {{- include "varnish-enterprise.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    {{- include "varnish.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
     command:
      - mkfs.mse4
      - -c
@@ -1061,8 +1061,8 @@ initContainers:
         ln -sf \
             /var/lib/varnish-controller/varnish-controller-agent/"${VARNISH_CONTROLLER_AGENT_NAME}" \
             /etc/varnish/shared/agent
-    {{- include "varnish-enterprise.securityContext" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
-    {{- include "varnish-enterprise.resources" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
+    {{- include "varnish.securityContext" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
+    {{- include "varnish.resources" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
     env:
     {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
       - name: VARNISH_CONTROLLER_AGENT_NAME

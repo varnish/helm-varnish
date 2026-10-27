@@ -1,13 +1,13 @@
 {{/*
 Sets up Pod annotations
 */}}
-{{- define "varnish-cache.podAnnotations" }}
+{{- define "varnish.podAnnotations" }}
 {{- $section := default "server" .section }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $vclConfig := include "varnish-cache.vclConfig" . }}
+{{- $vclConfig := include "varnish.vclConfig" . }}
 {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- $cmdfileConfig := include "varnish-cache.cmdfileConfig" . }}
-{{- $secretConfig := include "varnish-cache.secretConfig" . }}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
+{{- $secretConfig := include "varnish.secretConfig" . }}
 {{- $extraManifests := .Values.extraManifests }}
 {{- $checksum := dict }}
 {{- if not (eq $vclConfig "") }}
@@ -36,7 +36,7 @@ Sets up Pod annotations
 {{- end }}
 {{- end }}
 {{- end }}
-{{- include "varnish-cache.toYamlField"
+{{- include "varnish.toYamlField"
   (merge
     (dict
       "section" $section
@@ -49,7 +49,7 @@ Sets up Pod annotations
 {{/*
 Sets up Pod affinity depending on whether a YAML map or a string is given.
 */}}
-{{- define "varnish-cache.affinity" -}}
+{{- define "varnish.affinity" -}}
 {{- if .Values.server.affinity }}
 affinity:
   {{- $tp := kindOf .Values.server.affinity }}
@@ -64,7 +64,7 @@ affinity:
 {{/*
 Sets up Pod tolerations depending on whether a YAML map or a string is given.
 */}}
-{{- define "varnish-cache.tolerations" -}}
+{{- define "varnish.tolerations" -}}
 {{- if .Values.server.tolerations }}
 tolerations:
   {{- $tp := kindOf .Values.server.tolerations }}
@@ -81,7 +81,7 @@ Sets up terminationGracePeriodSeconds based on whether there's an explicit
 terminationGracePeriodSeconds, or 60 seconds after delayedHaltSeconds if
 present.
 */}}
-{{- define "varnish-cache.terminationGracePeriodSeconds" -}}
+{{- define "varnish.terminationGracePeriodSeconds" -}}
 {{- if not (empty .Values.server.terminationGracePeriodSeconds) }}
 terminationGracePeriodSeconds: {{ .Values.server.terminationGracePeriodSeconds }}
 {{- else if not (empty .Values.server.delayedHaltSeconds) }}
@@ -92,7 +92,7 @@ terminationGracePeriodSeconds: {{ add .Values.server.delayedHaltSeconds 60 }}
 {{/*
 Declares the Pod's imagePullSecrets
 */}}
-{{- define "varnish-cache.podImagePullSecrets" }}
+{{- define "varnish.podImagePullSecrets" }}
 {{- with .Values.global.imagePullSecrets }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
@@ -102,7 +102,7 @@ imagePullSecrets:
 {{/*
 Declares the Pod's volume mounts.
 */}}
-{{- define "varnish-cache.podVolumes" }}
+{{- define "varnish.podVolumes" }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 volumes:
 {{- if and (not (empty .Values.server.secretFrom)) (not (eq .Values.server.secret "")) }}
@@ -117,28 +117,28 @@ volumes:
 - name: {{ .Release.Name }}-config-secret
   secret:
     secretName: {{ .Values.server.secretFrom.name | quote }}
-{{- else if not (eq (include "varnish-cache.secretConfig" .) "") }}
+{{- else if not (eq (include "varnish.secretConfig" .) "") }}
 - name: {{ .Release.Name }}-config-secret
   secret:
-    secretName: {{ include "varnish-cache.fullname" . }}-secret
+    secretName: {{ include "varnish.fullname" . }}-secret
 {{- end }}
-{{- if not (eq (include "varnish-cache.vclConfig" .) "") }}
+{{- if not (eq (include "varnish.vclConfig" .) "") }}
 - name: {{ .Release.Name }}-config-vcl
   configMap:
-    name: {{ include "varnish-cache.fullname" . }}-vcl
+    name: {{ include "varnish.fullname" . }}-vcl
 {{- end }}
 {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
 {{- if not (empty $vclConfigs) }}
 {{- range $k, $v := $vclConfigs }}
 - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
   configMap:
-    name: {{ include "varnish-cache.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
+    name: {{ include "varnish.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
 {{- end }}
 {{- end }}
-{{- if not (eq (include "varnish-cache.cmdfileConfig" .) "") }}
+{{- if not (eq (include "varnish.cmdfileConfig" .) "") }}
 - name: {{ .Release.Name }}-config-cmdfile
   configMap:
-    name: {{ include "varnish-cache.fullname" . }}-cmdfile
+    name: {{ include "varnish.fullname" . }}-cmdfile
 {{- end }}
 - name: {{ .Release.Name }}-varnish-vsm
   emptyDir:
@@ -156,7 +156,7 @@ volumes:
 {{/*
 Declares the probe for Varnish Cache pod
 */}}
-{{- define "varnish-cache.varnishPodProbe" }}
+{{- define "varnish.varnishPodProbe" }}
 {{- $section := default "server" .section }}
 {{- $probeName := .probeName }}
 {{- $probe := (get (get .Values $section) $probeName) }}
@@ -184,8 +184,8 @@ Declares the probe for Varnish Cache pod
 {{/*
 Declares the Varnish Cache container
 */}}
-{{- define "varnish-cache.serverContainer" -}}
-{{- $cmdfileConfig := include "varnish-cache.cmdfileConfig" . }}
+{{- define "varnish.serverContainer" -}}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- $tp := kindOf .Values.server.extraArgs }}
 {{- $varnishExtraArgs := list }}
@@ -226,8 +226,8 @@ Declares the Varnish Cache container
 {{- $varnishExtraArgs = concat $varnishExtraArgs (list "-a" $extraArg) }}
 {{- end }}
 - name: {{ .Chart.Name }}
-  {{- include "varnish-cache.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
-  {{- include "varnish-cache.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
+  {{- include "varnish.securityContext" (merge (dict "section" "server") .) | nindent 2 }}
+  {{- include "varnish.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
   ports:
     {{- if .Values.server.http.enabled }}
     - name: http
@@ -248,10 +248,10 @@ Declares the Varnish Cache container
       hostPort: {{ .hostPort }}
       {{- end }}
     {{- end }}
-  {{- include "varnish-cache.varnishPodProbe" (merge (dict "probeName" "startupProbe") .) | nindent 2 }}
-  {{- include "varnish-cache.varnishPodProbe" (merge (dict "probeName" "livenessProbe") .) | nindent 2 }}
-  {{- include "varnish-cache.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
-  {{- include "varnish-cache.resources" (merge (dict "section" "server") .) | nindent 2 }}
+  {{- include "varnish.varnishPodProbe" (merge (dict "probeName" "startupProbe") .) | nindent 2 }}
+  {{- include "varnish.varnishPodProbe" (merge (dict "probeName" "livenessProbe") .) | nindent 2 }}
+  {{- include "varnish.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
+  {{- include "varnish.resources" (merge (dict "section" "server") .) | nindent 2 }}
   command:
     {{- if .Values.server.command }}
     {{- toYaml .Values.server.command | nindent 4 }}
@@ -299,18 +299,18 @@ Declares the Varnish Cache container
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    {{- include "varnish-cache.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
+    {{- include "varnish.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
   volumeMounts:
     {{- if and (not (empty .Values.server.secretFrom)) (hasKey .Values.server.secretFrom "name") (hasKey .Values.server.secretFrom "key") }}
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: {{ .Values.server.secretFrom.key | quote }}
-    {{- else if not (eq (include "varnish-cache.secretConfig" .) "") }}
+    {{- else if not (eq (include "varnish.secretConfig" .) "") }}
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
       subPath: secret
     {{- end }}
-    {{- if not (eq (include "varnish-cache.vclConfig" .) "") }}
+    {{- if not (eq (include "varnish.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
       mountPath: {{ .Values.server.vclConfigPath | quote }}
       subPath: {{ $defaultVcl }}
@@ -323,7 +323,7 @@ Declares the Varnish Cache container
       subPath: {{ $k | quote }}
     {{- end }}
     {{- end }}
-    {{- if not (eq (include "varnish-cache.cmdfileConfig" .) "") }}
+    {{- if not (eq (include "varnish.cmdfileConfig" .) "") }}
     - name: {{ .Release.Name }}-config-cmdfile
       mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
       subPath: cmds.cli
@@ -369,12 +369,12 @@ Declares the Varnish Cache container
 {{/*
 Declares the Varnish NCSA container
 */}}
-{{- define "varnish-cache.ncsaContainer" -}}
+{{- define "varnish.ncsaContainer" -}}
 {{- if .Values.server.varnishncsa.enabled }}
 - name: {{ .Chart.Name }}-ncsa
-  {{- include "varnish-cache.securityContext" (merge (dict "section" "server" "subsection" "varnishncsa") .) | nindent 2 }}
-  {{- include "varnish-cache.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
-  {{- include "varnish-cache.resources" (merge (dict "section" "server" "subsection" "varnishncsa") .) | nindent 2 }}
+  {{- include "varnish.securityContext" (merge (dict "section" "server" "subsection" "varnishncsa") .) | nindent 2 }}
+  {{- include "varnish.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
+  {{- include "varnish.resources" (merge (dict "section" "server" "subsection" "varnishncsa") .) | nindent 2 }}
   command: ["varnishncsa"]
   {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
   args: {{- toYaml .Values.server.varnishncsa.extraArgs | nindent 4 }}
@@ -423,7 +423,7 @@ Declares the Varnish NCSA container
 {{/*
 Declares the Varnish extra container
 */}}
-{{- define "varnish-cache.extraContainers" -}}
+{{- define "varnish.extraContainers" -}}
 {{- if .Values.server.extraContainers }}
 {{- $tp := kindOf .Values.server.extraContainers }}
 {{- if eq $tp "string" }}
@@ -437,7 +437,7 @@ Declares the Varnish extra container
 {{/*
 Declares the Varnish init containers
 */}}
-{{- define "varnish-cache.initContainers" -}}
+{{- define "varnish.initContainers" -}}
 {{- if .Values.server.extraInitContainers }}
 initContainers:
   {{- $tp := kindOf .Values.server.extraInitContainers }}

@@ -14,14 +14,14 @@ apiVersion: autoscaling/v1
 {{- end }}
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "varnish-cache.fullname" . }}
+  name: {{ include "varnish.fullname" . }}
   labels:
-    {{- include "varnish-cache.labels" . | nindent 4 }}
+    {{- include "varnish.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: {{ .Values.server.kind }}
-    name: {{ include "varnish-cache.fullname" . }}
+    name: {{ include "varnish.fullname" . }}
   minReplicas: {{ .Values.server.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
   {{- if not (empty .Values.server.autoscaling.behavior) }}

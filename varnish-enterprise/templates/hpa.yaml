@@ -14,14 +14,14 @@ apiVersion: autoscaling/v1
 {{- end }}
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "varnish-enterprise.fullname" . }}
+  name: {{ include "varnish.fullname" . }}
   labels:
-    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+    {{- include "varnish.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: {{ .Values.server.kind }}
-    name: {{ include "varnish-enterprise.fullname" . }}
+    name: {{ include "varnish.fullname" . }}
   minReplicas: {{ if and (eq (kindOf .Values.server.autoscaling.minReplicas) "string") (eq .Values.server.autoscaling.minReplicas "-") }}{{ .Values.server.replicas }}{{ else }}{{ .Values.server.autoscaling.minReplicas }}{{ end }}
   maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
   {{- if not (empty .Values.server.autoscaling.behavior) }}

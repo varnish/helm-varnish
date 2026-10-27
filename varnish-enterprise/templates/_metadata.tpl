@@ -3,9 +3,9 @@
 {{/*
 Common labels
 */}}
-{{- define "varnish-enterprise.labels" -}}
-helm.sh/chart: {{ include "varnish-enterprise.chart" . }}
-{{ include "varnish-enterprise.selectorLabels" . }}
+{{- define "varnish.labels" -}}
+helm.sh/chart: {{ include "varnish.chart" . }}
+{{ include "varnish.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -15,17 +15,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "varnish-enterprise.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "varnish-enterprise.name" . }}
+{{- define "varnish.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "varnish.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "varnish-enterprise.serviceAccountName" -}}
+{{- define "varnish.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "varnish-enterprise.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "varnish.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -34,9 +34,9 @@ Create the name of the service account to use
 {{/*
 Sets up the common server extra annotations
 */}}
-{{- define "varnish-enterprise.serverAnnotations" -}}
+{{- define "varnish.serverAnnotations" -}}
 {{- $section := default "server" .section }}
-{{- include "varnish-enterprise.toYamlField"
+{{- include "varnish.toYamlField"
   (merge
     (dict
       "section" $section
@@ -48,15 +48,15 @@ Sets up the common server extra annotations
 {{/*
 Sets up the common server extra labels
 */}}
-{{- define "varnish-enterprise.serverLabels" -}}
+{{- define "varnish.serverLabels" -}}
 {{- $section := default "server" .section }}
 {{- $nameSuffix := .nameSuffix }}
 {{- if not (eq $nameSuffix "") }}
 {{- $nameSuffix = .section }}
 {{- end }}
-{{- $defaultLabel := (fromYaml (include "varnish-enterprise.labels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
+{{- $defaultLabel := (fromYaml (include "varnish.labels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
 {{- $extraLabels := default dict .extraLabels }}
-{{- include "varnish-enterprise.toYamlField"
+{{- include "varnish.toYamlField"
   (merge
     (dict
       "section" $section
@@ -68,7 +68,7 @@ Sets up the common server extra labels
 {{/*
 Sets up the common service extra annotations
 */}}
-{{- define "varnish-enterprise.serviceAnnotations" -}}
+{{- define "varnish.serviceAnnotations" -}}
 {{- if .Values.server.service.annotations }}
 annotations:
   {{- $tp := kindOf .Values.server.service.annotations }}
@@ -83,7 +83,7 @@ annotations:
 {{/*
 Sets up the common service extra labels
 */}}
-{{- define "varnish-enterprise.serviceLabels" -}}
+{{- define "varnish.serviceLabels" -}}
 {{- $section := default "server" .section -}}
 {{- $service := (get .Values $section).service -}}
 {{- if $service.labels -}}
@@ -99,7 +99,7 @@ Sets up the common service extra labels
 {{/*
 Sets up the common ingress extra annotations
 */}}
-{{- define "varnish-enterprise.ingressAnnotations" -}}
+{{- define "varnish.ingressAnnotations" -}}
 {{- $section := default "server" .section -}}
 {{- $ingress := (get .Values $section).ingress -}}
 {{- if $ingress.annotations }}
@@ -116,7 +116,7 @@ annotations:
 {{/*
 Sets up the common ingress extra labels
 */}}
-{{- define "varnish-enterprise.ingressLabels" -}}
+{{- define "varnish.ingressLabels" -}}
 {{- $section := default "server" .section -}}
 {{- $ingress := (get .Values $section).ingress -}}
 {{- if $ingress.labels }}
@@ -132,7 +132,7 @@ Sets up the common ingress extra labels
 {{/*
 Sets up the common MSE extra annotations
 */}}
-{{- define "varnish-enterprise.mseAnnotations" -}}
+{{- define "varnish.mseAnnotations" -}}
 {{- if .Values.server.mse.persistence.annotations }}
 annotations:
   {{- $tp := kindOf .Values.server.mse.persistence.annotations }}
@@ -147,7 +147,7 @@ annotations:
 {{/*
 Sets up the common MSE PVC labels
 */}}
-{{- define "varnish-enterprise.msePvcLabels" -}}
+{{- define "varnish.msePvcLabels" -}}
 {{- if .Values.server.mse.persistence.labels }}
 {{- $tp := kindOf .Values.server.mse.persistence.labels }}
 {{- if eq $tp "string" }}
@@ -161,7 +161,7 @@ Sets up the common MSE PVC labels
 {{/*
 Sets up the common MSE4 extra annotations
 */}}
-{{- define "varnish-enterprise.mse4Annotations" -}}
+{{- define "varnish.mse4Annotations" -}}
 {{- if .Values.server.mse4.persistence.annotations }}
 annotations:
   {{- $tp := kindOf .Values.server.mse4.persistence.annotations }}
@@ -176,7 +176,7 @@ annotations:
 {{/*
 Sets up the common MSE4 PVC labels
 */}}
-{{- define "varnish-enterprise.mse4PvcLabels" -}}
+{{- define "varnish.mse4PvcLabels" -}}
 {{- if .Values.server.mse4.persistence.labels }}
 {{- $tp := kindOf .Values.server.mse4.persistence.labels }}
 {{- if eq $tp "string" }}
@@ -190,7 +190,7 @@ Sets up the common MSE4 PVC labels
 {{/*
 Sets up the common Agent PVC labels
 */}}
-{{- define "varnish-enterprise.agentPvcLabels" -}}
+{{- define "varnish.agentPvcLabels" -}}
 {{- if .Values.server.agent.persistence.labels }}
 {{- $tp := kindOf .Values.server.agent.persistence.labels }}
 {{- if eq $tp "string" }}
@@ -204,7 +204,7 @@ Sets up the common Agent PVC labels
 {{/*
 Sets up the common service account annotations
 */}}
-{{- define "varnish-enterprise.serviceAccountAnnotations" -}}
+{{- define "varnish.serviceAccountAnnotations" -}}
 {{- if .Values.serviceAccount.annotations }}
 annotations:
   {{- $tp := kindOf .Values.serviceAccount.annotations }}
@@ -219,7 +219,7 @@ annotations:
 {{/*
 Sets up the common service account extra labels
 */}}
-{{- define "varnish-enterprise.serviceAccountLabels" -}}
+{{- define "varnish.serviceAccountLabels" -}}
 {{- if .Values.serviceAccount.labels }}
 {{- $tp := kindOf .Values.serviceAccount.labels }}
 {{- if eq $tp "string" }}
@@ -233,14 +233,14 @@ Sets up the common service account extra labels
 {{/*
 Declares the Pod's serviceAccount.
 */}}
-{{- define "varnish-enterprise.podServiceAccount" }}
-serviceAccountName: {{ include "varnish-enterprise.serviceAccountName" . }}
+{{- define "varnish.podServiceAccount" }}
+serviceAccountName: {{ include "varnish.serviceAccountName" . }}
 {{- end }}
 
 {{/*
 Declares the Pod's securityContext.
 */}}
-{{- define "varnish-enterprise.podSecurityContext" }}
+{{- define "varnish.podSecurityContext" }}
 {{- if not (empty .Values.global.podSecurityContext) }}
 securityContext:
   {{- toYaml .Values.global.podSecurityContext | nindent 2 }}
@@ -250,15 +250,15 @@ securityContext:
 {{/*
 Sets up Pod labels
 */}}
-{{- define "varnish-enterprise.podLabels" }}
+{{- define "varnish.podLabels" }}
 {{- $section := default "server" .section }}
 {{- $nameSuffix := .nameSuffix }}
 {{- if not (eq $nameSuffix "") }}
 {{- $nameSuffix = .section }}
 {{- end }}
-{{- $defaultLabel := (fromYaml (include "varnish-enterprise.selectorLabels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
+{{- $defaultLabel := (fromYaml (include "varnish.selectorLabels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
 {{- $extraLabels := default dict .extraLabels }}
-{{- include "varnish-enterprise.toYamlField"
+{{- include "varnish.toYamlField"
   (merge
     (dict
       "section" $section
@@ -271,7 +271,7 @@ Sets up Pod labels
 {{/*
 Declares the Varnish deployment strategy
 */}}
-{{- define "varnish-enterprise.strategy" -}}
+{{- define "varnish.strategy" -}}
 {{- if .Values.server.strategy }}
 {{- $tp := kindOf .Values.server.strategy }}
 strategy:
@@ -286,7 +286,7 @@ strategy:
 {{/*
 Declares the Varnish DaemonSet and StatefulSet updateStrategy
 */}}
-{{- define "varnish-enterprise.updateStrategy" -}}
+{{- define "varnish.updateStrategy" -}}
 {{- if .Values.server.updateStrategy }}
 {{- $tp := kindOf .Values.server.updateStrategy }}
 updateStrategy:
@@ -301,7 +301,7 @@ updateStrategy:
 {{/*
 Sets up nodeSelector depending on whether a YAML map or a string is given.
 */}}
-{{- define "varnish-enterprise.nodeSelector" -}}
+{{- define "varnish.nodeSelector" -}}
 {{- if .Values.server.nodeSelector }}
 nodeSelector:
   {{- $tp := kindOf .Values.server.nodeSelector }}
@@ -316,8 +316,8 @@ nodeSelector:
 {{/*
 Declares the container securityContext.
 */}}
-{{- define "varnish-enterprise.securityContext" }}
-{{- include "varnish-enterprise.toYamlField"
+{{- define "varnish.securityContext" }}
+{{- include "varnish.toYamlField"
   (merge
     (dict
       "section" .section
@@ -328,8 +328,8 @@ Declares the container securityContext.
 {{/*
 Declares the container resource.
 */}}
-{{- define "varnish-enterprise.resources" }}
-{{- include "varnish-enterprise.toYamlField"
+{{- define "varnish.resources" }}
+{{- include "varnish.toYamlField"
   (merge
     (dict
       "section" .section

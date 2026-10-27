@@ -5,11 +5,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "varnish-enterprise.fullname" . }}
+  name: {{ include "varnish.fullname" . }}
   labels:
-    {{- include "varnish-enterprise.labels" . | nindent 4 }}
-    {{- include "varnish-enterprise.serviceLabels" . | indent 4 }}
-  {{- include "varnish-enterprise.serviceAnnotations" . | indent 2 }}
+    {{- include "varnish.labels" . | nindent 4 }}
+    {{- include "varnish.serviceLabels" . | indent 4 }}
+  {{- include "varnish.serviceAnnotations" . | indent 2 }}
 spec:
   {{- if .Values.server.service.type }}
   type: {{ .Values.server.service.type }}
@@ -80,7 +80,7 @@ spec:
       {{- end }}
   {{- end }}
   selector:
-    {{- include "varnish-enterprise.selectorLabels" . | nindent 4 }}
+    {{- include "varnish.selectorLabels" . | nindent 4 }}
 {{- end }}
 {{- if and .Values.cluster.enabled (not .Values.cluster.headlessServiceName) }}
 ---
@@ -91,13 +91,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "varnish-enterprise.fullname" . }}-peers
+  name: {{ include "varnish.fullname" . }}-peers
   labels:
-    {{- include "varnish-enterprise.labels" . | nindent 4 }}
+    {{- include "varnish.labels" . | nindent 4 }}
 spec:
   clusterIP: None
   selector:
-    {{- include "varnish-enterprise.selectorLabels" . | nindent 4 }}
+    {{- include "varnish.selectorLabels" . | nindent 4 }}
   ports:
     - name: http
       port: {{ .Values.server.http.port }}

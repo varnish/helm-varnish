@@ -3,7 +3,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "varnish-enterprise.name" -}}
+{{- define "varnish.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -12,7 +12,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "varnish-enterprise.fullname" -}}
+{{- define "varnish.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -28,14 +28,14 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "varnish-enterprise.chart" -}}
+{{- define "varnish.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Sets up the Varnish Enterprise image and its overrides (if any)
 */}}
-{{- define "varnish-enterprise.image" }}
+{{- define "varnish.image" }}
 {{- $base := .base | default dict }}
 {{- $image := .image | default dict }}
 image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{- if eq $image.tag "-" }}{{ default .Chart.AppVersion $base.tag }}{{ else }}{{ default $.Chart.AppVersion $image.tag }}{{ end }}"
@@ -45,7 +45,7 @@ imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else 
 {{/*
 Converts size string (e.g. 10Mi or 10M) to a number
 */}}
-{{- define "varnish-enterprise.sizeStrToNumber" -}}
+{{- define "varnish.sizeStrToNumber" -}}
 {{- $sizeStr := toString .sizeStr -}}
 {{- $size := atoi (mustRegexFind "[0-9]+" $sizeStr) }}
 {{- if not $size -}}
@@ -81,7 +81,7 @@ Converts size string (e.g. 10Mi or 10M) to a number
 {{/*
 Converts size string (e.g. 10Mi or 10M) or a percentage to a number.
 */}}
-{{- define "varnish-enterprise.sizeStrPercentToNumber" -}}
+{{- define "varnish.sizeStrPercentToNumber" -}}
 {{- $sizeStr := toString .sizeStr -}}
 {{- if hasSuffix "%" $sizeStr -}}
 {{- $percent := atoi (mustRegexFind "[0-9]+" $sizeStr) }}
@@ -91,14 +91,14 @@ Converts size string (e.g. 10Mi or 10M) or a percentage to a number.
 {{- end -}}
 {{- div (mul $baseSize $percent) 100 -}}
 {{- else -}}
-{{- include "varnish-enterprise.sizeStrToNumber" (merge (dict "sizeStr" $sizeStr)) -}}
+{{- include "varnish.sizeStrToNumber" (merge (dict "sizeStr" $sizeStr)) -}}
 {{- end -}}
 {{- end }}
 
 {{/*
 Sets up the NATS server
 */}}
-{{- define "varnish-enterprise.natsServer" }}
+{{- define "varnish.natsServer" }}
 {{- $natsAddress := "" }}
 {{- $internalNats := false }}
 {{- $tp := kindOf .Values.global.natsServer.internal.enabled }}
@@ -140,7 +140,7 @@ Sets up the NATS server
 {{/*
 Sets extra envs from either an array, an object, or a string.
 */}}
-{{- define "varnish-enterprise.toEnv" }}
+{{- define "varnish.toEnv" }}
 {{- $tp := kindOf .envs }}
 {{- if eq $tp "string" }}
 {{- tpl .envs . | trim | nindent 0 }}
@@ -157,7 +157,7 @@ Sets extra envs from either an array, an object, or a string.
 {{/*
 Declares the YAML field.
 */}}
-{{- define "varnish-enterprise.toYamlField" }}
+{{- define "varnish.toYamlField" }}
 {{- $section := default "server" .section }}
 {{- $fieldName := .fieldName }}
 {{- $fieldKey := default $fieldName .fieldKey }}

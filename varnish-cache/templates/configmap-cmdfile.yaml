@@ -1,11 +1,11 @@
-{{- $cmdfileConfig := include "varnish-cache.cmdfileConfig" . }}
+{{- $cmdfileConfig := include "varnish.cmdfileConfig" . }}
 {{- if not (eq $cmdfileConfig "") }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish-cache.fullname" . }}-cmdfile
+  name: {{ include "varnish.fullname" . }}-cmdfile
   labels:
-    {{- include "varnish-cache.labels" . | nindent 4 }}
+    {{- include "varnish.labels" . | nindent 4 }}
 data:
   cmds.cli: |
     {{- $cmdfileConfig | nindent 4 }}

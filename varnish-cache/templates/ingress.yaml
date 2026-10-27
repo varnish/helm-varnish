@@ -2,7 +2,7 @@
 {{- if (not (and (.Values.server.service.http.enabled) (.Values.server.service.http.port))) }}
 {{ fail "HTTP service must be enabled in values to enable ingress: 'service.service.http.enabled'" }}
 {{- end }}
-{{- $serviceName := include "varnish-cache.fullname" . }}
+{{- $serviceName := include "varnish.fullname" . }}
 {{- $servicePort := .Values.server.service.http.port }}
 {{- $pathType := .Values.server.ingress.pathType }}
 {{- $kubeVersion := .Capabilities.KubeVersion.Version }}
@@ -15,11 +15,11 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ include "varnish-cache.fullname" . }}
+  name: {{ include "varnish.fullname" . }}
   labels:
-    {{- include "varnish-cache.labels" . | nindent 4 }}
-    {{- include "varnish-cache.ingressLabels" . | indent 4 }}
-  {{- include "varnish-cache.ingressAnnotations" . | indent 2 }}
+    {{- include "varnish.labels" . | nindent 4 }}
+    {{- include "varnish.ingressLabels" . | indent 4 }}
+  {{- include "varnish.ingressAnnotations" . | indent 2 }}
 spec:
   {{- if .Values.server.ingress.tls }}
   tls:
