@@ -265,6 +265,7 @@ Declares the Varnish container
 {{- define "varnish-common.serverContainer" -}}
 {{- $mseConfig := include "varnish-common.mseConfig" . }}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
+{{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- $cmdfileConfig := include "varnish-common.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath -}}
 {{/*
@@ -386,7 +387,7 @@ Composing the $varnishArgs list or arguments
     TLS
 */}}
 {{- if .Values.server.tls.enabled }}
-  {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
+  {{- if not (eq $tlsConfig "") }}
     {{- $varnishArgs = concat $varnishArgs (list "-A" "/etc/varnish/tls.conf") }}
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-a" ( printf "https=%s:%s,https" (toString .Values.server.tls.address) (toString .Values.server.tls.port) )) }}
@@ -515,7 +516,7 @@ Composing the $varnishArgs list or arguments
     {{- end }}
 
     {{- if .Values.server.tls.enabled }}
-    {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
+    {{- if not (eq $tlsConfig "") }}
     - name: VARNISH_TLS_CFG
       value: /etc/varnish/tls.conf
     {{- else }}
@@ -575,7 +576,7 @@ Composing the $varnishArgs list or arguments
       mountPath: /etc/varnish/mse4.conf
       subPath: mse4.conf
     {{- end }}
-    {{- if not (eq (include "varnish-common.tlsConfig" .) "") }}
+    {{- if not (eq $tlsConfig "") }}
     - name: {{ .Release.Name }}-config-tls
       mountPath: /etc/varnish/tls.conf
       subPath: tls.conf

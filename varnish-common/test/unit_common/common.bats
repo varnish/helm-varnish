@@ -8,6 +8,13 @@ chart=$(chart_name)
 default_fsgroup=$(yq -r '.global.podSecurityContext.fsGroup' < "$(chart_dir)/values.yaml")
 default_uid=$(yq -r '.global.securityContext.runAsUser' < "$(chart_dir)/values.yaml")
 
+teardown() {
+    # Set by tests that need a file inside the chart
+    if [ -n "${tls_file:-}" ]; then
+        rm -f "$(chart_dir)/${tls_file}"
+    fi
+}
+
 @test "${kind}: inherits imagePullSecret from global" {
     cd "$(chart_dir)"
 
@@ -646,6 +653,45 @@ release-namespace: {{ .Release.Namespace }}
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
             tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "/etc/varnish/tls.conf" ]
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-tls")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"release-name-config-tls","mountPath":"/etc/varnish/tls.conf","subPath":"tls.conf"}' ]
+}
+
+@test "${kind}/tls: can be enabled with custom config file" {
+    cd "$(chart_dir)"
+
+    # .Files.Get only sees files inside the chart and outside of test/ (see
+    # .helmignore), the content is not validated by the chart
+    tls_file=$(mktemp files/bats-tls-XXXXXX.conf)
+    printf 'frontend = {\n  host = "*"\n  port = "443"\n}\n' >"${tls_file}"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.tls.enabled=true' \
+        --set "server.tls.configFile=${tls_file}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.command' |
+            tee -a /dev/stderr)
+    [[ "${actual}" == *'"-A","/etc/varnish/tls.conf"'* ]]
+    [[ "${actual}" != *'https='* ]]
 
     local actual=$(echo "$container" |
         yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
