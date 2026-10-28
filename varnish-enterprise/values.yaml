@@ -262,7 +262,7 @@ server:
     port: 6443
 
     # Configures the address on which Varnish will listen for HTTPS traffic. Only used when
-    # `server.tls.config` is empty.
+    # neither `server.tls.config` nor `server.tls.configFile` is set.
     # Type: template string
     address: "0.0.0.0"
 

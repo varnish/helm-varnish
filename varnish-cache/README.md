@@ -497,7 +497,7 @@ Configures the TCP port on which Varnish will listen for HTTPS traffic. This por
 - Type: string
 - Default: `0.0.0.0`
 
-Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when `server.tls.config` is empty.
+Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when neither `server.tls.config` nor `server.tls.configFile` is set.
 
 **server.tls.config**
 
