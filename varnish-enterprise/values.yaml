@@ -30,6 +30,7 @@ global:
 
     # The tag to use for the initContainer image.
     tag: "1.36"
+
   # An object that conforms to the Kubernetes securityContext definition of a Pod.
   # This securityContext will be set on all Pods within this chart. For setting
   # securityContext on all containers, see `global.securityContext`.
@@ -234,7 +235,7 @@ server:
     # to bind to within a container. To change the port exposed via service to other applications, see
     # `server.service.http.port`.
     port: 6081
-    # Configures the address to listen to for HTTP.
+    # Configures the address to listen to for HTTP. Ignored when `server.http.podIP` is true.
     # Availability: v1.7.4
     address: "0.0.0.0"
     # Set this to `true` to listen to podIP instead of a specific address. Note that setting this might make
@@ -260,7 +261,8 @@ server:
     # This port is used by HTTPS service as a targetPort.
     port: 6443
 
-    # Configures the address on which Varnish will listen for HTTPS traffic.
+    # Configures the address on which Varnish will listen for HTTPS traffic. Only used when
+    # `server.tls.config` is empty.
     # Type: template string
     address: "0.0.0.0"
 
@@ -294,6 +296,27 @@ server:
     port: 6082
 
   # An array of extra ports for Varnish to listen to.
+  #
+  #     name        Name of this listen (accessible in VCLs via local.socket).
+  #
+  #     proto       The proto to listen as (http or proxy)
+  #
+  #     TCP socket:
+  #
+  #       port        The port to listens as. Required unless path is set.
+  #
+  #       address     The IP address to listens as
+  #
+  #     UNIX socket:
+  #
+  #       path        The path to socket. Required unless port is set.
+  #
+  #       mode        The mode octet for the socket (0644, 0755, etc.)
+  #
+  #       user        The user for the socket
+  #
+  #       group       The group for the socket
+  #
   # Type: array of objects
   # Example:
   #   extraListens:
@@ -315,9 +338,9 @@ server:
   # Availability: v1.5.0
   # Type: object or array or template string
   # Example:
-  # extraEnvs:
-  #   MY_ENV_VAR: value
-  #   MY_OTHER_ENV_VAR: other_value
+  #   extraEnvs:
+  #     MY_ENV_VAR: value
+  #     MY_OTHER_ENV_VAR: other_value
   #
   # Example:
   #   extraEnvs:
@@ -325,10 +348,14 @@ server:
   #       value: value
   #     - name: MY_OTHER_ENV_VAR
   #       valueFrom:
-  #         configMapRef:
+  #         configMapKeyRef:
   #           name: my-config-map
   #           key: my-key
   #
+  # Example:
+  #   extraEnvs: |
+  #     - name: RELEASE_NAMESPACE
+  #       value: {{ .Release.Namespace }}
   extraEnvs: {}
 
   # Sets the default Time To Live (in seconds) for a cached object.
@@ -371,13 +398,14 @@ server:
   # Varnish Enterprise Helm Chart from the cluster and reinstall. The value can be set as either an array
   # of objects or a template string.
   # Type: array or template string
-  #  extraInitContainers: |
-  #    - name: varnish-setup-tls
-  #      securityContext:
-  #        {{- toYaml .Values.global.securityContext | nindent 4 }}
-  #      image: debian:latest
-  #      command:
-  #        - sh -c "sleep 3600"
+  # Example:
+  #   extraInitContainers: |
+  #     - name: varnish-setup-tls
+  #       securityContext:
+  #         {{- toYaml .Values.global.securityContext | nindent 4 }}
+  #       image: debian:latest
+  #       command:
+  #         - sh -c "sleep 3600"
   extraInitContainers: []
 
   # An array of objects that conforms to the Kubernetes [containers](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec) definition of a Pod.
@@ -403,7 +431,7 @@ server:
   # Example:
   #   extraVolumeClaimTemplates: |
   #     - metadata:
-  #       name: {{ .Release.Name }}-pv
+  #         name: {{ .Release.Name }}-pv
   #       spec:
   #         accessModes: ["ReadWriteOnce"]
   #         resources:
@@ -781,7 +809,7 @@ server:
     # Sets the repository for Varnish Enterprise image.
     repository: "quay.io/varnish-software/varnish-plus"
     # Sets the [imagePullPolicy](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) for the Varnish Enterprise image.
-    # This can be one of Always, Never, or IfNotPreset.
+    # This can be one of Always, Never, or IfNotPresent.
     pullPolicy: IfNotPresent
     # Sets the tag for the Varnish Enterprise image. By default, this is set to the same application
     # version as in the Varnish Enterprise Helm Chart. If the tag is set to non-exact versions
@@ -823,8 +851,8 @@ server:
     #             periodSeconds: 60
     #           - type: Pods
     #             value: 4
-    #        periodSeconds: 60
-    #    selectPolicy: Max
+    #             periodSeconds: 60
+    #         selectPolicy: Max
     behavior: ""
 
     # Configures the autoscaling metrics. Can be set as a templated string
@@ -1019,27 +1047,26 @@ server:
   # An object that conforms to the Kubernetes [startupProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
   # of a Container
   # Availability: v1.1.0
-
-  #Example:
-  #  startupProbe:
-  #    initialDelaySeconds: 5
-  #    periodSeconds: 10
-  #    timeoutSeconds: 1
-  #    successThreshold: 1
-  #    failureThreshold: 3
-  #    httpGet:
-  #      path: /health
-  #      httpHeaders:
-  #        - name: Host
-  #          value: example.com
+  # Example:
+  #   startupProbe:
+  #     initialDelaySeconds: 5
+  #     periodSeconds: 10
+  #     timeoutSeconds: 1
+  #     successThreshold: 1
+  #     failureThreshold: 3
+  #     httpGet:
+  #       path: /health
+  #       httpHeaders:
+  #         - name: Host
+  #           value: example.com
   startupProbe: {}
 
   # An object that conforms to the Kubernetes [readinessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
   # of a Container.
   # See also [server.startupProbe.httpGet](https://docs.varnish-software.com/varnish-helm/varnish-enterprise/configurations/#serverstartupprobehttpget).
-  # # Availability: v1.2.0
+  # Availability: v1.2.0
   # Example:
-  #   readinessProbe
+  #   readinessProbe:
   #     httpGet:
   #       path: /health
   #       httpHeaders:
@@ -1061,11 +1088,11 @@ server:
     # Sets the consecutive failures until a probe is considered a failure.
     failureThreshold: 3
 
-  # An object that conforms to the Kubernetes [readinessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
+  # An object that conforms to the Kubernetes [livenessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
   # of a Container.
   # See also [server.startupProbe.httpGet](https://docs.varnish-software.com/varnish-helm/varnish-enterprise/configurations/#serverstartupprobehttpget).
   # Example:
-  #   livenessProbe
+  #   livenessProbe:
   #     httpGet:
   #       path: /health
   #       httpHeaders:
@@ -1186,7 +1213,7 @@ server:
       # of `server.image.repository`.
       repository: "-"
       # Sets the [imagePullPolicy](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) for the Varnish Enterprise image for use with
-      # varnishncsa. This can be one of Always, Never, or IfNotPreset. Set this to "-" to inherit the value
+      # varnishncsa. This can be one of Always, Never, or IfNotPresent. Set this to "-" to inherit the value
       # of `server.image.pullPolicy`.
       pullPolicy: "-"
       # Sets the tag for the Varnish Enterprise image for use with varnishncsa. The Varnish image used
@@ -1226,6 +1253,7 @@ server:
 
     # Configures a probe for checking if a Pod can continue to receive a connection.
     livenessProbe:
+      # Sets the initial delays in seconds until the first probe is performed.
       initialDelaySeconds: 30
 
       # Sets the interval in seconds between each probes.
@@ -1253,7 +1281,7 @@ server:
     #         memory: 128Mi
     resources: {}
 
-  # Configures the Varnish Otel sidecar.
+  # Configures the Varnish OTEL sidecar.
   otel:
     # Enables the Varnish OTEL container for OpenTelemetry integration. When
     # enabled, the container runs `/usr/bin/varnish-otel` to export logs and
@@ -1271,9 +1299,9 @@ server:
       # `server.image.repository`.
       # Availability: v1.7.0
       repository: "-"
-      # Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish
+      # Sets the [imagePullPolicy](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) for the Varnish
       # Enterprise image for use with Varnish OTEL. This can be one of Always,
-      # Never, or IfNotPreset. Set this to "-" to inherit the value of
+      # Never, or IfNotPresent. Set this to "-" to inherit the value of
       # `server.image.pullPolicy`.
       # Availability: v1.7.0
       pullPolicy: "-"
@@ -1285,7 +1313,7 @@ server:
       tag: "-"
 
     # An object that conforms to the Kubernetes
-    # [securityContext][k8s-pod-v1-containers] definition of a Container.
+    # [securityContext](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition of a Container.
     #
     # This securityContext will be set on the Varnish OTEL container. For
     # setting securityContext on the Pod itself, see `global.podSecurityContext`.
@@ -1293,7 +1321,7 @@ server:
     # Availability: v1.7.0
     securityContext: {}
 
-    # An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers]
+    # An object that conforms to the Kubernetes [resources](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
     # definition of a Container. This configuration can be used to limit resources
     # consumed by the Varnish OTEL container.
     # Availability: v1.7.0
@@ -1302,17 +1330,16 @@ server:
     # Sets environment variables for the Varnish OTEL container. This is
     # typically used to configure OpenTelemetry exporters and other OTEL
     # settings. Most variables have sensible defaults; see the
-    # [Varnish OTEL Configuration][varnish-otel] documentation.
+    # Varnish OTEL configuration documentation.
     #
     # Can be set as an object, an array of objects, or a template string.
     #
     # For a complete list of OpenTelemetry environment variables, see the
-    # [OpenTelemetry Environment Variable Specification][otel-env-vars].
+    # [OpenTelemetry Environment Variable Specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/).
     # Availability: v1.7.0
     # Example:
     #     env:
-    #       OTEL_LOGS_EXPORTER: "otlp"
-    #       OTEL_LOGS_EXPORTER: "otlp"
+    #       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
     env:
 
   # Configures the init container for Varnish Controller Agent.
@@ -1328,7 +1355,7 @@ server:
     # Type: boolean
     enabled: true
 
-    # An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition
+    # An object that conforms to the Kubernetes [securityContext](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
     # of a Container
     #
     # This securityContext will be set on the Varnish Controller Agent's init container.
@@ -1378,15 +1405,15 @@ server:
       # image used here must be the same version as the Varnish Controller. Since this is
       # a different image from Varnish Enterprise, using "-" is unsupported.
       repository: "quay.io/varnish-software/varnish-controller-agent"
-      # Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Controller image.
-      # This can be one of Always, Never, or IfNotPreset.
+      # Sets the [imagePullPolicy](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) for the Varnish Controller image.
+      # This can be one of Always, Never, or IfNotPresent.
       pullPolicy: IfNotPresent
       # Sets the tag for the Varnish Controller image for use with varnishncsa. The Varnish
       # Controller image used here must be the same version as the Varnish Controller.
       # Since this is a different image from Varnish Enterprise, using "-" is unsupported.
       tag: "7.5.1-6.0.16r13"
 
-    # An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition
+    # An object that conforms to the Kubernetes [securityContext](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
     # of a Container.
     #
     # This securityContext will be set on the Varnish Controller container. For setting
@@ -1451,7 +1478,7 @@ server:
     #     latitude: "37.354107"
     location: {}
 
-    # An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers]
+    # An object that conforms to the Kubernetes [resources](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
     # definition of a Container. This configuration can be used to limit resources consumed
     # by the Varnish Controller Agent container.
     # Example:
@@ -1620,17 +1647,25 @@ server:
 #     data        The data of each manifest. Can be set as templated string.
 #
 # An array of objects to attach Kubernetes manifests to a workload.
+#
+#     name        The name of each manifest (will be used when checksum is true)
+#
+#     checksum    A boolean flag whether to include this manifest as part of the
+#                 checksum in workload manifests. Useful for ConfigMaps.
+#
+#     data        The data of each manifest. Can be set as templated string.
+#
 # Availability: v1.2.1
 # Type: array of objects
 # Example:
-# extraManifests
-#  - name: clusterrole
-#    data: |
-#      apiVersion: rbac.authorization.k8s.io/v1
-#      kind: ClusterRole
-#      metadata:
-#        name: {{ .Release.Name }}-clusterrole
-#      # ...
+#   extraManifests:
+#     - name: clusterrole
+#       data: |
+#         apiVersion: rbac.authorization.k8s.io/v1
+#         kind: ClusterRole
+#         metadata:
+#           name: {{ .Release.Name }}-clusterrole
+#         # ...
 extraManifests: []
 
 cluster:
