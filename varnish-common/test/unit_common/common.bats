@@ -3605,6 +3605,12 @@ env: {
     [[ "${actual}" == *"MEMPOOL.sess"* ]]
     [[ "${actual}" == *"sleep 5"* ]]
     [[ "${actual}" == *"sleep 30"* ]]
+
+    # varnishstat must target the same instance as varnishd (-n)
+    local actual=$(echo "$container" | yq -r '.lifecycle.preStop.exec.command[2]' | tee -a /dev/stderr)
+    [[ "${actual}" == *'varnishstat -n "$VARNISH_WORKDIR" -1'* ]]
+    local actual=$(echo "$container" | yq -r '.env[] | select(.name == "VARNISH_WORKDIR") | .name' | tee -a /dev/stderr)
+    [ "${actual}" == "VARNISH_WORKDIR" ]
 }
 
 @test "${kind}/delayedShutdown/mempool: no -n when workDir empty" {
