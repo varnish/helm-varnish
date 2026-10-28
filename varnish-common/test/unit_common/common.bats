@@ -658,6 +658,42 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '{"name":"release-name-config-tls","mountPath":"/etc/varnish/tls.conf","subPath":"tls.conf"}' ]
 }
 
+@test "${kind}/tls: can be enabled with custom config file" {
+    cd "$(chart_dir)"
+
+    # Any non-empty file shipped with the chart will do, the content is not
+    # validated by the chart
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.tls.enabled=true' \
+        --set 'server.tls.configFile=README.md' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.command' |
+            tee -a /dev/stderr)
+    [[ "${actual}" == *'"-A","/etc/varnish/tls.conf"'* ]]
+    [[ "${actual}" != *'https='* ]]
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "/etc/varnish/tls.conf" ]
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-tls")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"release-name-config-tls","mountPath":"/etc/varnish/tls.conf","subPath":"tls.conf"}' ]
+}
+
 @test "${kind}/tls: not enabled by default" {
     cd "$(chart_dir)"
 

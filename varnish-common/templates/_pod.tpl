@@ -378,7 +378,7 @@ Composing the $varnishArgs list or arguments
     TLS
 */}}
 {{- if .Values.server.tls.enabled }}
-  {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
+  {{- if not (eq (include "varnish.tlsConfig" .) "") }}
     {{- $varnishArgs = concat $varnishArgs (list "-A" "/etc/varnish/tls.conf") }}
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-a" ( printf "https=%s:%s,https" (toString .Values.server.tls.address) (toString .Values.server.tls.port) )) }}
@@ -507,7 +507,7 @@ Composing the $varnishArgs list or arguments
     {{- end }}
 
     {{- if .Values.server.tls.enabled }}
-    {{- if and .Values.server.tls.config (not (eq .Values.server.tls.config "")) }}
+    {{- if not (eq (include "varnish.tlsConfig" .) "") }}
     - name: VARNISH_TLS_CFG
       value: /etc/varnish/tls.conf
     {{- else }}
