@@ -678,7 +678,7 @@ Composing the $varnishArgs list or arguments
         - -c
         - |
           set -e
-          while [ "$(varnishstat -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
+          while [ "$(varnishstat -n "$VARNISH_WORKDIR" -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
             echo >&2 "Waiting for Varnish to drain connections..."
             sleep {{ .Values.server.delayedShutdown.mempool.pollSeconds }}
           done
