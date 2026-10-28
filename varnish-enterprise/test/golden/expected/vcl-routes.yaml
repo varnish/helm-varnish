@@ -49,12 +49,12 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 data:
   cmds.cli: |
-    vcl.load route_foo_0 /etc/varnish/vcls/foo.vcl
-    vcl.label foo route_foo_0
-    vcl.load route_any_0 /etc/varnish/vcls/any.vcl
-    vcl.label any route_any_0
-    vcl.load router_0 /etc/varnish/vcls/router.vcl
-    vcl.use router_0
+    vcl.load route-foo-0 /etc/varnish/vcls/foo.vcl
+    vcl.label foo route-foo-0
+    vcl.load route-any-0 /etc/varnish/vcls/any.vcl
+    vcl.label any route-any-0
+    vcl.load router-0 /etc/varnish/vcls/router.vcl
+    vcl.use router-0
 ---
 # Source: varnish-enterprise/templates/configmap-vcl.yaml
 apiVersion: v1

@@ -90,13 +90,48 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
-        --set "server.vcls.routes[0].hostnames[0]=*.api.bar.com" \
+        --set "server.vcls.routes[0].hostnames[0]=api.bar-baz.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("__api_bar_com.vcl")) | .data | has("__api_bar_com.vcl")' \
+        yq -r 'select(.data | has("api_bar_baz_com.vcl")) | .data | has("api_bar_baz_com.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
+}
+
+@test "vcl-bundle: hostname not starting with a letter gets a route_ prefix" {
+    cd "$(chart_dir)"
+    local object=$( (helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].hostnames[0]=1.example.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[1].hostnames[0]=*.api.bar.com" \
+        --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . || echo "---") | tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r 'select(.metadata.name == "release-name-'"$(chart_name)"'-vcl-bundle-cmds") | .data["cmds.cli"]' |
+        grep '^vcl.label' | tee -a /dev/stderr)
+    [ "${actual}" = "vcl.label route_1_example_com route-route_1_example_com-0
+vcl.label route___api_bar_com route-route___api_bar_com-0" ]
+
+    local actual=$(echo "$object" |
+        yq -r 'select(.data | has("route_1_example_com.vcl")) | .metadata.name' |
+        tee -a /dev/stderr)
+    [ "${actual}" = "release-name-$(chart_name)-vcl-bundle-route-1-example-com" ]
+}
+
+@test "vcl-bundle: error when route name does not start with a letter" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].name=1site" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.routes: name '1site' must start with a letter"* ]]
 }
 
 # ── Routing VCL ───────────────────────────────────────────────────────────────
@@ -182,10 +217,36 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r 'select(.data | has("cmds.cli")) | .data."cmds.cli"' \
         | tee -a /dev/stderr)
-    [[ "${actual}" == *'vcl.load route_foo_com_0 /etc/varnish/vcls/foo_com.vcl'* ]]
-    [[ "${actual}" == *'vcl.label foo_com route_foo_com_0'* ]]
-    [[ "${actual}" == *'vcl.load router_0 /etc/varnish/vcls/router.vcl'* ]]
-    [[ "${actual}" == *'vcl.use router_0'* ]]
+    [[ "${actual}" == *'vcl.load route-foo_com-0 /etc/varnish/vcls/foo_com.vcl'* ]]
+    [[ "${actual}" == *'vcl.label foo_com route-foo_com-0'* ]]
+    [[ "${actual}" == *'vcl.load router-0 /etc/varnish/vcls/router.vcl'* ]]
+    [[ "${actual}" == *'vcl.use router-0'* ]]
+}
+
+@test "vcl-bundle: route names cannot clash with the loaded VCL names" {
+    cd "$(chart_dir)"
+    local actual=$( (helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].name=foo" \
+        --set "server.vcls.routes[0].hostnames[0]=a.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[1].name=route_foo_0" \
+        --set "server.vcls.routes[1].hostnames[0]=b.com" \
+        --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[2].name=router_0" \
+        --set "server.vcls.routes[2].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r 'select(.data | has("cmds.cli")) | .data."cmds.cli"' \
+        | tee -a /dev/stderr)
+    [ "${actual}" = "vcl.load route-foo-0 /etc/varnish/vcls/foo.vcl
+vcl.label foo route-foo-0
+vcl.load route-route_foo_0-0 /etc/varnish/vcls/route_foo_0.vcl
+vcl.label route_foo_0 route-route_foo_0-0
+vcl.load route-router_0-0 /etc/varnish/vcls/router_0.vcl
+vcl.label router_0 route-router_0-0
+vcl.load router-0 /etc/varnish/vcls/router.vcl
+vcl.use router-0" ]
 }
 
 # ── Includes ──────────────────────────────────────────────────────────────────
@@ -668,6 +729,43 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"collides with a route mounted at the same path"* ]]
 }
 
+@test "vcl-bundle: error when route k8s name collides with reserved router" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[0].name=Router" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"k8s name 'router' is reserved"* ]]
+}
+
+@test "vcl-bundle: error when route k8s name collides with reserved cmds" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[0].name=cmds" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"k8s name 'cmds' is reserved"* ]]
+}
+
+@test "vcl-bundle: error when include k8s name collides with a route k8s name" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[0].name=include-helpers-vcl" \
+        --set "server.vcls.includes.helpers\\.vcl=content" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"filename 'helpers.vcl' collides with the k8s name of route 'include-helpers-vcl'"* ]]
+}
+
 @test "vcl-bundle: error when two includes produce the same k8s name" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
@@ -778,4 +876,168 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         yq -r '.spec.template.metadata.annotations | has("checksum/release-name-vcl-bundle")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
+}
+
+# ── Kubernetes name limits ─────────────────────────────────────────────────────
+
+@test "vcl-bundle: error when route volume name exceeds 63 characters" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].hostnames[0]=www.some-long-customer-domain.example.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.routes: volume name 'myrel-config-vcl-bundle-www-some-long-customer-domain-example-com' exceeds 63 characters"* ]]
+}
+
+@test "vcl-bundle: route volume name of exactly 63 characters is accepted" {
+    cd "$(chart_dir)"
+    # "myrel-config-vcl-bundle-" is 24 characters
+    local name=$(printf 'a%.0s' {1..39})
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].name=${name}" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -eq 0 ]
+
+    name="${name}a"
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].name=${name}" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"exceeds 63 characters"* ]]
+}
+
+@test "vcl-bundle: error when router volume name exceeds 63 characters" {
+    cd "$(chart_dir)"
+    # "-config-vcl-bundle-router" is 25 characters
+    local release=$(printf 'r%.0s' {1..39})
+    run --separate-stderr helm template "${release}" \
+        --namespace default \
+        --set "server.vcls.routes[0].name=a" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.routes: volume name '${release}-config-vcl-bundle-router' exceeds 63 characters"* ]]
+
+    release="${release%r}"
+    run --separate-stderr helm template "${release}" \
+        --namespace default \
+        --set "server.vcls.routes[0].name=a" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -eq 0 ]
+}
+
+@test "vcl-bundle: error when include volume name exceeds 63 characters" {
+    cd "$(chart_dir)"
+    # "myrel-config-vcl-bundle-include-" is 32 characters
+    local filename="$(printf 'a%.0s' {1..32}).vcl"
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.includes.${filename//./\\.}=vcl 4.1;" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.includes: volume name 'myrel-config-vcl-bundle-include-${filename%.vcl}-vcl' exceeds 63 characters"* ]]
+}
+
+# ── Include path normalization ────────────────────────────────────────────────
+
+# Renders the bundle with a route named "foo" and the includes given as YAML keys
+render_with_includes() {
+    local includes=""
+    for f in "$@"; do includes+="      \"${f}\": content\n"; done
+    run --separate-stderr helm template \
+        --namespace default \
+        --values <(printf "server:\n  vcls:\n    routes:\n      - name: foo\n        vclContent: \"vcl 4.1;\"\n    includes:\n${includes}") \
+        --show-only templates/configmap-vcl.yaml \
+        .
+}
+
+@test "vcl-bundle: include filename starting with ./ is mounted at its clean path" {
+    cd "$(chart_dir)"
+    render_with_includes "./helpers.vcl"
+    [ "$status" -eq 0 ]
+    local actual=$(echo "$output" |
+        yq -r 'select(.data | has("helpers.vcl")) | .metadata.name' |
+        tee -a /dev/stderr)
+    [ "${actual}" = "release-name-$(chart_name)-vcl-bundle-include-helpers-vcl" ]
+    run --separate-stderr helm template \
+        --namespace default \
+        --values <(printf 'server:\n  vcls:\n    routes:\n      - vclContent: "vcl 4.1;"\n    includes:\n      "./helpers.vcl": content\n') \
+        --show-only templates/deployment.yaml \
+        .
+    [ "$status" -eq 0 ]
+    local mount=$(echo "$output" |
+        yq -r '.spec.template.spec.containers[0].volumeMounts[] | select(.name | test("include-helpers-vcl")) | .mountPath + " " + .subPath' |
+        tee -a /dev/stderr)
+    [ "${mount}" = "/etc/varnish/vcls/helpers.vcl helpers.vcl" ]
+}
+
+@test "vcl-bundle: error when include filename is ./router.vcl" {
+    cd "$(chart_dir)"
+    render_with_includes "./router.vcl"
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"filename './router.vcl' collides with a route mounted at the same path"* ]]
+}
+
+@test "vcl-bundle: error when include filename is ./cmds.cli" {
+    cd "$(chart_dir)"
+    render_with_includes "./cmds.cli"
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"filename './cmds.cli' collides with a route mounted at the same path"* ]]
+}
+
+@test "vcl-bundle: error when include filename is ./<route>.vcl" {
+    cd "$(chart_dir)"
+    render_with_includes "./foo.vcl"
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"filename './foo.vcl' collides with a route mounted at the same path"* ]]
+}
+
+@test "vcl-bundle: error when two include filenames have the same clean path" {
+    cd "$(chart_dir)"
+    render_with_includes "a//b.vcl" "a/b.vcl"
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"collides with another include mounted at the same path"* ]]
+}
+
+# ── File/directory mount overlaps ─────────────────────────────────────────────
+
+@test "vcl-bundle: error when include is under a route file" {
+    cd "$(chart_dir)"
+    render_with_includes "foo.vcl/x.vcl"
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'foo.vcl/x.vcl' and 'foo.vcl' cannot both be mounted, as one is a directory of the other"* ]]
+}
+
+@test "vcl-bundle: error when include is under router.vcl" {
+    cd "$(chart_dir)"
+    render_with_includes "router.vcl/x.vcl"
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'router.vcl/x.vcl' and 'router.vcl' cannot both be mounted"* ]]
+}
+
+@test "vcl-bundle: error when include is under another include" {
+    cd "$(chart_dir)"
+    render_with_includes "lib/" "lib/x.vcl"
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'lib' and 'lib/x.vcl' cannot both be mounted"* ]]
+}
+
+@test "vcl-bundle: includes sharing a directory or a name prefix are accepted" {
+    cd "$(chart_dir)"
+    render_with_includes "lib/a.vcl" "lib/b.vcl" "libx.vcl" "foo.vcl.d/x.vcl"
+    [ "$status" -eq 0 ]
 }

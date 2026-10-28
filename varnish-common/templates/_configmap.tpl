@@ -134,6 +134,7 @@ env: {
 {{/*
 Normalizes a route object's name for use as a VCL filename and Varnish label.
 Takes a route object as context. Replaces non-alphanumeric characters with underscores.
+Names derived from a hostname that does not start with a letter get a "route_" prefix.
 */}}
 {{- define "varnish-common.vclBundleK8sName" -}}
 {{- $s := regexReplaceAll "[^a-z0-9]" (. | lower) "-" -}}
@@ -145,9 +146,17 @@ Takes a route object as context. Replaces non-alphanumeric characters with under
 {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" .name -}}
 {{- fail (printf "server.vcls.routes: name '%s' contains path traversal sequence" .name) -}}
 {{- end -}}
+{{- if not (regexMatch "^[a-zA-Z]" .name) -}}
+{{- fail (printf "server.vcls.routes: name '%s' must start with a letter, as it is used as a VCL label" .name) -}}
+{{- end -}}
 {{- regexReplaceAll "[^a-zA-Z0-9]" .name "_" -}}
 {{- else if .hostnames -}}
-{{- regexReplaceAll "[^a-zA-Z0-9]" (first .hostnames) "_" -}}
+{{- $name := regexReplaceAll "[^a-zA-Z0-9]" (first .hostnames) "_" -}}
+{{- /* VCL labels must start with a letter */ -}}
+{{- if not (regexMatch "^[a-zA-Z]" $name) -}}
+{{- $name = printf "route_%s" $name -}}
+{{- end -}}
+{{- $name -}}
 {{- else -}}
 any
 {{- end -}}
@@ -183,6 +192,10 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- if not (eq .Values.server.cmdfileConfigPath "/etc/varnish/cmds.cli") -}}
       {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
     {{- end -}}
+    {{- $routerVolName := printf "%s-config-vcl-bundle-router" $.Release.Name -}}
+    {{- if gt (len $routerVolName) 63 -}}
+      {{- fail (printf "server.vcls.routes: volume name '%s' exceeds 63 characters, use a shorter release name" $routerVolName) -}}
+    {{- end -}}
     {{- $seen := dict -}}
     {{- $seenK8s := dict -}}
     {{- $seenMountPaths := dict "router.vcl" "reserved" "cmds.cli" "reserved" -}}
@@ -200,6 +213,16 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- end -}}
       {{- $_ := set $seen $name true -}}
       {{- $k8sName := include "varnish-common.vclBundleK8sName" $name -}}
+      {{- if eq $k8sName "" -}}
+        {{- fail (printf "server.vcls.routes: name '%s' produces an empty k8s name" $name) -}}
+      {{- end -}}
+      {{- $volName := printf "%s-config-vcl-bundle-%s" $.Release.Name $k8sName -}}
+      {{- if gt (len $volName) 63 -}}
+        {{- fail (printf "server.vcls.routes: volume name '%s' exceeds 63 characters, shorten the route name or set 'name'" $volName) -}}
+      {{- end -}}
+      {{- if has $k8sName (list "router" "cmds") -}}
+        {{- fail (printf "server.vcls.routes: k8s name '%s' is reserved for the built-in router and cmds ConfigMaps" $k8sName) -}}
+      {{- end -}}
       {{- if hasKey $seenK8s $k8sName -}}
         {{- fail (printf "server.vcls.routes: duplicate k8s name '%s' — routes must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
@@ -207,17 +230,43 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- $_ := set $seenMountPaths (printf "%s.vcl" $name) "route" -}}
     {{- end -}}
     {{- $seenIncludeK8s := dict -}}
+    {{- $seenIncludePaths := dict -}}
     {{- range $filename, $_ := .Values.server.vcls.includes -}}
       {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" $filename -}}
         {{- fail (printf "server.vcls.includes: filename '%s' contains path traversal sequence" $filename) -}}
       {{- end -}}
+      {{- /* Compare mount paths in canonical form, so that "./x" or "a//b" match "x" or "a/b" */ -}}
+      {{- $path := clean $filename -}}
       {{- $k8sName := include "varnish-common.vclBundleK8sName" $filename -}}
+      {{- if eq $k8sName "" -}}
+        {{- fail (printf "server.vcls.includes: filename '%s' produces an empty k8s name" $filename) -}}
+      {{- end -}}
+      {{- $volName := printf "%s-config-vcl-bundle-include-%s" $.Release.Name $k8sName -}}
+      {{- if gt (len $volName) 63 -}}
+        {{- fail (printf "server.vcls.includes: volume name '%s' exceeds 63 characters, shorten the filename" $volName) -}}
+      {{- end -}}
       {{- if hasKey $seenIncludeK8s $k8sName -}}
         {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
       {{- $_ := set $seenIncludeK8s $k8sName true -}}
-      {{- if hasKey $seenMountPaths $filename -}}
+      {{- if hasKey $seenK8s (printf "include-%s" $k8sName) -}}
+        {{- fail (printf "server.vcls.includes: filename '%s' collides with the k8s name of route 'include-%s'" $filename $k8sName) -}}
+      {{- end -}}
+      {{- if hasKey $seenMountPaths $path -}}
         {{- fail (printf "server.vcls.includes: filename '%s' collides with a route mounted at the same path" $filename) -}}
+      {{- end -}}
+      {{- if hasKey $seenIncludePaths $path -}}
+        {{- fail (printf "server.vcls.includes: filename '%s' collides with another include mounted at the same path" $filename) -}}
+      {{- end -}}
+      {{- $_ := set $seenIncludePaths $path true -}}
+    {{- end -}}
+    {{- /* A path cannot be mounted both as a file and as a directory containing another mount */ -}}
+    {{- $mountPaths := concat (keys $seenMountPaths) (keys $seenIncludePaths) | sortAlpha -}}
+    {{- range $path := keys $seenIncludePaths | sortAlpha -}}
+      {{- range $other := $mountPaths -}}
+        {{- if or (hasPrefix (printf "%s/" $other) $path) (hasPrefix (printf "%s/" $path) $other) -}}
+          {{- fail (printf "server.vcls.includes: '%s' and '%s' cannot both be mounted, as one is a directory of the other" $path $other) -}}
+        {{- end -}}
       {{- end -}}
     {{- end -}}
   {{- end -}}

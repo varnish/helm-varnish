@@ -136,11 +136,11 @@ data:
   cmds.cli: |
     {{- range .Values.server.vcls.routes }}
     {{- $name := include "varnish-common.vclBundleNormalizeName" . }}
-    vcl.load route_{{ $name }}_0 /etc/varnish/vcls/{{ $name }}.vcl
-    vcl.label {{ $name }} route_{{ $name }}_0
+    vcl.load route-{{ $name }}-0 /etc/varnish/vcls/{{ $name }}.vcl
+    vcl.label {{ $name }} route-{{ $name }}-0
     {{- end }}
-    vcl.load router_0 /etc/varnish/vcls/router.vcl
-    vcl.use router_0
+    vcl.load router-0 /etc/varnish/vcls/router.vcl
+    vcl.use router-0
 {{- range .Values.server.vcls.routes }}
 {{- $name := include "varnish-common.vclBundleNormalizeName" . }}
 {{- if eq (default "" .vclContent) "" }}
