@@ -1033,8 +1033,8 @@ Declares the Varnish extra container
 Declares the Varnish init containers
 */}}
 {{- define "varnish.initContainers" -}}
-{{- $msePersistenceEnabled := and (include "varnish.isEnterprise" .) .Values.server.mse.persistence.enabled }}
-{{- $mse4PersistenceEnabled := and (include "varnish.isEnterprise" .) .Values.server.mse4.persistence.enabled }}
+{{- $msePersistenceEnabled := and (include "varnish.mseEnabled" .) .Values.server.mse.persistence.enabled }}
+{{- $mse4PersistenceEnabled := and (include "varnish.mse4Enabled" .) .Values.server.mse4.persistence.enabled }}
 {{- if or (and (include "varnish.agentEnabled" .) .Values.server.initAgent.enabled) .Values.server.extraInitContainers $msePersistenceEnabled $mse4PersistenceEnabled }}
 initContainers:
 {{- if $msePersistenceEnabled }}
