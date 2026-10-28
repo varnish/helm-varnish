@@ -188,6 +188,31 @@ rollingUpdate:
     [ "${actual}" = 'mse-config' ]
 }
 
+@test "StatefulSet/mse/persistence: initContainer is not defined when mse is disabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.kind=StatefulSet' \
+        --set 'server.mse4.enabled=true' \
+        --set 'server.mse.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
+              .name'  | tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse") | .metadata.name' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+}
+
 @test "StatefulSet/mse/persistence: can be enabled with custom values" {
     skip_unless_enterprise
     cd "$(chart_dir)"
@@ -319,6 +344,30 @@ rollingUpdate:
             .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
               .name'  | tee -a /dev/stderr)
     [ "${actual}" = 'mse4-config' ]
+}
+
+@test "StatefulSet/mse4/persistence: initContainer is not defined when mse4 is disabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.kind=StatefulSet' \
+        --set 'server.mse4.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
+              .name'  | tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse4") | .metadata.name' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '' ]
 }
 
 @test "StatefulSet/mse4/persistence: can be enabled with custom values" {
