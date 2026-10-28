@@ -668,6 +668,43 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "${actual}" == *"collides with a route mounted at the same path"* ]]
 }
 
+@test "vcl-bundle: error when route k8s name collides with reserved router" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[0].name=Router" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"k8s name 'router' is reserved"* ]]
+}
+
+@test "vcl-bundle: error when route k8s name collides with reserved cmds" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[0].name=cmds" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"k8s name 'cmds' is reserved"* ]]
+}
+
+@test "vcl-bundle: error when include k8s name collides with a route k8s name" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[0].name=include-helpers-vcl" \
+        --set "server.vcls.includes.helpers\\.vcl=content" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"filename 'helpers.vcl' collides with the k8s name of route 'include-helpers-vcl'"* ]]
+}
+
 @test "vcl-bundle: error when two includes produce the same k8s name" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \

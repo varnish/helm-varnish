@@ -200,6 +200,9 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- end -}}
       {{- $_ := set $seen $name true -}}
       {{- $k8sName := include "varnish.vclBundleK8sName" $name -}}
+      {{- if has $k8sName (list "router" "cmds") -}}
+        {{- fail (printf "server.vcls.routes: k8s name '%s' is reserved for the built-in router and cmds ConfigMaps" $k8sName) -}}
+      {{- end -}}
       {{- if hasKey $seenK8s $k8sName -}}
         {{- fail (printf "server.vcls.routes: duplicate k8s name '%s' — routes must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
@@ -216,6 +219,9 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
         {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
       {{- $_ := set $seenIncludeK8s $k8sName true -}}
+      {{- if hasKey $seenK8s (printf "include-%s" $k8sName) -}}
+        {{- fail (printf "server.vcls.includes: filename '%s' collides with the k8s name of route 'include-%s'" $filename $k8sName) -}}
+      {{- end -}}
       {{- if hasKey $seenMountPaths $filename -}}
         {{- fail (printf "server.vcls.includes: filename '%s' collides with a route mounted at the same path" $filename) -}}
       {{- end -}}
