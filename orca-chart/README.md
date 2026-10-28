@@ -307,9 +307,11 @@ orca:
 `spec.volumeClaimTemplates` is immutable on an existing StatefulSet, so adding `book_path` to a store that is already deployed, or taking it away, makes `helm upgrade` fail rather than migrate. Both need the StatefulSet replaced:
 
 ```sh
-kubectl delete statefulset <release> --cascade=orphan
+kubectl delete statefulset -l app.kubernetes.io/instance=<release> --cascade=orphan
 helm upgrade <release> ...
 ```
+
+The StatefulSet is selected by label rather than by name, because its name is not the release name: it is `<release>-orca-chart` unless the release name already contains the chart name, and `fullnameOverride` or `nameOverride` can change it again.
 
 `--cascade=orphan` leaves the pods and the PVCs in place, so the cached data survives and the new StatefulSet adopts them. Plan it as a maintenance step, and check your `persistentVolumeClaimRetentionPolicy` first if you have changed it from the default.
 
