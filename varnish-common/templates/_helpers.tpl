@@ -229,3 +229,21 @@ Declares the YAML field.
 {{- (dict $fieldName $fieldValue) | toYaml }}
 {{- end }}
 {{- end }}
+
+{{/*
+Declares the env var named .name holding the varnishd working directory
+(-n) for sidecars and scripts. "-" uses the pod name, an empty
+server.workDir declares nothing as varnishd then runs without -n.
+Takes a dict with "name" and "Values".
+*/}}
+{{- define "varnish.workDirEnv" -}}
+{{- if eq (toString .Values.server.workDir) "-" }}
+- name: {{ .name }}
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+{{- else if not (eq (toString .Values.server.workDir) "") }}
+- name: {{ .name }}
+  value: "{{ .Values.server.workDir }}"
+{{- end }}
+{{- end }}

@@ -434,9 +434,9 @@ Whether to enable shared PID namespace between all containers in a Pod. This is 
 **server.workDir**
 
 - Type: string
-- Default: `-`
+- Default: `""`
 
-Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to "-", the Pod name is used.
+Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to "-", the Pod name is used. When empty, varnishd runs without `-n` and uses the Varnish default, so `varnishstat`, `varnishadm` and `varnishlog` work without `-n` in `kubectl exec` and in extra containers.
 
 **server.http.enabled**
 

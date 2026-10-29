@@ -329,7 +329,7 @@ Composing the $varnishArgs list or arguments
 */}}
 {{- if (eq .Values.server.workDir "-" ) }}
 {{- $varnishArgs = concat $varnishArgs (list "-n" "$(VARNISH_WORKDIR)" )  }}
-{{- else }}
+{{- else if not (eq (toString .Values.server.workDir) "") }}
 {{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir)) }}
 {{- end }}
 {{/*
@@ -534,15 +534,7 @@ Composing the $varnishArgs list or arguments
           fieldPath: metadata.name
     {{- end }}
     {{- end }}
-    {{- if eq .Values.server.workDir "-" }}
-    - name: VARNISH_WORKDIR
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.name
-    {{- else }}
-    - name: VARNISH_WORKDIR
-      value: "{{ .Values.server.workDir }}"
-    {{- end }}
+    {{- include "varnish.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
     {{- if (include "varnish.clusterEnabled" .) }}
     - name: VARNISH_CLUSTER_TOKEN
       valueFrom:
@@ -686,7 +678,7 @@ Composing the $varnishArgs list or arguments
         - -c
         - |
           set -e
-          while [ "$(varnishstat -n "$VARNISH_WORKDIR" -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
+          while [ "$(varnishstat {{ if not (eq (toString .Values.server.workDir) "") }}-n "$VARNISH_WORKDIR" {{ end }}-1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
             echo >&2 "Waiting for Varnish to drain connections..."
             sleep {{ .Values.server.delayedShutdown.mempool.pollSeconds }}
           done
@@ -704,21 +696,25 @@ Declares the Varnish NCSA container
   {{- include "varnish.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
   {{- include "varnish.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
-  {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
-  args: {{- toYaml ( concat (list "-n"  "$(VARNISH_WORKDIR)" ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
+  {{- $ncsaArgs := list }}
+  {{- if not (eq (toString .Values.server.workDir) "") }}
+    {{- $ncsaArgs = list "-n" "$(VARNISH_WORKDIR)" }}
+  {{- end }}
+  {{- if eq (kindOf .Values.server.varnishncsa.extraArgs) "string" }}
+    {{- $extra := .Values.server.varnishncsa.extraArgs | trim }}
+    {{- if $extra }}
+      {{- $ncsaArgs = concat $ncsaArgs (regexSplit "\\s+" $extra -1) }}
+    {{- end }}
+  {{- else if .Values.server.varnishncsa.extraArgs }}
+    {{- $ncsaArgs = concat $ncsaArgs .Values.server.varnishncsa.extraArgs }}
+  {{- end }}
+  {{- if $ncsaArgs }}
+  args: {{- toYaml $ncsaArgs | nindent 4 }}
   {{- end }}
   env:
     - name: VSM_NOPID
       value: "1"
-  {{- if eq .Values.server.workDir "-" }}
-    - name: VARNISH_WORKDIR
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.name
-  {{- else }}
-    - name: VARNISH_WORKDIR
-      value: "{{ .Values.server.workDir }}"
-  {{- end }}
+    {{- include "varnish.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
   {{- if and .Values.server.varnishncsa.extraEnvs (not (empty .Values.server.varnishncsa.extraEnvs)) }}
   {{- range $k, $v := .Values.server.varnishncsa.extraEnvs }}
     - name: {{ $k | quote }}
@@ -731,7 +727,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (toString .Values.server.workDir) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
@@ -740,7 +736,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (toString .Values.server.workDir) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
@@ -749,7 +745,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (toString .Values.server.workDir) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
@@ -780,15 +776,7 @@ Declares the Varnish Otel container
   {{- include "varnish.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
   command: ["/usr/bin/varnish-otel"]
   env:
-    {{- if eq .Values.server.workDir "-" }}
-    - name: OTEL_VARNISH_WORKDIR
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.name
-    {{- else }}
-    - name: OTEL_VARNISH_WORKDIR
-      value: "{{ .Values.server.workDir }}"
-    {{- end }}
+    {{- include "varnish.workDirEnv" (dict "name" "OTEL_VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
   {{- if .Values.server.otel.env }}
     {{- include "varnish.toEnv" (merge (dict "envs" .Values.server.otel.env) .) | nindent 4 }}
   {{- end }}
@@ -805,6 +793,9 @@ Declares the Varnish Controller Agent container
 */}}
 {{- define "varnish.agentContainer" -}}
 {{- if (include "varnish.agentEnabled" .) }}
+{{- if eq (toString .Values.server.workDir) "" }}
+  {{- fail "'server.workDir' cannot be empty when 'server.agent.enabled' is set" }}
+{{- end }}
 - name: {{ .Chart.Name }}-agent
   {{- include "varnish.securityContext" (merge (dict "section" "server.agent") .) | nindent 2 }}
   {{- include "varnish.image" (merge (dict "image" .Values.server.agent.image) .) | nindent 2 }}

@@ -853,6 +853,97 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '[]' ]
 }
 
+@test "${kind}/workDir: no -n when empty" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -o=json -I=0 '.command' |
+        jq -r -c 'if . == null then "no command" else index(["-n"]) end' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_WORKDIR") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '' ]
+}
+
+@test "${kind}/workDir: pod name with -" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -o=json -I=0 '.command' |
+        jq -r -c '.[index(["-n"]) + 1]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '$(VARNISH_WORKDIR)' ]
+
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_WORKDIR") | .valueFrom.fieldRef.fieldPath' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'metadata.name' ]
+}
+
+@test "${kind}/workDir: Cache default has no -n" {
+    is_enterprise && skip "Varnish Cache only"
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+        jq -r -c 'if . == null then "no command" else index(["-n"]) end' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+}
+
+@test "${kind}/agent: fails with empty workDir" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    run helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.workDir=' \
+        --namespace default \
+        --show-only ${template} \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"'server.workDir' cannot be empty when 'server.agent.enabled' is set"* ]]
+}
+
 @test "${kind}/extraListens: not configured by default" {
     cd "$(chart_dir)"
 
@@ -3452,6 +3543,7 @@ env: {
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
+        --set "server.workDir=-" \
         --set "server.delayedShutdown.method=mempool" \
         --set "server.delayedShutdown.mempool.pollSeconds=5" \
         --set "server.delayedShutdown.mempool.waitSeconds=30" \
@@ -3475,6 +3567,26 @@ env: {
     [[ "${actual}" == *'varnishstat -n "$VARNISH_WORKDIR" -1'* ]]
     local actual=$(echo "$container" | yq -r '.env[] | select(.name == "VARNISH_WORKDIR") | .name' | tee -a /dev/stderr)
     [ "${actual}" == "VARNISH_WORKDIR" ]
+}
+
+@test "${kind}/delayedShutdown/mempool: no -n when workDir empty" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=' \
+        --set "server.delayedShutdown.method=mempool" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .lifecycle.preStop.exec.command[2]' |
+            tee -a /dev/stderr)
+    [[ "${actual}" == *'varnishstat -1'* ]]
 }
 
 @test "${kind}/delayedShutdown: can be enabled with shutdown_delay" {
@@ -5875,6 +5987,52 @@ release-namespace: to-be-override
     [ "${actual}" != 'null' ]
 }
 
+@test "${kind}/varnishncsa: targets varnishd workdir without extraArgs" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
+        --set-json 'server.varnishncsa.extraArgs=[]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .args' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["-n","$(VARNISH_WORKDIR)"]' ]
+}
+
+@test "${kind}/varnishncsa: no -n when workDir empty" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=' \
+        --set 'server.varnishncsa.startupProbe.periodSeconds=5' \
+        --set-json 'server.varnishncsa.extraArgs=[]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa")' |
+            tee -a /dev/stderr)
+    [ -n "${container}" ]
+
+    local actual=$(echo "$container" | yq -o=json -I=0 '.args' | tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+
+    local actual=$(echo "$container" | yq -r '.startupProbe.exec.command[2]' | tee -a /dev/stderr)
+    [ "${actual}" == '/usr/bin/varnishncsa -d -t3' ]
+}
+
 @test "${kind}/varnishncsa/image: inherit from ${chart} by default" {
     cd "$(chart_dir)"
 
@@ -5939,6 +6097,7 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
         --set 'server.varnishncsa.startupProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.startupProbe.periodSeconds=20' \
         --set 'server.varnishncsa.startupProbe.timeoutSeconds=2' \
@@ -5959,6 +6118,7 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
         --set 'server.varnishncsa.readinessProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.readinessProbe.periodSeconds=20' \
         --set 'server.varnishncsa.readinessProbe.timeoutSeconds=2' \
@@ -5995,6 +6155,7 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
         --set 'server.varnishncsa.livenessProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.livenessProbe.periodSeconds=20' \
         --set 'server.varnishncsa.livenessProbe.timeoutSeconds=2' \

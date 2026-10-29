@@ -187,3 +187,23 @@ chart=$(chart_name)
 
     [ "${actual}" == "${chart}-otel" ]
 }
+
+@test "Deployment/otel: no OTEL_VARNISH_WORKDIR when workDir empty" {
+    cd "$(chart_dir)"
+    local object=$((helm template \
+        --set 'server.otel.enabled=true' \
+        --set 'server.workDir=' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || echo "---") | tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == "${chart}-otel" ]
+
+    local actual=$(echo "$object" |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .env[]? | select(.name == "OTEL_VARNISH_WORKDIR") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == "" ]
+}
