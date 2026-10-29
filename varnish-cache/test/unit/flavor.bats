@@ -8,7 +8,7 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
 
 @test "Flavor: Cache chart is flagged as cache" {
     cd "$(chart_dir)"
-    local actual=$(yq -r '.annotations."varnish.com/flavor"' Chart.yaml)
+    local actual=$(yq -r '.annotations.flavor' Chart.yaml)
     [ "${actual}" == "cache" ]
 }
 

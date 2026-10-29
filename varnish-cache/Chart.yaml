@@ -9,4 +9,4 @@ maintainers:
   - email: containers@varnish-software.com
     name: Varnish Software
 annotations:
-  varnish.com/flavor: cache
+  flavor: cache

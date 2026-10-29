@@ -20,7 +20,7 @@ their tests, which live in `varnish-common/` and are symlinked into each
 chart (`helm package` copies the files they point to). Only `values.yaml`,
 `Chart.yaml`, the README and the chart-specific tests are per chart.
 
-- The `varnish.com/flavor` annotation in `Chart.yaml` tells the templates
+- The `flavor` annotation in `Chart.yaml` tells the templates
   which chart they render. Code reading Enterprise-only values (cluster, MSE,
   agent, license...) must be gated with `include "varnish.isEnterprise" .`
   or one of the predicates next to it in `_helpers.tpl`, as these values do

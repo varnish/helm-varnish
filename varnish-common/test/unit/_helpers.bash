@@ -11,7 +11,7 @@ app_version() {
 }
 
 is_enterprise() {
-  [ "$(yq -r '.annotations."varnish.com/flavor"' < "$(chart_dir)/Chart.yaml")" == "enterprise" ]
+  [ "$(yq -r '.annotations.flavor' < "$(chart_dir)/Chart.yaml")" == "enterprise" ]
 }
 
 skip_unless_enterprise() {
