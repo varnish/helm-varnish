@@ -200,6 +200,13 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- end -}}
       {{- $_ := set $seen $name true -}}
       {{- $k8sName := include "varnish-common.vclBundleK8sName" $name -}}
+      {{- if eq $k8sName "" -}}
+        {{- fail (printf "server.vcls.routes: name '%s' produces an empty k8s name" $name) -}}
+      {{- end -}}
+      {{- $volName := printf "%s-config-vcl-bundle-%s" $.Release.Name $k8sName -}}
+      {{- if gt (len $volName) 63 -}}
+        {{- fail (printf "server.vcls.routes: volume name '%s' exceeds 63 characters, shorten the route name or set 'name'" $volName) -}}
+      {{- end -}}
       {{- if has $k8sName (list "router" "cmds") -}}
         {{- fail (printf "server.vcls.routes: k8s name '%s' is reserved for the built-in router and cmds ConfigMaps" $k8sName) -}}
       {{- end -}}
@@ -215,6 +222,13 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
         {{- fail (printf "server.vcls.includes: filename '%s' contains path traversal sequence" $filename) -}}
       {{- end -}}
       {{- $k8sName := include "varnish-common.vclBundleK8sName" $filename -}}
+      {{- if eq $k8sName "" -}}
+        {{- fail (printf "server.vcls.includes: filename '%s' produces an empty k8s name" $filename) -}}
+      {{- end -}}
+      {{- $volName := printf "%s-config-vcl-bundle-include-%s" $.Release.Name $k8sName -}}
+      {{- if gt (len $volName) 63 -}}
+        {{- fail (printf "server.vcls.includes: volume name '%s' exceeds 63 characters, shorten the filename" $volName) -}}
+      {{- end -}}
       {{- if hasKey $seenIncludeK8s $k8sName -}}
         {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
       {{- end -}}
