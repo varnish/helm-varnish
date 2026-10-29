@@ -8,6 +8,13 @@ chart=$(chart_name)
 default_fsgroup=$(yq -r '.global.podSecurityContext.fsGroup' < "$(chart_dir)/values.yaml")
 default_uid=$(yq -r '.global.securityContext.runAsUser' < "$(chart_dir)/values.yaml")
 
+teardown() {
+    # Set by tests that need a file inside the chart
+    if [ -n "${tls_file:-}" ]; then
+        rm -f "$(chart_dir)/${tls_file}"
+    fi
+}
+
 @test "${kind}: inherits imagePullSecret from global" {
     cd "$(chart_dir)"
 
@@ -661,12 +668,15 @@ release-namespace: {{ .Release.Namespace }}
 @test "${kind}/tls: can be enabled with custom config file" {
     cd "$(chart_dir)"
 
-    # Any non-empty file shipped with the chart will do, the content is not
-    # validated by the chart
+    # .Files.Get only sees files inside the chart and outside of test/ (see
+    # .helmignore), the content is not validated by the chart
+    tls_file=$(mktemp files/bats-tls-XXXXXX.conf)
+    printf 'frontend = {\n  host = "*"\n  port = "443"\n}\n' >"${tls_file}"
+
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.tls.enabled=true' \
-        --set 'server.tls.configFile=README.md' \
+        --set "server.tls.configFile=${tls_file}" \
         --namespace default \
         --show-only ${template} \
         . || echo "---") |
