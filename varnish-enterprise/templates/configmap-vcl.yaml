@@ -43,28 +43,8 @@ data:
   wrapped-default.vcl: |
     vcl 4.1;
 
-    import activedns;
+    include "cluster_auto_dns.vcl";
 
-    include "cluster.vcl";
-
-    sub vcl_init {
-      # Turn on trace headers for debug (optional)
-      {{- if and .Values.cluster.trace }}
-      cluster_opts.set("trace", "true");
-      {{- end }}
-      # For dynamic cluster, create a DNS group with the domain name for headless service
-      new cluster_group = activedns.dns_group(
-        {{- if .Values.cluster.headlessServiceName }}
-        "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
-        {{- else}}
-        "{{ include "varnish-enterprise.fullname" . }}-peers:{{ .Values.server.http.port }}"
-        {{- end }}
-      );
-      # Subscribe the cluster director to the DNS group
-      cluster.subscribe(cluster_group.get_tag());
-      # Set the cluster token
-      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
-    }
     include {{ .Values.server.vclConfigPath | quote }};
 {{- end }}
 {{- if not (empty .Values.server.vcls.routes) }}
@@ -80,29 +60,10 @@ data:
     vcl 4.1;
     {{- if .Values.cluster.enabled }}
 
-    import activedns;
-
-    include "cluster.vcl";
+    include "cluster_auto_dns.vcl";
     {{- end }}
 
     backend default none;
-    {{- if .Values.cluster.enabled }}
-
-    sub vcl_init {
-      {{- if .Values.cluster.trace }}
-      cluster_opts.set("trace", "true");
-      {{- end }}
-      new cluster_group = activedns.dns_group(
-        {{- if .Values.cluster.headlessServiceName }}
-        "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
-        {{- else }}
-        "{{ include "varnish-enterprise.fullname" . }}-peers:{{ .Values.server.http.port }}"
-        {{- end }}
-      );
-      cluster.subscribe(cluster_group.get_tag());
-      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
-    }
-    {{- end }}
 
     sub vcl_recv {
       set req.http.No-Port-Host = regsub(req.http.host, ":\d+$", "");

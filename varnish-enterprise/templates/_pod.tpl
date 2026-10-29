@@ -41,9 +41,6 @@ Sets up Pod annotations
     "routes" .Values.server.vcls.routes
     "includes" .Values.server.vcls.includes
     "clusterEnabled" .Values.cluster.enabled
-    "clusterTrace" .Values.cluster.trace
-    "clusterHeadlessServiceName" .Values.cluster.headlessServiceName
-    "serverHttpPort" .Values.server.http.port
 }}
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl-bundle") (sha256sum (toJson $bundleData))) $checksum) }}
 {{- end }}
@@ -521,15 +518,7 @@ Composing the $varnishArgs list or arguments
       value: "{{ .Values.server.workDir }}"
     {{- end }}
     {{- if .Values.cluster.enabled }}
-    - name: VARNISH_CLUSTER_TOKEN
-      valueFrom:
-        secretKeyRef:
-          {{- if .Values.cluster.secretName }}
-          name: {{ .Values.cluster.secretName }}
-          {{- else }}
-          name: {{ include "varnish-enterprise.fullname" . }}-cluster-secret
-          {{- end }}
-          key: token
+    {{- include "varnish-enterprise.clusterEnv" . | nindent 4 }}
     {{- end }}
     {{- include "varnish-enterprise.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
   {{- if gt (len .Values.server.command) 0 }}
