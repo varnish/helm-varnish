@@ -270,7 +270,10 @@ Declares the Varnish container
 {{/*
 Composing the $varnishArgs list or arguments
 */}}
-{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
+{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" }}
+{{- if include "varnish.isSet" .Values.server.admin.port }}
+  {{- $varnishArgs = concat $varnishArgs (list "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port )) }}
+{{- end }}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 {{- if not (empty .Values.server.vcls.routes) }}
   {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli" "-f" "") }}
@@ -295,13 +298,16 @@ Composing the $varnishArgs list or arguments
 {{/*
     Parameter list
 */}}
-{{- $varnishParams := merge (dict
-    "thread_pool_min" (toString .Values.server.minThreads)
-    "thread_pool_max" (toString .Values.server.maxThreads)
-    "thread_pool_timeout" (toString .Values.server.threadTimeout)
-    )
-    .Values.server.parameters
- }}
+{{- $threadParams := dict }}
+{{- range $pKey, $pValue := dict
+    "thread_pool_min" .Values.server.minThreads
+    "thread_pool_max" .Values.server.maxThreads
+    "thread_pool_timeout" .Values.server.threadTimeout }}
+  {{- if include "varnish.isSet" $pValue }}
+    {{- $_ := set $threadParams $pKey (toString $pValue) }}
+  {{- end }}
+{{- end }}
+{{- $varnishParams := merge $threadParams .Values.server.parameters }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
   {{- if not (include "varnish.isEnterprise" .) }}
     {{- fail "'server.delayedShutdown.method' 'shutdown_delay' requires Varnish Enterprise, use 'sleep' or 'mempool' instead" }}
@@ -329,7 +335,9 @@ Composing the $varnishArgs list or arguments
 {{/*
     TTL
 */}}
+{{- if include "varnish.isSet" .Values.server.ttl }}
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
+{{- end }}
 {{/*
     Listen address
 */}}

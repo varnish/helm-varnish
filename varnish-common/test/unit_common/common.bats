@@ -771,6 +771,88 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '0.0.0.0:9999' ]
 }
 
+@test "${kind}/admin: omitted when port is null" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.admin.port=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            jq -r -c 'if . == null then "no command" else index(["-T"]) end' |
+            tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+}
+
+@test "${kind}/ttl: omitted when null" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.ttl=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            jq -r -c 'if . == null then "no command" else index(["-t"]) end' |
+            tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+}
+
+@test "${kind}/ttl: zero is kept" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.ttl=0' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            jq -r -c '.[index(["-t", "0"]) + 1]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '0' ]
+}
+
+@test "${kind}/threads: omitted when null" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.minThreads=null' \
+        --set 'server.maxThreads=null' \
+        --set 'server.threadTimeout=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            jq -r -c 'if . == null then "no command" else [.[] | select(startswith("thread_pool_"))] end' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '[]' ]
+}
+
 @test "${kind}/extraListens: not configured by default" {
     cd "$(chart_dir)"
 

@@ -65,6 +65,14 @@ MSE is enabled by default ("-") unless MSE4 is enabled.
 {{- end }}
 
 {{/*
+Returns "true" when the value given as context is neither null nor an empty
+string. Unlike a plain "if", zero and false count as set.
+*/}}
+{{- define "varnish.isSet" -}}
+{{- if and (not (kindIs "invalid" .)) (ne (toString .) "") }}true{{ end }}
+{{- end }}
+
+{{/*
 Sets up the Varnish image and its overrides (if any)
 */}}
 {{- define "varnish.image" }}
