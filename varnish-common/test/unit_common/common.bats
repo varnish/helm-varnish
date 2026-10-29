@@ -891,6 +891,47 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '' ]
 }
 
+@test "${kind}/workDir: null is the same as empty" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=null' \
+        --set-json 'server.varnishncsa.extraArgs=[]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '[.spec.template.spec.containers[]? | .command, .args, .env]' |
+        tee -a /dev/stderr)
+    [[ "${actual}" == '[["/usr/sbin/varnishd"'* ]]
+    [[ "${actual}" != *'"-n"'* ]]
+    [[ "${actual}" != *'nil'* ]]
+    [[ "${actual}" != *'VARNISH_WORKDIR'* ]]
+}
+
+@test "${kind}/workDir: numeric value is used as is" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=1' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+        jq -r -c '.[index(["-n"]) + 1]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '1' ]
+}
+
 @test "${kind}/workDir: pod name with -" {
     cd "$(chart_dir)"
 
