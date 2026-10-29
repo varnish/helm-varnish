@@ -328,10 +328,10 @@ Composing the $varnishArgs list or arguments
 {{/*
     Working directory
 */}}
-{{- if (eq .Values.server.workDir "-" ) }}
+{{- if eq (include "varnish.workDir" .) "-" }}
 {{- $varnishArgs = concat $varnishArgs (list "-n" "$(VARNISH_WORKDIR)" )  }}
-{{- else if not (eq (toString .Values.server.workDir) "") }}
-{{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir)) }}
+{{- else if not (eq (include "varnish.workDir" .) "") }}
+{{- $varnishArgs = concat $varnishArgs (list "-n" (include "varnish.workDir" .)) }}
 {{- end }}
 {{/*
     TTL
@@ -679,7 +679,7 @@ Composing the $varnishArgs list or arguments
         - -c
         - |
           set -e
-          while [ "$(varnishstat {{ if not (eq (toString .Values.server.workDir) "") }}-n "$VARNISH_WORKDIR" {{ end }}-1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
+          while [ "$(varnishstat {{ if not (eq (include "varnish.workDir" .) "") }}-n "$VARNISH_WORKDIR" {{ end }}-1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
             echo >&2 "Waiting for Varnish to drain connections..."
             sleep {{ .Values.server.delayedShutdown.mempool.pollSeconds }}
           done
@@ -698,7 +698,7 @@ Declares the Varnish NCSA container
   {{- include "varnish.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
   {{- $ncsaArgs := list }}
-  {{- if not (eq (toString .Values.server.workDir) "") }}
+  {{- if not (eq (include "varnish.workDir" .) "") }}
     {{- $ncsaArgs = list "-n" "$(VARNISH_WORKDIR)" }}
   {{- end }}
   {{- if eq (kindOf .Values.server.varnishncsa.extraArgs) "string" }}
@@ -728,7 +728,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (toString .Values.server.workDir) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
@@ -737,7 +737,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (toString .Values.server.workDir) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
@@ -746,7 +746,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (toString .Values.server.workDir) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
@@ -794,7 +794,7 @@ Declares the Varnish Controller Agent container
 */}}
 {{- define "varnish.agentContainer" -}}
 {{- if (include "varnish.agentEnabled" .) }}
-{{- if eq (toString .Values.server.workDir) "" }}
+{{- if eq (include "varnish.workDir" .) "" }}
   {{- fail "'server.workDir' cannot be empty when 'server.agent.enabled' is set" }}
 {{- end }}
 - name: {{ .Chart.Name }}-agent
@@ -810,7 +810,7 @@ Declares the Varnish Controller Agent container
     - name: VARNISH_CONTROLLER_VARNISH_ADMIN_PORT
       value: {{ .Values.server.admin.port | quote }}
     - name: VARNISH_CONTROLLER_VARNISH_NAME
-      value: {{ (toString .Values.server.workDir) | quote }}
+      value: {{ (include "varnish.workDir" .) | quote }}
     {{- if .Values.server.http.enabled }}
     - name: VARNISH_CONTROLLER_VARNISH_PORT
       value: {{ .Values.server.http.port | quote }}
