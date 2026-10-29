@@ -30,6 +30,10 @@ chart (`helm package` copies the files they point to). Only `values.yaml`,
 - `test/golden/run.sh` compares the rendered output of each chart against
   snapshots; run it with `--update` after an intended change and review the
   diff for both charts.
+- Both charts define the same named templates (`varnish.*`). Helm keeps only
+  one definition per template name across a parent chart and its
+  subcharts, so a parent chart depending on both must use releases built
+  from the same `varnish-common` revision.
 
 ## License
 

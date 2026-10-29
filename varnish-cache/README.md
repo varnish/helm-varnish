@@ -177,6 +177,10 @@ server:
       subPath: home.vcl
 ```
 
+#### Using as a subchart
+
+`varnish-cache` and `varnish-enterprise` share their named templates (`varnish.*`). When both are dependencies of the same parent chart, use releases built from the same `varnish-common` revision, as Helm keeps only one definition per template name.
+
 ## Support
 
 Community support for Varnish Helm Chart is provided via [GitHub](https://github.com/varnish/helm-varnish-cache).
@@ -617,10 +621,12 @@ Sets the threshold in seconds where idle threads are destroyed after least this 
 
 **server.extraArgs**
 
-- Type: array of strings
+- Type: string or array of strings
 - Default: `[]`
 
-Sets the extra arguments to the varnishd.
+Sets the extra arguments to the varnishd. Each string (and each string item of a list) is split on whitespace into separate arguments, so values containing spaces cannot be passed through `server.extraArgs`; use `server.parameters` or a cmdfile instead.
+
+Since chart 0.2.0, list items are split on whitespace as in the Varnish Enterprise chart; previously, each list item was passed to varnishd unchanged.
 
 **server.parameters**
 
