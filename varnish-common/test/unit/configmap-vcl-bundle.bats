@@ -816,3 +816,66 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
+
+# ── Kubernetes name limits ─────────────────────────────────────────────────────
+
+@test "vcl-bundle: error when route k8s name is empty" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].name=_" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.routes: name '_' produces an empty k8s name"* ]]
+}
+
+@test "vcl-bundle: error when route volume name exceeds 63 characters" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].hostnames[0]=www.some-long-customer-domain.example.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.routes: volume name 'myrel-config-vcl-bundle-www-some-long-customer-domain-example-com' exceeds 63 characters"* ]]
+}
+
+@test "vcl-bundle: route volume name of exactly 63 characters is accepted" {
+    cd "$(chart_dir)"
+    # "myrel-config-vcl-bundle-" is 24 characters
+    local name=$(printf 'a%.0s' {1..39})
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].name=${name}" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -eq 0 ]
+
+    name="${name}a"
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].name=${name}" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"exceeds 63 characters"* ]]
+}
+
+@test "vcl-bundle: error when include volume name exceeds 63 characters" {
+    cd "$(chart_dir)"
+    # "myrel-config-vcl-bundle-include-" is 32 characters
+    local filename="$(printf 'a%.0s' {1..32}).vcl"
+    run --separate-stderr helm template myrel \
+        --namespace default \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.includes.${filename//./\\.}=vcl 4.1;" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.includes: volume name 'myrel-config-vcl-bundle-include-${filename%.vcl}-vcl' exceeds 63 characters"* ]]
+}
