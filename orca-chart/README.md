@@ -269,6 +269,56 @@ orca:
 
 Scaling up creates a new empty PVC for the new replica (which cold-starts while the existing replicas keep their warm cache). Scaling down does *not* delete PVCs by default.
 
+### Putting the book on its own volume
+
+A store's book is the index MSE4 keeps of what is cached. Its IO is small and random where the store's is large and sequential, and MSE4 recommends splitting the two across devices when they are not alike. That is what `book_path` is for: a fast local SSD for the book, a large or network-backed volume for the store.
+
+Setting `book_path` on a store makes the chart render a second PVC per replica, `orca-book-<store-name>`, mounted at that path. It needs a `book_volume` block alongside it:
+
+```yaml
+kind: StatefulSet
+replicaCount: 3
+storage:
+  storageClassName: bulk
+orca:
+  varnish:
+    storage:
+      stores:
+      - name: store1
+        path: /var/lib/varnish-supervisor/storage/store1
+        size: 1T
+        book_size: 5G
+        book_path: /var/lib/varnish-supervisor/book/store1
+        book_volume:
+          size: 7G
+          storageClassName: fast-nvme
+```
+
+* `book_volume` is read by the chart alone. It is stripped before the configuration is written, since unknown keys there are rejected.
+* `book_volume.size` is required and has to be greater than `book_size` plus that volume's own filesystem reserve (3% with a 1G floor), for the same reason `size` does: a volume formatted to exactly `book_size` has less than that free.
+* Size the book from the object count rather than from the store. A book is a fixed number of slots, one per cached object, so the default 5G holds around 27 million objects and 1G around 5 million. A 1T store paired with a 5G book already assumes objects averaging under 40K, so a larger book is usually wasted space rather than more cache.
+* Growing the book later means growing this volume first. MSE4 builds the new book beside the old one and replaces it, so the volume has to hold both at once while that happens. Expand the PVCs at that point, which needs `allowVolumeExpansion` on the storage class, rather than claiming the extra space up front for a resize that may never come.
+* `book_volume.storageClassName` and `book_volume.accessModes` fall back to the top-level `storage:` block when unset, so only the one that differs has to be named.
+* Every `path` and `book_path` becomes a volume mount on the one container, so they all have to be distinct and none may sit inside another.
+* The mount is what creates the directory. A missing `book_path` is refused rather than created, so that a volume which failed to mount is reported instead of being quietly filled on whatever filesystem the mount point sits on.
+
+`size` still has to cover `book_size` even with `book_path` set. The book is taken out of the store's budget only once the two paths turn out to be on different devices, which is decided at run time by comparing them, and separate PVCs are not a promise of that: a provisioner that hands out directories on one node filesystem, `local-path` among them, backs both claims with the same device. The chart cannot tell which you have, so it keeps `book_size` in the minimum. Being wrong that way asks for a slightly larger store than you needed; the other way renders a config that will not start.
+
+#### Adding or removing a book volume on a running release
+
+`spec.volumeClaimTemplates` is immutable on an existing StatefulSet, so adding `book_path` to a store that is already deployed, or taking it away, makes `helm upgrade` fail rather than migrate. Both need the StatefulSet replaced:
+
+```sh
+kubectl delete statefulset -l app.kubernetes.io/instance=<release> --cascade=orphan
+helm upgrade <release> ...
+```
+
+The StatefulSet is selected by label rather than by name, because its name is not the release name: it is `<release>-orca-chart` unless the release name already contains the chart name, and `fullnameOverride` or `nameOverride` can change it again.
+
+`--cascade=orphan` leaves the pods and the PVCs in place, so the cached data survives and the new StatefulSet adopts them. Plan it as a maintenance step, and check your `persistentVolumeClaimRetentionPolicy` first if you have changed it from the default.
+
+Removing the split means dropping `book_path` and `book_volume` together. Dropping `book_path` alone is refused, since `book_volume` would no longer describe anything. The book then moves back onto the store's volume and the store is shrunk to make room, which drops the objects at the tail.
+
 ### Cache data survives `helm upgrade` and `helm uninstall`
 
 The StatefulSet's `persistentVolumeClaimRetentionPolicy` defaults to `Retain`, so PVCs created from `volumeClaimTemplates` are preserved across `helm upgrade` and `helm uninstall`. If you no longer need the cache data, delete the PVCs manually:
