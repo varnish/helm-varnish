@@ -342,20 +342,6 @@ global:
 
 This securityContext will be set on all containers within this chart. For setting securityContext on the Pod itself, see `global.podSecurityContext`.
 
-**global.initContainer.image**
-
-- Type: string
-- Default: `busybox`
-
-Sets the image of the init containers created by the chart.
-
-**global.initContainer.tag**
-
-- Type: string
-- Default: `1.36`
-
-Sets the image tag of the init containers created by the chart.
-
 ### Service Account configurations
 
 **serviceAccount.create**

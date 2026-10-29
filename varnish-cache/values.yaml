@@ -23,14 +23,6 @@ global:
   #     - name: private-pull-secrets
   imagePullSecrets: []
 
-  # Overrides the default busybox initContainer image.
-  initContainer:
-    # The image to use for the initContainer.
-    image: "busybox"
-
-    # The tag to use for the initContainer image.
-    tag: "1.36"
-
   # An object that conforms to the Kubernetes securityContext definition of a Pod.
   # This securityContext will be set on all Pods within this chart. For setting
   # securityContext on all containers, see `global.securityContext`.
