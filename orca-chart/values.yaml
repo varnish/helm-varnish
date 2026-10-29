@@ -203,16 +203,18 @@ orca:
     # its own, which is what MSE4 recommends when a fast device is available
     # for its small random IO and a large one for the store's sequential IO.
     # It needs a `book_volume` block, which is read by the chart alone and
-    # never reaches the configuration: `size` for the second PVC (greater
-    # than `book_size` plus that volume's own reserve, with room to spare if
-    # the book is ever resized), and optional `storageClassName` and
-    # `accessModes` that otherwise fall back to the top-level `storage:`
-    # block. `size` goes on covering `book_size`, because whether the book is
-    # really on another device is settled at run time and separate PVCs do
-    # not promise it. Every `path` and `book_path` becomes a volume mount, so
-    # they have to be distinct and must not nest. Adding or removing
-    # `book_path` on a running release needs the StatefulSet replaced; see
-    # the README.
+    # never reaches the configuration: `size` for the second PVC, which is
+    # the volume rather than the book file and so has to be greater than
+    # `book_size` plus that volume's own reserve, and optional
+    # `storageClassName` and `accessModes` that otherwise fall back to the
+    # top-level `storage:` block. Size the book by object count, not by the
+    # store: the default 5G holds around 27 million objects. `size` goes on
+    # covering `book_size`, because whether the book is really on another
+    # device is settled at run time and separate PVCs do not promise it.
+    # Every `path` and `book_path` becomes a volume mount, so they have to be
+    # distinct and must not nest. Growing the book later means expanding this
+    # PVC first, and adding or removing `book_path` on a running release
+    # needs the StatefulSet replaced; see the README for both.
     storage:
       stores: []
       # - name: store1
@@ -224,7 +226,7 @@ orca:
       #   book_size: 5G
       #   book_path: /var/lib/varnish-supervisor/book/store2
       #   book_volume:
-      #     size: 10G
+      #     size: 7G
       #     storageClassName: fast-nvme
   virtual_registry:
     registries:

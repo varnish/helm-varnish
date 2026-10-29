@@ -287,15 +287,17 @@ orca:
       - name: store1
         path: /var/lib/varnish-supervisor/storage/store1
         size: 1T
-        book_size: 20G
+        book_size: 5G
         book_path: /var/lib/varnish-supervisor/book/store1
         book_volume:
-          size: 50G
+          size: 7G
           storageClassName: fast-nvme
 ```
 
 * `book_volume` is read by the chart alone. It is stripped before the configuration is written, since unknown keys there are rejected.
-* `book_volume.size` is required and has to be greater than `book_size` plus that volume's own filesystem reserve (3% with a 1G floor), for the same reason `size` does: a volume formatted to exactly `book_size` has less than that free. Leave more headroom still if the book may be resized later, since MSE4 builds the new book before replacing the old one and needs room for both at once.
+* `book_volume.size` is required and has to be greater than `book_size` plus that volume's own filesystem reserve (3% with a 1G floor), for the same reason `size` does: a volume formatted to exactly `book_size` has less than that free.
+* Size the book from the object count rather than from the store. A book is a fixed number of slots, one per cached object, so the default 5G holds around 27 million objects and 1G around 5 million. A 1T store paired with a 5G book already assumes objects averaging under 40K, so a larger book is usually wasted space rather than more cache.
+* Growing the book later means growing this volume first. MSE4 builds the new book beside the old one and replaces it, so the volume has to hold both at once while that happens. Expand the PVCs at that point, which needs `allowVolumeExpansion` on the storage class, rather than claiming the extra space up front for a resize that may never come.
 * `book_volume.storageClassName` and `book_volume.accessModes` fall back to the top-level `storage:` block when unset, so only the one that differs has to be named.
 * Every `path` and `book_path` becomes a volume mount on the one container, so they all have to be distinct and none may sit inside another.
 * The mount is what creates the directory. A missing `book_path` is refused rather than created, so that a volume which failed to mount is reported instead of being quietly filled on whatever filesystem the mount point sits on.
