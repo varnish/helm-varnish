@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "helm.fullname" . }}-test-connection"
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      {{- if .Values.broadcaster.tls.enabled }}
+      args: ['-O-', '--no-check-certificate', 'https://{{ include "helm.fullname" . }}/']
+      {{- else }}
+      args: ['-O-', 'http://{{ include "helm.fullname" . }}/']
+      {{- end }}
+  restartPolicy: Never

@@ -1,0 +1,17 @@
+{{- $scheme := ternary "https" "http" .Values.broadcaster.tls.enabled }}
+Varnish Broadcaster is relaying requests to the Varnish pods behind these
+Services: {{ join ", " .Values.discovery.groups }}
+
+From inside the cluster, invalidate content on all of them with:
+
+  curl -X PURGE {{ $scheme }}://{{ include "helm.fullname" . }}.{{ .Release.Namespace }}.svc/path/to/object
+
+or target a single group with the X-Broadcast-Group header:
+{{- range .Values.discovery.groups }}
+
+  curl -X PURGE -H "X-Broadcast-Group: {{ . }}" {{ $scheme }}://{{ include "helm.fullname" $ }}.{{ $.Release.Namespace }}.svc/path/to/object
+{{- end }}
+
+Check the list of discovered nodes with:
+
+  kubectl exec -n {{ .Release.Namespace }} deploy/{{ include "helm.fullname" . }} -c broadcaster -- cat /etc/broadcaster/nodes.conf
