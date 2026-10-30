@@ -320,7 +320,7 @@ For example:
 ```yaml
 global:
   podSecurityContext:
-    fsGroup: 999
+    fsGroup: 1000
 ```
 
 This securityContext will be set on all Pods within this chart. For setting securityContext on all containers, see `global.securityContext`.
@@ -336,7 +336,7 @@ For example:
 ```yaml
 global:
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
     runAsNonRoot: true
 ```
 
@@ -749,7 +749,7 @@ For example:
 ```yaml
 server:
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
 ```
 
 This securityContext will be set on the Varnish Cache container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
@@ -1108,7 +1108,7 @@ For example:
 ```yaml
 server:
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
 ```
 
 This securityContext will be set on the varnishncsa container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.

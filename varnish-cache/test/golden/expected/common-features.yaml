@@ -141,13 +141,13 @@ spec:
         - name: pull-secret
       serviceAccountName: golden
       securityContext:
-        fsGroup: 999
+        fsGroup: 1000
       shareProcessNamespace: false
       containers:
         - name: varnish-cache
           securityContext:
             runAsNonRoot: true
-            runAsUser: 999
+            runAsUser: 1000
           image: "docker.io/varnish:APP_VERSION"
           imagePullPolicy: IfNotPresent
           ports:
@@ -223,7 +223,7 @@ spec:
         - name: varnish-cache-ncsa
           securityContext:
             runAsNonRoot: true
-            runAsUser: 999
+            runAsUser: 1000
           image: "docker.io/varnish:APP_VERSION"
           imagePullPolicy: IfNotPresent
           command: ["varnishncsa"]

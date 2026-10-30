@@ -11,13 +11,16 @@ global:
   #imagePullSecrets:
   #  - name: private-pull-secrets
 
-  # Sets the securityContext of the Pod.
+  # Sets the securityContext of the Pod. 1000 is the varnish group in the
+  # official varnish image.
   podSecurityContext:
-    fsGroup: 999
+    fsGroup: 1000
 
-  # Sets the securityContext for all containers.
+  # Sets the securityContext for all containers. 1000 is the varnish user in
+  # the official varnish image; varnish-otel fails to start with a user that
+  # does not exist in the image.
   securityContext:
-    runAsUser: 999
+    runAsUser: 1000
     runAsNonRoot: true
 
   # Sets the annotations for all workload resources.

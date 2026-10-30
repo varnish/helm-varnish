@@ -55,9 +55,9 @@ template=${template:-}
         . || echo "---") | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.securityContext' | tee -a /dev/stderr)
 
-    # Note: values.yaml has 'global.podSecurityContext.fsGroup=999' as the default;
+    # Note: values.yaml has 'global.podSecurityContext.fsGroup=1000' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"fsGroup":999,"hello":"world"}' ]
+    [ "${actual}" == '{"fsGroup":1000,"hello":"world"}' ]
 }
 
 @test "${kind}: inherits securityContext from global and server" {
@@ -124,7 +124,7 @@ release-namespace: {{ .Release.Namespace }}
 
     # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":999}' ]
+    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":1000}' ]
 }
 
 @test "${kind}: inherits securityContext from global and server with both as a templated string" {
@@ -2902,7 +2902,7 @@ release-namespace: {{ .Release.Namespace }}
 
     # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":999}' ]
+    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":1000}' ]
 }
 
 @test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with both as a templated string" {
