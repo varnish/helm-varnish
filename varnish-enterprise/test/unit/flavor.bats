@@ -9,7 +9,7 @@ load _helpers
 setup_file() {
     export ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
     export CACHE_FLAVOR_DIR="${BATS_FILE_TMPDIR}/chart"
-    cp -r "$(chart_dir)" "${CACHE_FLAVOR_DIR}"
+    cp -rL "$(chart_dir)" "${CACHE_FLAVOR_DIR}"
     rm -rf "${CACHE_FLAVOR_DIR}/test"
     yq -i '.annotations.flavor = "cache"' "${CACHE_FLAVOR_DIR}/Chart.yaml"
     yq -i 'del(.cluster) |
