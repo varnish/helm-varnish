@@ -1307,6 +1307,42 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == 'thread_pool_timeout=500' ]
 }
 
+@test "${kind}/command: can be configured" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set-json 'server.command=["/bin/sh", "-c", "exec varnishd -F"]' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") | .command' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["/bin/sh","-c","exec varnishd -F"]' ]
+}
+
+@test "${kind}/command: null uses the default command" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.command=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") | .command[0]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "/usr/sbin/varnishd" ]
+}
+
 @test "${kind}/extraArgs: not configured by default" {
     cd "$(chart_dir)"
 

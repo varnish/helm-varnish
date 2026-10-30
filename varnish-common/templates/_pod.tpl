@@ -543,7 +543,7 @@ Composing the $varnishArgs list or arguments
           key: token
     {{- end }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
-  {{- if gt (len .Values.server.command) 0 }}
+  {{- if .Values.server.command }}
   command:
     {{- .Values.server.command | toYaml | nindent 4 }}
   {{- else }}
