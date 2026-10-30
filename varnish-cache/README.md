@@ -179,7 +179,7 @@ server:
 
 #### Using as a subchart
 
-`varnish-cache` and `varnish-enterprise` share their named templates (`varnish.*`). When both are dependencies of the same parent chart, use releases built from the same `varnish-common` revision, as Helm keeps only one definition per template name.
+`varnish-cache` and `varnish-enterprise` share their named templates (`varnish-common.*`). When both are dependencies of the same parent chart, use releases built from the same `varnish-common` revision, as Helm keeps only one definition per template name.
 
 ## Support
 
@@ -1081,7 +1081,7 @@ An object that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definit
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "varnish.name" . }}
+              app.kubernetes.io/name: {{ include "varnish-common.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
     ```

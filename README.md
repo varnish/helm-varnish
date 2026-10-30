@@ -22,7 +22,7 @@ chart (`helm package` copies the files they point to). Only `values.yaml`,
 
 - The `flavor` annotation in `Chart.yaml` tells the templates
   which chart they render. Code reading Enterprise-only values (cluster, MSE,
-  agent, license...) must be gated with `include "varnish.isEnterprise" .`
+  agent, license...) must be gated with `include "varnish-common.isEnterprise" .`
   or one of the predicates next to it in `_helpers.tpl`, as these values do
   not exist in `varnish-cache`.
 - Shared tests that only apply to Varnish Enterprise call
@@ -30,10 +30,11 @@ chart (`helm package` copies the files they point to). Only `values.yaml`,
 - `test/golden/run.sh` compares the rendered output of each chart against
   snapshots; run it with `--update` after an intended change and review the
   diff for both charts.
-- Both charts define the same named templates (`varnish.*`). Helm keeps only
-  one definition per template name across a parent chart and its
-  subcharts, so a parent chart depending on both must use releases built
-  from the same `varnish-common` revision.
+- Shared named templates are prefixed with `varnish-common.` rather than
+  `varnish.`, which a parent chart created with `helm create varnish` would
+  override. Helm keeps only one definition per template name across a
+  parent chart and its subcharts, so a parent chart depending on both
+  charts must use releases built from the same `varnish-common` revision.
 
 ## License
 

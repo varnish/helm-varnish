@@ -1,11 +1,11 @@
-{{- $tlsConfig := include "varnish.tlsConfig" . }}
+{{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- if not (eq $tlsConfig "") }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" . }}-tls
+  name: {{ include "varnish-common.fullname" . }}-tls
   labels:
-    {{- include "varnish.labels" . | nindent 4 }}
+    {{- include "varnish-common.labels" . | nindent 4 }}
 data:
   tls.conf: |
     {{- $tlsConfig | nindent 4 }}

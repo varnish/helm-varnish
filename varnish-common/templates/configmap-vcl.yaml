@@ -1,13 +1,13 @@
-{{- include "varnish.vclBundleConflictCheck" . }}
-{{- $vclConfig := include "varnish.vclConfig" . }}
+{{- include "varnish-common.vclBundleConflictCheck" . }}
+{{- $vclConfig := include "varnish-common.vclConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if not (eq $vclConfig "") }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" . }}-vcl
+  name: {{ include "varnish-common.fullname" . }}-vcl
   labels:
-    {{- include "varnish.labels" . | nindent 4 }}
+    {{- include "varnish-common.labels" . | nindent 4 }}
 data:
   {{ $defaultVcl }}: |
     {{- $vclConfig | nindent 4 }}
@@ -19,16 +19,16 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
+  name: {{ include "varnish-common.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
   labels:
-    {{- include "varnish.labels" $ | nindent 4 }}
+    {{- include "varnish-common.labels" $ | nindent 4 }}
 data:
   {{ $k }}: |
     {{- tpl $v $ | nindent 4 }}
 {{- end }}
 {{- end }}
 
-{{- if (include "varnish.clusterEnabled" .) }}
+{{- if (include "varnish-common.clusterEnabled" .) }}
 {{- if not .Values.server.http.enabled }}
 {{- fail "'server.http.enabled must be true for clustering to work" }}
 {{- end }}
@@ -36,9 +36,9 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" . }}-vcl-wrapped-default-vcl
+  name: {{ include "varnish-common.fullname" . }}-vcl-wrapped-default-vcl
   labels:
-    {{- include "varnish.labels" . | nindent 4 }}
+    {{- include "varnish-common.labels" . | nindent 4 }}
 data:
   wrapped-default.vcl: |
     vcl 4.1;
@@ -57,7 +57,7 @@ data:
         {{- if .Values.cluster.headlessServiceName }}
         "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
         {{- else}}
-        "{{ include "varnish.fullname" . }}-peers:{{ .Values.server.http.port }}"
+        "{{ include "varnish-common.fullname" . }}-peers:{{ .Values.server.http.port }}"
         {{- end }}
       );
       # Subscribe the cluster director to the DNS group
@@ -72,13 +72,13 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" . }}-vcl-bundle-router
+  name: {{ include "varnish-common.fullname" . }}-vcl-bundle-router
   labels:
-    {{- include "varnish.labels" . | nindent 4 }}
+    {{- include "varnish-common.labels" . | nindent 4 }}
 data:
   router.vcl: |
     vcl 4.1;
-    {{- if (include "varnish.clusterEnabled" .) }}
+    {{- if (include "varnish-common.clusterEnabled" .) }}
 
     import activedns;
 
@@ -86,7 +86,7 @@ data:
     {{- end }}
 
     backend default none;
-    {{- if (include "varnish.clusterEnabled" .) }}
+    {{- if (include "varnish-common.clusterEnabled" .) }}
 
     sub vcl_init {
       {{- if .Values.cluster.trace }}
@@ -96,7 +96,7 @@ data:
         {{- if .Values.cluster.headlessServiceName }}
         "{{ .Values.cluster.headlessServiceName }}:{{ .Values.server.http.port }}"
         {{- else }}
-        "{{ include "varnish.fullname" . }}-peers:{{ .Values.server.http.port }}"
+        "{{ include "varnish-common.fullname" . }}-peers:{{ .Values.server.http.port }}"
         {{- end }}
       );
       cluster.subscribe(cluster_group.get_tag());
@@ -108,7 +108,7 @@ data:
       set req.http.No-Port-Host = regsub(req.http.host, ":\d+$", "");
     {{- $hasCatchAll := false }}
     {{- range .Values.server.vcls.routes }}
-    {{- $name := include "varnish.vclBundleNormalizeName" . }}
+    {{- $name := include "varnish-common.vclBundleNormalizeName" . }}
     {{- if .hostnames }}
       # {{ $name }}: {{ .hostnames | join ", " }}
       if ({{- range $i, $h := .hostnames }}{{- if $i }} || {{ end }}req.http.No-Port-Host == {{ $h | quote }}{{- end }}) {
@@ -129,20 +129,20 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" . }}-vcl-bundle-cmds
+  name: {{ include "varnish-common.fullname" . }}-vcl-bundle-cmds
   labels:
-    {{- include "varnish.labels" . | nindent 4 }}
+    {{- include "varnish-common.labels" . | nindent 4 }}
 data:
   cmds.cli: |
     {{- range .Values.server.vcls.routes }}
-    {{- $name := include "varnish.vclBundleNormalizeName" . }}
+    {{- $name := include "varnish-common.vclBundleNormalizeName" . }}
     vcl.load route_{{ $name }}_0 /etc/varnish/vcls/{{ $name }}.vcl
     vcl.label {{ $name }} route_{{ $name }}_0
     {{- end }}
     vcl.load router_0 /etc/varnish/vcls/router.vcl
     vcl.use router_0
 {{- range .Values.server.vcls.routes }}
-{{- $name := include "varnish.vclBundleNormalizeName" . }}
+{{- $name := include "varnish-common.vclBundleNormalizeName" . }}
 {{- if eq (default "" .vclContent) "" }}
 {{- fail (printf "server.vcls.routes: route '%s' must set vclContent" $name) }}
 {{- end }}
@@ -150,9 +150,9 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" $ }}-vcl-bundle-{{ include "varnish.vclBundleK8sName" $name }}
+  name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-{{ include "varnish-common.vclBundleK8sName" $name }}
   labels:
-    {{- include "varnish.labels" $ | nindent 4 }}
+    {{- include "varnish-common.labels" $ | nindent 4 }}
 data:
   {{ $name }}.vcl: |
     {{- tpl .vclContent $ | nindent 4 }}
@@ -165,9 +165,9 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "varnish.fullname" $ }}-vcl-bundle-include-{{ include "varnish.vclBundleK8sName" $filename }}
+  name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
   labels:
-    {{- include "varnish.labels" $ | nindent 4 }}
+    {{- include "varnish-common.labels" $ | nindent 4 }}
 data:
   {{ base $filename }}: |
     {{- tpl $content $ | nindent 4 }}

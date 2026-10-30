@@ -887,7 +887,7 @@ server:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchLabels:
-              app.kubernetes.io/name: {{ include "varnish.name" . }}
+              app.kubernetes.io/name: {{ include "varnish-common.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
 

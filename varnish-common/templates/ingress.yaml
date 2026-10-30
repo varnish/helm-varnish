@@ -2,7 +2,7 @@
 {{- if (not (and (.Values.server.service.http.enabled) (.Values.server.service.http.port))) }}
 {{ fail "HTTP service must be enabled in values to enable ingress: 'service.service.http.enabled'" }}
 {{- end }}
-{{- $serviceName := include "varnish.fullname" . }}
+{{- $serviceName := include "varnish-common.fullname" . }}
 {{- $servicePort := .Values.server.service.http.port }}
 {{- if and (eq .Values.server.service.type "ClusterIP") (hasKey .Values.server.service "clusterIP") (eq .Values.server.service.clusterIP "None") }}
 {{- $servicePort = .Values.server.http.port }}
@@ -18,11 +18,11 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ include "varnish.fullname" . }}
+  name: {{ include "varnish-common.fullname" . }}
   labels:
-    {{- include "varnish.labels" . | nindent 4 }}
-    {{- include "varnish.ingressLabels" . | indent 4 }}
-  {{- include "varnish.ingressAnnotations" . | indent 2 }}
+    {{- include "varnish-common.labels" . | nindent 4 }}
+    {{- include "varnish-common.ingressLabels" . | indent 4 }}
+  {{- include "varnish-common.ingressAnnotations" . | indent 2 }}
 spec:
   {{- if .Values.server.ingress.tls }}
   tls:

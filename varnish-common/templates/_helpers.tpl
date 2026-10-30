@@ -3,7 +3,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "varnish.name" -}}
+{{- define "varnish-common.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -12,7 +12,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "varnish.fullname" -}}
+{{- define "varnish-common.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -28,7 +28,7 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "varnish.chart" -}}
+{{- define "varnish-common.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -39,43 +39,43 @@ values (cluster, mse, mse4, agent, initAgent, licenseSecret, baseUrl,
 global.natsServer) are absent from the Varnish Cache values, so they must only
 be read behind this check or one of the predicates below.
 */}}
-{{- define "varnish.isEnterprise" -}}
+{{- define "varnish-common.isEnterprise" -}}
 {{- if eq (index (.Chart.Annotations | default dict) "flavor") "enterprise" }}true{{ end }}
 {{- end }}
 
-{{- define "varnish.clusterEnabled" -}}
-{{- if and (include "varnish.isEnterprise" .) .Values.cluster.enabled }}true{{ end }}
+{{- define "varnish-common.clusterEnabled" -}}
+{{- if and (include "varnish-common.isEnterprise" .) .Values.cluster.enabled }}true{{ end }}
 {{- end }}
 
-{{- define "varnish.agentEnabled" -}}
-{{- if and (include "varnish.isEnterprise" .) .Values.server.agent.enabled }}true{{ end }}
+{{- define "varnish-common.agentEnabled" -}}
+{{- if and (include "varnish-common.isEnterprise" .) .Values.server.agent.enabled }}true{{ end }}
 {{- end }}
 
 {{/*
 MSE is enabled by default ("-") unless MSE4 is enabled.
 */}}
-{{- define "varnish.mseEnabled" -}}
-{{- if include "varnish.isEnterprise" . }}
+{{- define "varnish-common.mseEnabled" -}}
+{{- if include "varnish-common.isEnterprise" . }}
 {{- if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}true{{ end }}
 {{- end }}
 {{- end }}
 
-{{- define "varnish.mse4Enabled" -}}
-{{- if and (include "varnish.isEnterprise" .) .Values.server.mse4.enabled }}true{{ end }}
+{{- define "varnish-common.mse4Enabled" -}}
+{{- if and (include "varnish-common.isEnterprise" .) .Values.server.mse4.enabled }}true{{ end }}
 {{- end }}
 
 {{/*
 Returns "true" when the value given as context is neither null nor an empty
 string. Unlike a plain "if", zero and false count as set.
 */}}
-{{- define "varnish.isSet" -}}
+{{- define "varnish-common.isSet" -}}
 {{- if and (not (kindIs "invalid" .)) (ne (toString .) "") }}true{{ end }}
 {{- end }}
 
 {{/*
 Sets up the Varnish image and its overrides (if any)
 */}}
-{{- define "varnish.image" }}
+{{- define "varnish-common.image" }}
 {{- $base := .base | default dict }}
 {{- $image := .image | default dict }}
 image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{- if eq $image.tag "-" }}{{ default .Chart.AppVersion $base.tag }}{{ else }}{{ default $.Chart.AppVersion $image.tag }}{{ end }}"
@@ -85,7 +85,7 @@ imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else 
 {{/*
 Converts size string (e.g. 10Mi or 10M) to a number
 */}}
-{{- define "varnish.sizeStrToNumber" -}}
+{{- define "varnish-common.sizeStrToNumber" -}}
 {{- $sizeStr := toString .sizeStr -}}
 {{- $size := atoi (mustRegexFind "[0-9]+" $sizeStr) }}
 {{- if not $size -}}
@@ -121,7 +121,7 @@ Converts size string (e.g. 10Mi or 10M) to a number
 {{/*
 Converts size string (e.g. 10Mi or 10M) or a percentage to a number.
 */}}
-{{- define "varnish.sizeStrPercentToNumber" -}}
+{{- define "varnish-common.sizeStrPercentToNumber" -}}
 {{- $sizeStr := toString .sizeStr -}}
 {{- if hasSuffix "%" $sizeStr -}}
 {{- $percent := atoi (mustRegexFind "[0-9]+" $sizeStr) }}
@@ -131,14 +131,14 @@ Converts size string (e.g. 10Mi or 10M) or a percentage to a number.
 {{- end -}}
 {{- div (mul $baseSize $percent) 100 -}}
 {{- else -}}
-{{- include "varnish.sizeStrToNumber" (merge (dict "sizeStr" $sizeStr)) -}}
+{{- include "varnish-common.sizeStrToNumber" (merge (dict "sizeStr" $sizeStr)) -}}
 {{- end -}}
 {{- end }}
 
 {{/*
 Sets up the NATS server
 */}}
-{{- define "varnish.natsServer" }}
+{{- define "varnish-common.natsServer" }}
 {{- $natsAddress := "" }}
 {{- $internalNats := false }}
 {{- $tp := kindOf .Values.global.natsServer.internal.enabled }}
@@ -180,7 +180,7 @@ Sets up the NATS server
 {{/*
 Sets extra envs from either an array, an object, or a string.
 */}}
-{{- define "varnish.toEnv" }}
+{{- define "varnish-common.toEnv" }}
 {{- $tp := kindOf .envs }}
 {{- if eq $tp "string" }}
 {{- tpl .envs . | trim | nindent 0 }}
@@ -197,7 +197,7 @@ Sets extra envs from either an array, an object, or a string.
 {{/*
 Declares the YAML field.
 */}}
-{{- define "varnish.toYamlField" }}
+{{- define "varnish-common.toYamlField" }}
 {{- $section := default "server" .section }}
 {{- $fieldName := .fieldName }}
 {{- $fieldKey := default $fieldName .fieldKey }}
@@ -233,8 +233,8 @@ Declares the YAML field.
 {{/*
 Returns server.workDir as a string, or "" when it is null or empty.
 */}}
-{{- define "varnish.workDir" -}}
-{{- if include "varnish.isSet" .Values.server.workDir }}{{ toString .Values.server.workDir }}{{ end }}
+{{- define "varnish-common.workDir" -}}
+{{- if include "varnish-common.isSet" .Values.server.workDir }}{{ toString .Values.server.workDir }}{{ end }}
 {{- end }}
 
 {{/*
@@ -243,8 +243,8 @@ Declares the env var named .name holding the varnishd working directory
 server.workDir declares nothing as varnishd then runs without -n.
 Takes a dict with "name" and "Values".
 */}}
-{{- define "varnish.workDirEnv" -}}
-{{- $workDir := include "varnish.workDir" . }}
+{{- define "varnish-common.workDirEnv" -}}
+{{- $workDir := include "varnish-common.workDir" . }}
 {{- if eq $workDir "-" }}
 - name: {{ .name }}
   valueFrom:
