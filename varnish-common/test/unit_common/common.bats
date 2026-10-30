@@ -13,6 +13,7 @@ teardown() {
     if [ -n "${tls_file:-}" ]; then
         rm -f "$(chart_dir)/${tls_file}"
     fi
+    check_render
 }
 
 @test "${kind}: inherits imagePullSecret from global" {
@@ -23,7 +24,7 @@ teardown() {
         --set 'global.imagePullSecrets[0].name=quay.io-varnish-software' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.imagePullSecrets' | tee -a /dev/stderr)
     [ "${actual}" == '[{"name":"quay.io-varnish-software"}]' ]
 }
@@ -36,7 +37,7 @@ teardown() {
         --set 'serviceAccount.create=true' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "release-name-${chart}" ]
 }
@@ -49,7 +50,7 @@ teardown() {
         --set 'serviceAccount.create=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.serviceAccountName' | tee -a /dev/stderr)
     [ "${actual}" == "default" ]
 }
@@ -62,7 +63,7 @@ teardown() {
         --set 'global.podSecurityContext.hello=world' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.securityContext' | tee -a /dev/stderr)
 
     # Note: values.yaml sets a default 'global.podSecurityContext.fsGroup';
@@ -80,7 +81,7 @@ teardown() {
         --set 'server.securityContext.foo=bar' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .securityContext' | tee -a /dev/stderr)
@@ -105,7 +106,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.securityContext.foo=bar' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .securityContext' | tee -a /dev/stderr)
@@ -127,7 +128,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.securityContext=${securityContext}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .securityContext' | tee -a /dev/stderr)
@@ -151,7 +152,7 @@ release-namespace: to-be-override
         --set 'server.securityContext=release-namespace: {{ .Release.Namespace }}' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .securityContext' | tee -a /dev/stderr)
@@ -169,7 +170,7 @@ release-namespace: to-be-override
         --set 'server.labels.hello=varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.metadata.labels.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
@@ -183,7 +184,7 @@ release-namespace: to-be-override
         --set 'server.labels=hello: {{ .Release.Name }}' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.metadata.labels.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
@@ -197,7 +198,7 @@ release-namespace: to-be-override
         --set 'server.annotations.hello=varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
@@ -211,7 +212,7 @@ release-namespace: to-be-override
         --set 'server.annotations=hello: {{ .Release.Name }}' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
@@ -225,7 +226,7 @@ release-namespace: to-be-override
         --set 'server.podAnnotations.hello=varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "varnish" ]
@@ -239,7 +240,7 @@ release-namespace: to-be-override
         --set 'server.podAnnotations=hello: {{ .Release.Name }}' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.metadata.annotations.hello' |
             tee -a /dev/stderr)
     [ "${actual}" == "release-name" ]
@@ -254,7 +255,7 @@ release-namespace: to-be-override
         --set 'server.podLabels.hello=varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -278,7 +279,7 @@ release-namespace: to-be-override
         --set 'server.podLabels.release-namespace=varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -302,7 +303,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.podLabels=${labels}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -319,7 +320,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     # .metadata.labels
@@ -382,7 +383,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.livenessProbe.initialDelaySeconds=5' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -431,7 +432,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.livenessProbe.initialDelaySeconds=5' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -460,7 +461,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.livenessProbe.initialDelaySeconds=5' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -492,7 +493,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -533,7 +534,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"HTTP support must be enabled to enable startupProbe"* ]]
 }
@@ -548,7 +549,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"HTTP support must be enabled to enable readinessProbe"* ]]
 }
@@ -563,7 +564,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"HTTP support must be enabled to enable livenessProbe"* ]]
 }
@@ -578,7 +579,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.livenessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"HTTP support must be enabled"* ]]
 }
@@ -592,7 +593,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.tls.port=8443' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -636,7 +637,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.tls.port=8443' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -679,7 +680,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.tls.configFile=${tls_file}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -711,7 +712,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -742,7 +743,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -766,7 +767,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.admin.port=9999' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -789,7 +790,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.admin.port=null' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -809,7 +810,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.ttl=null' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -829,7 +830,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.ttl=0' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -851,7 +852,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.threadTimeout=null' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -871,7 +872,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.workDir=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -900,7 +901,7 @@ release-namespace: {{ .Release.Namespace }}
         --set-json 'server.varnishncsa.extraArgs=[]' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -920,7 +921,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.workDir=1' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -940,7 +941,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.workDir=-' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -968,7 +969,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1002,7 +1003,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1031,7 +1032,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraListens[1].proto=PROXY' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1061,7 +1062,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraListens[0].port=8888' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1085,7 +1086,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraListens[0].path=/tmp/varnish.sock' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1109,7 +1110,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraEnvs.BAZ=bax' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1141,7 +1142,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.extraEnvs=${extraEnvs}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1171,7 +1172,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraEnvs[1].value=bax' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1202,7 +1203,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraEnvs[1].valueFrom.secretKeyRef.key=my-key' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1227,7 +1228,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1272,7 +1273,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.threadTimeout=500' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1349,7 +1350,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1370,7 +1371,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraArgs[1]=feature=+http2' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1393,7 +1394,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraArgs=-p feature=+http2' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1416,7 +1417,7 @@ release-namespace: {{ .Release.Namespace }}
         --set-json 'server.extraArgs=["-t", 600, "-p", true, "-p", "cc_command=exec cc -fpic -shared -o %o %s"]' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1438,7 +1439,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraListens[0].proto=PROXY' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1470,7 +1471,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraListens[0].proto=PROXY' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1501,7 +1502,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.parameters.feature[1]=+validate_headers" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -1531,7 +1532,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraContainers[0].image=alpine:latest' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1554,7 +1555,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.extraContainers=${extraContainers}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1574,7 +1575,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraVolumeMounts[0].mountPath=/var/data' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1598,7 +1599,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.extraVolumeMounts=${extraVolumeMounts}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1620,7 +1621,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.extraVolumes[0].hostPath.type=directory' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1645,7 +1646,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.extraVolumes=${extraVolumes}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1664,7 +1665,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.secret=hello-varnish" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1704,7 +1705,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.secretFrom.key=varnish-password" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1744,7 +1745,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.secretFrom.key=varnish-password" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"Either 'server.secret' or 'server.secretFrom' can be set"* ]]
 }
@@ -1758,7 +1759,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.secretFrom.key=varnish-password" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"'server.secretFrom' must contain a 'name' key"* ]]
 }
@@ -1773,7 +1774,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.secretFrom.key=varnish-password" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"'server.secretFrom' must contain a 'name' key"* ]]
 }
@@ -1787,7 +1788,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.secretFrom.name=external-secret" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"'server.secretFrom' must contain a 'key' key"* ]]
 }
@@ -1802,7 +1803,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.secretFrom.key=" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"'server.secretFrom' must contain a 'key' key"* ]]
 }
@@ -1814,7 +1815,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1850,7 +1851,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1914,7 +1915,7 @@ backend release-name {
         --set "server.vclConfig=${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -1979,7 +1980,7 @@ backend release-name {
         --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -2060,7 +2061,7 @@ backend release-name {
         --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -2157,7 +2158,7 @@ backend release-name {
         --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -2255,7 +2256,7 @@ backend release-name {
         --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -2335,7 +2336,7 @@ backend release-name {
         --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"Cannot enable both 'server.vclConfigs.\"default.vcl\""* ]]
 }
@@ -2366,7 +2367,7 @@ backend release-name {
         --set 'server.vclConfigs.varnish\.vcl='"${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"Cannot enable both 'server.vclConfigs.\"varnish.vcl\""* ]]
 }
@@ -2388,7 +2389,7 @@ backend default {
         --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -2413,7 +2414,7 @@ backend default {
         --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" | yq -r -o=json -I=0 '.data' | tee -a /dev/stderr)
@@ -2428,7 +2429,7 @@ backend default {
         --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -2461,7 +2462,7 @@ backend default {
         --set "server.extraVolumeMounts[0].subpath=tenant1.vcl" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -2501,7 +2502,7 @@ vcl.use vcl_main
         --set "server.cmdfileConfig=${cmdfileConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -2547,7 +2548,7 @@ vcl.use vcl_main
         --set "server.cmdfileConfigPath=/etc/varnish/cmdfile" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -2584,7 +2585,7 @@ vcl.use vcl_main
         --set "server.agent.enabled=true" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"Cannot enable both cmdfile and agent"* ]]
 }
@@ -2599,7 +2600,7 @@ vcl.use vcl_main
         --set 'server.image.pullPolicy=Always' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -2625,7 +2626,7 @@ vcl.use vcl_main
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .startupProbe' | tee -a /dev/stderr)
@@ -2645,7 +2646,7 @@ vcl.use vcl_main
         --set 'server.startupProbe.failureThreshold=6' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .startupProbe' | tee -a /dev/stderr)
@@ -2666,7 +2667,7 @@ vcl.use vcl_main
         --set 'server.startupProbe.httpGet=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .startupProbe' | tee -a /dev/stderr)
@@ -2689,7 +2690,7 @@ vcl.use vcl_main
         --set 'server.startupProbe.httpGet.httpHeaders[0].value=1' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .startupProbe' | tee -a /dev/stderr)
@@ -2710,7 +2711,7 @@ vcl.use vcl_main
         --set 'server.startupProbe.httpGet.port=0' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .startupProbe' | tee -a /dev/stderr)
@@ -2730,7 +2731,7 @@ vcl.use vcl_main
         --set 'server.readinessProbe.failureThreshold=6' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .readinessProbe' | tee -a /dev/stderr)
@@ -2751,7 +2752,7 @@ vcl.use vcl_main
         --set 'server.readinessProbe.httpGet=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .readinessProbe' | tee -a /dev/stderr)
@@ -2774,7 +2775,7 @@ vcl.use vcl_main
         --set 'server.readinessProbe.httpGet.httpHeaders[0].value=1' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .readinessProbe' | tee -a /dev/stderr)
@@ -2795,7 +2796,7 @@ vcl.use vcl_main
         --set 'server.readinessProbe.httpGet.port=0' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .readinessProbe' | tee -a /dev/stderr)
@@ -2811,7 +2812,7 @@ vcl.use vcl_main
         --set 'server.readinessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .readinessProbe' | tee -a /dev/stderr)
@@ -2831,7 +2832,7 @@ vcl.use vcl_main
         --set 'server.livenessProbe.failureThreshold=6' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .livenessProbe' | tee -a /dev/stderr)
@@ -2852,7 +2853,7 @@ vcl.use vcl_main
         --set 'server.livenessProbe.httpGet=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .livenessProbe' | tee -a /dev/stderr)
@@ -2875,7 +2876,7 @@ vcl.use vcl_main
         --set 'server.livenessProbe.httpGet.httpHeaders[0].value=1' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .livenessProbe' | tee -a /dev/stderr)
@@ -2896,7 +2897,7 @@ vcl.use vcl_main
         --set 'server.livenessProbe.httpGet.port=0' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .livenessProbe' | tee -a /dev/stderr)
@@ -2912,7 +2913,7 @@ vcl.use vcl_main
         --set 'server.livenessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .livenessProbe' | tee -a /dev/stderr)
@@ -2932,7 +2933,7 @@ vcl.use vcl_main
         --set 'server.resources.requests.memory=128Mi' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .resources' | tee -a /dev/stderr)
@@ -2958,7 +2959,7 @@ requests:
         --set "server.resources=${resources}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .resources' | tee -a /dev/stderr)
@@ -2984,7 +2985,7 @@ requests:
         --set 'server.resources.requests.memory=128Mi' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .resources' | tee -a /dev/stderr)
@@ -3016,7 +3017,7 @@ requests:
         --set "server.resources=${resources}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .resources' | tee -a /dev/stderr)
@@ -3031,7 +3032,7 @@ requests:
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .resources' | tee -a /dev/stderr)
@@ -3047,7 +3048,7 @@ requests:
         --set 'server.nodeSelector.tier=edge' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"edge"}' ]
@@ -3061,7 +3062,7 @@ requests:
         --set 'server.nodeSelector=tier: {{ .Release.Name }}-edge' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"tier":"release-name-edge"}' ]
@@ -3074,7 +3075,7 @@ requests:
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.nodeSelector' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
@@ -3090,7 +3091,7 @@ requests:
         --set 'server.tolerations[0].effect=NoSchedule' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"effect":"NoSchedule","key":"far-network-disk","operator":"Exists"}]' ]
@@ -3110,7 +3111,7 @@ requests:
         --set "server.tolerations=${tolerations}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == '[{"key":"ban-release-name","operator":"Exists","effect":"NoSchedule"}]' ]
@@ -3123,7 +3124,7 @@ requests:
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.tolerations' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
@@ -3138,7 +3139,7 @@ requests:
         --set 'server.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey=kubernetes.io/hostname' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"foo":"bar"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
@@ -3162,7 +3163,7 @@ podAntiAffinity:
         --set "server.affinity=${affinity}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.affinity' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"app.kubernetes.io/name":"'"${chart}"'","app.kubernetes.io/instance":"release-name"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
@@ -3177,7 +3178,7 @@ podAntiAffinity:
         --set 'server.mse.memoryTarget=80%' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3196,7 +3197,7 @@ podAntiAffinity:
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3249,7 +3250,7 @@ env: {
         --set "server.mse.config=${mseConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3286,7 +3287,7 @@ env: {
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3325,7 +3326,7 @@ env: {
         --set 'server.mse.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
@@ -3341,7 +3342,7 @@ env: {
         --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3363,7 +3364,7 @@ env: {
         --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3386,7 +3387,7 @@ env: {
         --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
@@ -3402,7 +3403,7 @@ env: {
         --set 'server.mse4.memoryTarget=80%' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3423,7 +3424,7 @@ env: {
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3473,7 +3474,7 @@ env: {
         --set "server.mse4.config=${mse4Config}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3512,7 +3513,7 @@ env: {
         --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3549,7 +3550,7 @@ env: {
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3569,7 +3570,7 @@ env: {
         --set "server.delayedHaltSeconds=120" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3591,7 +3592,7 @@ env: {
         --set "server.delayedShutdown.sleep.seconds=90" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3610,7 +3611,7 @@ env: {
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3631,7 +3632,7 @@ env: {
         --set "server.delayedShutdown.sleep.seconds=120" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3654,7 +3655,7 @@ env: {
         --set "server.delayedShutdown.mempool.waitSeconds=30" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3683,7 +3684,7 @@ env: {
         --set "server.delayedShutdown.method=mempool" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3704,7 +3705,7 @@ env: {
         --set "server.delayedShutdown.shutdownDelay.seconds=120" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3735,7 +3736,7 @@ env: {
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3753,7 +3754,7 @@ env: {
         --set "server.terminationGracePeriodSeconds=120" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3771,7 +3772,7 @@ env: {
         --set "server.delayedHaltSeconds=60" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3790,7 +3791,7 @@ env: {
         --set "server.delayedHaltSeconds=60" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3810,7 +3811,7 @@ env: {
         --set "server.delayedShutdown.sleep.seconds=60" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3831,7 +3832,7 @@ env: {
         --set "server.delayedShutdown.mempool.waitSeconds=5" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3851,7 +3852,7 @@ env: {
         --set "server.delayedShutdown.shutdownDelay.seconds=1" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -3868,7 +3869,7 @@ env: {
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3893,7 +3894,7 @@ env: {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3938,7 +3939,7 @@ env: {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -3985,7 +3986,7 @@ env: {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -4031,7 +4032,7 @@ env: {
         --set 'server.http.port=8090' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -4064,7 +4065,7 @@ env: {
         --set 'server.readinessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"HTTP support must be enabled to enable Varnish Controller Agent"* ]]
 }
@@ -4081,7 +4082,7 @@ env: {
         --set 'server.admin.port=9999' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -4122,7 +4123,7 @@ env: {
         --set "server.secretFrom.key=varnish-secret" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -4145,7 +4146,7 @@ env: {
         --set 'server.agent.enabled=true' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"Secret must be set to enable Varnish Controller agent"* ]]
 }
@@ -4161,7 +4162,7 @@ env: {
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
@@ -4185,7 +4186,7 @@ env: {
         --set 'server.agent.securityContext.foo=baz' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .securityContext' | tee -a /dev/stderr)
@@ -4214,7 +4215,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.agent.securityContext.foo=baz' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .securityContext' | tee -a /dev/stderr)
@@ -4240,7 +4241,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.agent.securityContext=${securityContext}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .securityContext' | tee -a /dev/stderr)
@@ -4268,7 +4269,7 @@ release-namespace: to-be-override
         --set 'server.agent.securityContext=release-namespace: {{ .Release.Namespace }}' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .securityContext' | tee -a /dev/stderr)
@@ -4288,7 +4289,7 @@ release-namespace: to-be-override
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
@@ -4332,7 +4333,7 @@ release-namespace: to-be-override
         --set 'global.natsServer.internal.clusterDomain=remote.local' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
@@ -4378,7 +4379,7 @@ release-namespace: to-be-override
         --set 'global.natsServer.internal.passwordFrom.key=nats-password' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
@@ -4421,7 +4422,7 @@ release-namespace: to-be-override
         --set 'global.natsServer.internal.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
@@ -4464,7 +4465,7 @@ release-namespace: to-be-override
         --set 'global.natsServer.internal.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"Either 'global.natsServer.internal.enabled' or 'global.natsServer.externalAddress' must be set"* ]]
 }
@@ -4480,7 +4481,7 @@ release-namespace: to-be-override
         --set 'server.agent.logLevel=info' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4504,7 +4505,7 @@ release-namespace: to-be-override
         --set 'server.agent.extraEnvs.BAZ=bax' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4539,7 +4540,7 @@ release-namespace: to-be-override
         --set "server.agent.extraEnvs=${extraEnvs}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4571,7 +4572,7 @@ release-namespace: to-be-override
         --set 'server.agent.extraEnvs[1].value=bax' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4605,7 +4606,7 @@ release-namespace: to-be-override
         --set 'server.agent.extraEnvs[1].valueFrom.secretKeyRef.key=my-key' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4633,7 +4634,7 @@ release-namespace: to-be-override
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4656,7 +4657,7 @@ release-namespace: to-be-override
         --set 'server.agent.tags[1]=highmem' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4677,7 +4678,7 @@ release-namespace: to-be-override
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4707,7 +4708,7 @@ release-namespace: to-be-override
         --set 'server.agent.location.longitude=-121.955238' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4741,7 +4742,7 @@ release-namespace: to-be-override
         --set 'server.agent.resources.requests.memory=128Mi' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .resources' | tee -a /dev/stderr)
@@ -4771,7 +4772,7 @@ requests:
         --set "server.agent.resources=${resources}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .resources' | tee -a /dev/stderr)
@@ -4801,7 +4802,7 @@ requests:
         --set 'server.agent.resources.requests.memory=128Mi' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .resources' | tee -a /dev/stderr)
@@ -4837,7 +4838,7 @@ requests:
         --set "server.agent.resources=${resources}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .resources' | tee -a /dev/stderr)
@@ -4855,7 +4856,7 @@ requests:
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .resources' | tee -a /dev/stderr)
@@ -4873,7 +4874,7 @@ requests:
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -4900,7 +4901,7 @@ requests:
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -4933,7 +4934,7 @@ backend {{ .Release.Name }} {
         --set "server.vclConfig=${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -4967,7 +4968,7 @@ backend {{ .Release.Name }} {
         --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5009,7 +5010,7 @@ default {{ .Release.Name }} {
         --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5057,7 +5058,7 @@ default {{ .Release.Name }} {
         --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5106,7 +5107,7 @@ default {{ .Release.Name }} {
         --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5145,7 +5146,7 @@ backend default {
         --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5169,7 +5170,7 @@ backend default {
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5198,7 +5199,7 @@ backend default {
         --set "server.agent.extraArgs[0]=-help" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5228,7 +5229,7 @@ backend default {
         --set 'server.agent.extraVolumeMounts[0].mountPath=/var/data' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5255,7 +5256,7 @@ backend default {
         --set "server.agent.extraVolumeMounts=${extraVolumeMounts}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5278,7 +5279,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5299,7 +5300,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5322,7 +5323,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5354,7 +5355,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5380,7 +5381,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5405,7 +5406,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5431,7 +5432,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5457,7 +5458,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5483,7 +5484,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5509,7 +5510,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5536,7 +5537,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5563,7 +5564,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5590,7 +5591,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5615,7 +5616,7 @@ backend default {
         --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -5643,7 +5644,7 @@ backend default {
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5679,7 +5680,7 @@ backend default {
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5712,7 +5713,7 @@ backend default {
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5747,7 +5748,7 @@ backend default {
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5780,7 +5781,7 @@ backend default {
         --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-vcli") |
             .resources' | tee -a /dev/stderr)
@@ -5799,7 +5800,7 @@ backend default {
         --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-vcli") |
             .resources' | tee -a /dev/stderr)
@@ -5820,7 +5821,7 @@ backend default {
         --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5848,7 +5849,7 @@ backend default {
         --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5870,7 +5871,7 @@ backend default {
         --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5894,7 +5895,7 @@ backend default {
         --set 'server.initAgent.extraVolumeMounts[0].mountPath=/var/data' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5920,7 +5921,7 @@ backend default {
         --set "server.initAgent.extraVolumeMounts=${extraVolumeMounts}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -5940,7 +5941,7 @@ backend default {
         --set "server.varnishncsa.enabled=false" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa")' |
             tee -a /dev/stderr)
@@ -5959,7 +5960,7 @@ backend default {
         --set 'server.varnishncsa.securityContext.foo=baz' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .securityContext' | tee -a /dev/stderr)
@@ -5987,7 +5988,7 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.varnishncsa.securityContext.foo=baz' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .securityContext' | tee -a /dev/stderr)
@@ -6012,7 +6013,7 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.varnishncsa.securityContext=${securityContext}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .securityContext' | tee -a /dev/stderr)
@@ -6039,7 +6040,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.securityContext=release-namespace: {{ .Release.Namespace }}' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .securityContext' | tee -a /dev/stderr)
@@ -6057,7 +6058,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.extraArgs[0]=--help' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6079,7 +6080,7 @@ release-namespace: to-be-override
         --set-json 'server.varnishncsa.extraArgs=["-F", "%h %r", "-t", 3]' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6097,7 +6098,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.extraArgs=--help' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6119,7 +6120,7 @@ release-namespace: to-be-override
         --set-json 'server.varnishncsa.extraArgs=[]' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6140,7 +6141,7 @@ release-namespace: to-be-override
         --set-json 'server.varnishncsa.extraArgs=[]' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local container=$(echo "$object" |
@@ -6165,7 +6166,7 @@ release-namespace: to-be-override
         --set "server.image.tag=latest" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6188,7 +6189,7 @@ release-namespace: to-be-override
         --set "server.varnishncsa.image.tag=ncsa-latest" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6207,7 +6208,7 @@ release-namespace: to-be-override
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
@@ -6228,7 +6229,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.startupProbe.failureThreshold=6' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
@@ -6249,7 +6250,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.readinessProbe.failureThreshold=6' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
@@ -6265,7 +6266,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.readinessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
@@ -6286,7 +6287,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.livenessProbe.failureThreshold=6' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
@@ -6302,7 +6303,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.livenessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
@@ -6321,7 +6322,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.resources.requests.memory=128Mi' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .resources' | tee -a /dev/stderr)
@@ -6336,7 +6337,7 @@ release-namespace: to-be-override
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .resources' | tee -a /dev/stderr)
@@ -6353,7 +6354,7 @@ release-namespace: to-be-override
         --set 'server.varnishncsa.extraVolumeMounts[0].mountPath=/var/data' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6377,7 +6378,7 @@ release-namespace: to-be-override
         --set "server.varnishncsa.extraVolumeMounts=${extraVolumeMounts}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6425,7 +6426,7 @@ EOF
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6477,7 +6478,7 @@ EOF
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6527,7 +6528,7 @@ EOF
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6579,7 +6580,7 @@ EOF
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6602,7 +6603,7 @@ EOF
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6629,7 +6630,7 @@ EOF
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -6657,7 +6658,7 @@ EOF
         --set 'server.varnishncsa.extraEnvs.BAZ=bax' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |

@@ -9,7 +9,7 @@ chart=$(chart_name)
     local object=$((helm template \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
@@ -24,7 +24,7 @@ chart=$(chart_name)
         --set 'server.otel.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
@@ -39,7 +39,7 @@ chart=$(chart_name)
         --set 'server.otel.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .command[0]' |
@@ -56,7 +56,7 @@ chart=$(chart_name)
         --set 'server.otel.env.OTEL_SERVICE_NAME=varnish' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local endpoint=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .env[]? | select(.name == "OTEL_EXPORTER_OTLP_ENDPOINT") | .value' |
@@ -76,7 +76,7 @@ chart=$(chart_name)
         --set 'server.otel.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[] | select(.name == "'"${chart}"'-otel") | .volumeMounts[] | select(.mountPath == "/var/lib/varnish") | .mountPath' |
@@ -91,7 +91,7 @@ chart=$(chart_name)
         --set 'server.otel.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[] | select(.name == "'"${chart}"'-otel") | .volumeMounts[] | select(.mountPath == "/etc/varnish/shared") | .mountPath' |
@@ -108,7 +108,7 @@ chart=$(chart_name)
         --set 'server.otel.image.tag=custom-tag' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .image' |
@@ -125,7 +125,7 @@ chart=$(chart_name)
         --set 'server.image.tag=6.0.16r3' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .image' |
@@ -142,7 +142,7 @@ chart=$(chart_name)
         --set 'server.otel.resources.limits.memory=256Mi' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local cpu=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .resources.limits.cpu' |
@@ -163,7 +163,7 @@ chart=$(chart_name)
         --set 'server.otel.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
@@ -179,7 +179,7 @@ chart=$(chart_name)
         --set 'server.otel.enabled=true' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
@@ -195,7 +195,7 @@ chart=$(chart_name)
         --set 'server.workDir=' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |

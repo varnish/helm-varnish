@@ -9,20 +9,20 @@ chart=$(chart_name)
     local actual=$((helm template \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'length > 0' | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
 
 @test "Deployment: can be disabled" {
     cd "$(chart_dir)"
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --set 'server.kind=DaemonSet' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" = "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"could not find template"* ]]
 }
 
 @test "Deployment/strategy: can be disabled" {
@@ -33,7 +33,7 @@ chart=$(chart_name)
         --set 'server.strategy=' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
@@ -48,7 +48,7 @@ chart=$(chart_name)
         --set 'server.strategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
@@ -68,7 +68,7 @@ rollingUpdate:
         --set "server.strategy=$strategy" \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.strategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
@@ -83,7 +83,7 @@ rollingUpdate:
         --set 'server.updateStrategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"'server.updateStrategy' cannot be enabled"* ]]
@@ -93,14 +93,14 @@ rollingUpdate:
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --set 'server.kind=Deployment' \
         --set 'server.mse.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" == "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'"* ]]
 }
 
 @test "Deployment/agent: test initContainer image and tag" {
@@ -115,7 +115,7 @@ rollingUpdate:
         --set 'global.initContainer.tag=24.04' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
 
     [ "${actual}" == "ubuntu:24.04" ]
@@ -132,7 +132,7 @@ rollingUpdate:
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
@@ -149,7 +149,7 @@ rollingUpdate:
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -170,7 +170,7 @@ rollingUpdate:
         --set "server.extraVolumeClaimTemplates[0].spec.resources.requests.storage=10Gi" \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"'server.extraVolumeClaimTemplates' cannot be enabled"* ]]
