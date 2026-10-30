@@ -47,7 +47,23 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
         'server.baseUrl=http://example.com'; do
         run helm template --set "${value}" --namespace default .
         [ "$status" -ne 0 ]
-        [[ "$output" == *"false schema"* ]]
+        [[ "$output" == *"want null"* || "$output" == *"Expected: null"* ]]
+    done
+}
+
+@test "Flavor: accepts null Enterprise-only values" {
+    cd "$(chart_dir)"
+
+    for value in \
+        'cluster=null' \
+        'server.mse=null' \
+        'server.mse4=null' \
+        'server.agent=null' \
+        'server.initAgent=null' \
+        'server.licenseSecret=null' \
+        'server.baseUrl=null'; do
+        run helm template --set "${value}" --namespace default .
+        [ "$status" -eq 0 ]
     done
 }
 
