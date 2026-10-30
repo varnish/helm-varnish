@@ -377,6 +377,10 @@ server:
   command: []
 
   # Sets the extra configuration args for Varnish Enterprise.
+  # A string is split on whitespace into separate arguments, while each item
+  # of a list is passed as a single argument, so use a list for values
+  # containing spaces.
+  # Type: string or array of strings
   extraArgs: []
 
   # Sets the Varnish Enterprise parameters (i.e. the -p argument).

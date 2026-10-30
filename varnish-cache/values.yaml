@@ -319,9 +319,9 @@ server:
   command: []
 
   # Sets the extra configuration args for Varnish Cache.
-  # Each string (and each string item of a list) is split on whitespace into
-  # separate arguments, so values containing spaces cannot be passed through
-  # extraArgs; use server.parameters or a cmdfile instead.
+  # A string is split on whitespace into separate arguments, while each item
+  # of a list is passed as a single argument, so use a list for values
+  # containing spaces.
   # Type: string or array of strings
   extraArgs: []
 
