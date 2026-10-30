@@ -1330,7 +1330,8 @@ release-namespace: {{ .Release.Namespace }}
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.extraArgs[0]=-p feature=+http2' \
+        --set 'server.extraArgs[0]=-p' \
+        --set 'server.extraArgs[1]=feature=+http2' \
         --namespace default \
         --show-only ${template} \
         . || echo "---") |
@@ -1371,12 +1372,31 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == 'feature=+http2' ]
 }
 
+@test "${kind}/extraArgs: list items are passed as single string arguments" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set-json 'server.extraArgs=["-t", 600, "-p", true, "-p", "cc_command=exec cc -fpic -shared -o %o %s"]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") | .command[-6:]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["-t","600","-p","true","-p","cc_command=exec cc -fpic -shared -o %o %s"]' ]
+}
+
 @test "${kind}/extraArgs: can be configured with extraListens" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.extraArgs[0]=-p feature=+http2' \
+        --set 'server.extraArgs[0]=-p' \
+        --set 'server.extraArgs[1]=feature=+http2' \
         --set 'server.extraListens[0].name=proxy' \
         --set 'server.extraListens[0].port=8088' \
         --set 'server.extraListens[0].proto=PROXY' \
@@ -6015,6 +6035,25 @@ release-namespace: to-be-override
             tee -a /dev/stderr)
 
     [ "${actual}" != "null" ]
+}
+
+@test "${kind}/varnishncsa/extraArgs: list items are passed as single string arguments" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=' \
+        --set-json 'server.varnishncsa.extraArgs=["-F", "%h %r", "-t", 3]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") | .args' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["-F","%h %r","-t","3"]' ]
 }
 
 @test "${kind}/varnishncsa/extraArgs: can be configured as string" {
