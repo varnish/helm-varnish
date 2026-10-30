@@ -624,9 +624,7 @@ Sets the threshold in seconds where idle threads are destroyed after least this 
 - Type: string or array of strings
 - Default: `[]`
 
-Sets the extra arguments to the varnishd. Each string (and each string item of a list) is split on whitespace into separate arguments, so values containing spaces cannot be passed through `server.extraArgs`; use `server.parameters` or a cmdfile instead.
-
-Since chart 0.2.0, list items are split on whitespace as in the Varnish Enterprise chart; previously, each list item was passed to varnishd unchanged.
+Sets the extra arguments to the varnishd. A string is split on whitespace into separate arguments, while each item of a list is passed as a single argument, so use a list for values containing spaces.
 
 **server.parameters**
 

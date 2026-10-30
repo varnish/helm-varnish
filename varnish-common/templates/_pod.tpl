@@ -403,12 +403,7 @@ Composing the $varnishArgs list or arguments
   {{- end }}
 {{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
   {{- range .Values.server.extraArgs }}
-    {{- $item := . -}}
-    {{- if eq (kindOf $item) "string" }}
-      {{- $varnishArgs = concat $varnishArgs (regexSplit "\\s+" $item -1) -}}
-    {{- else }}
-      {{- $varnishArgs = concat $varnishArgs (list $item) -}}
-    {{- end }}
+    {{- $varnishArgs = append $varnishArgs (toString .) -}}
   {{- end }}
 {{- else if .Values.server.extraArgs }}
   {{- fail (printf "Validation failed: .Values.server.extraArgs should be a string or list, not a %s" (kindOf .Values.server.extraArgs)) }}
@@ -707,7 +702,9 @@ Declares the Varnish NCSA container
       {{- $ncsaArgs = concat $ncsaArgs (regexSplit "\\s+" $extra -1) }}
     {{- end }}
   {{- else if .Values.server.varnishncsa.extraArgs }}
-    {{- $ncsaArgs = concat $ncsaArgs .Values.server.varnishncsa.extraArgs }}
+    {{- range .Values.server.varnishncsa.extraArgs }}
+      {{- $ncsaArgs = append $ncsaArgs (toString .) }}
+    {{- end }}
   {{- end }}
   {{- if $ncsaArgs }}
   args: {{- toYaml $ncsaArgs | nindent 4 }}
@@ -862,7 +859,11 @@ Declares the Varnish Controller Agent container
   {{- include "varnish-common.resources" (merge (dict "section" "server.agent") .) | nindent 2 }}
   command: ["/usr/bin/varnish-controller-agent"]
   {{- if and .Values.server.agent.extraArgs (not (empty .Values.server.agent.extraArgs)) }}
-  args: {{- toYaml .Values.server.agent.extraArgs | nindent 4 }}
+  {{- $agentArgs := list }}
+  {{- range .Values.server.agent.extraArgs }}
+    {{- $agentArgs = append $agentArgs (toString .) }}
+  {{- end }}
+  args: {{- toYaml $agentArgs | nindent 4 }}
   {{- end }}
   volumeMounts:
     - name: {{ .Release.Name }}-varnish-vsm
