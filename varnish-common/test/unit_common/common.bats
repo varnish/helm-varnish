@@ -3155,7 +3155,6 @@ podAntiAffinity:
 }
 
 @test "${kind}/mse/memoryTarget: not configured by default" {
-    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -3246,7 +3245,6 @@ env: {
 }
 
 @test "${kind}/mse/config: not configured by default" {
-    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -3829,7 +3827,6 @@ env: {
 }
 
 @test "${kind}/agent: not enabled by default" {
-    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -6591,7 +6588,6 @@ EOF
 }
 
 @test "${kind}/licenseSecret: license volume and volumeMounts does not exist by default" {
-    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
