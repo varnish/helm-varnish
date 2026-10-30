@@ -65,6 +65,14 @@ MSE is enabled by default ("-") unless MSE4 is enabled.
 {{- end }}
 
 {{/*
+Returns "true" when the value given as context is neither null nor an empty
+string. Unlike a plain "if", zero and false count as set.
+*/}}
+{{- define "varnish-common.isSet" -}}
+{{- if and (not (kindIs "invalid" .)) (ne (toString .) "") }}true{{ end }}
+{{- end }}
+
+{{/*
 Sets up the Varnish image and its overrides (if any)
 */}}
 {{- define "varnish-common.image" }}
@@ -219,5 +227,31 @@ Declares the YAML field.
 {{- end }}
 {{- if not (empty $fieldValue) }}
 {{- (dict $fieldName $fieldValue) | toYaml }}
+{{- end }}
+{{- end }}
+
+{{/*
+Returns server.workDir as a string, or "" when it is null or empty.
+*/}}
+{{- define "varnish-common.workDir" -}}
+{{- if include "varnish-common.isSet" .Values.server.workDir }}{{ toString .Values.server.workDir }}{{ end }}
+{{- end }}
+
+{{/*
+Declares the env var named .name holding the varnishd working directory
+(-n) for sidecars and scripts. "-" uses the pod name, an empty
+server.workDir declares nothing as varnishd then runs without -n.
+Takes a dict with "name" and "Values".
+*/}}
+{{- define "varnish-common.workDirEnv" -}}
+{{- $workDir := include "varnish-common.workDir" . }}
+{{- if eq $workDir "-" }}
+- name: {{ .name }}
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+{{- else if not (eq $workDir "") }}
+- name: {{ .name }}
+  value: "{{ $workDir }}"
 {{- end }}
 {{- end }}

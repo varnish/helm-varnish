@@ -730,6 +730,199 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '0.0.0.0:9999' ]
 }
 
+@test "${kind}/admin: omitted when port is null" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.admin.port=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .command' |
+            jq -r -c 'if . == null then "no command" else index(["-T"]) end' |
+            tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+}
+
+@test "${kind}/ttl: omitted when null" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.ttl=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .command' |
+            jq -r -c 'if . == null then "no command" else index(["-t"]) end' |
+            tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+}
+
+@test "${kind}/ttl: zero is kept" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.ttl=0' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .command' |
+            jq -r -c '.[index(["-t", "0"]) + 1]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '0' ]
+}
+
+@test "${kind}/threads: omitted when null" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.minThreads=null' \
+        --set 'server.maxThreads=null' \
+        --set 'server.threadTimeout=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .command' |
+            jq -r -c 'if . == null then "no command" else [.[] | select(startswith("thread_pool_"))] end' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '[]' ]
+}
+
+@test "${kind}/workDir: no -n when empty" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -o=json -I=0 '.command' |
+        jq -r -c 'if . == null then "no command" else index(["-n"]) end' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_WORKDIR") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '' ]
+}
+
+@test "${kind}/workDir: null is the same as empty" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=null' \
+        --set-json 'server.varnishncsa.extraArgs=[]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '[.spec.template.spec.containers[]? | .command, .args, .env]' |
+        tee -a /dev/stderr)
+    [[ "${actual}" == '[["/usr/sbin/varnishd"'* ]]
+    [[ "${actual}" != *'"-n"'* ]]
+    [[ "${actual}" != *'nil'* ]]
+    [[ "${actual}" != *'VARNISH_WORKDIR'* ]]
+}
+
+@test "${kind}/workDir: numeric value is used as is" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=1' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .command' |
+        jq -r -c '.[index(["-n"]) + 1]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '1' ]
+}
+
+@test "${kind}/workDir: pod name with -" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -o=json -I=0 '.command' |
+        jq -r -c '.[index(["-n"]) + 1]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '$(VARNISH_WORKDIR)' ]
+
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_WORKDIR") | .valueFrom.fieldRef.fieldPath' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'metadata.name' ]
+}
+
+@test "${kind}/agent: fails with empty workDir" {
+    cd "$(chart_dir)"
+
+    run helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.workDir=' \
+        --namespace default \
+        --show-only ${template} \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"'server.workDir' cannot be empty when 'server.agent.enabled' is set"* ]]
+}
+
 @test "${kind}/extraListens: can be configured" {
     cd "$(chart_dir)"
 
@@ -1019,6 +1212,24 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c '.[index(["-p", "thread_pool_timeout=500"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_timeout=500' ]
+}
+
+@test "${kind}/command: null uses the default command" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.command=null' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") | .command[0]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "/usr/sbin/varnishd" ]
 }
 
 @test "${kind}/extraArgs: can be configured" {
@@ -5621,6 +5832,52 @@ release-namespace: to-be-override
             tee -a /dev/stderr)
 
     [ "${actual}" != 'null' ]
+}
+
+@test "${kind}/varnishncsa: targets varnishd workdir without extraArgs" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=-' \
+        --set-json 'server.varnishncsa.extraArgs=[]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa") |
+            .args' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["-n","$(VARNISH_WORKDIR)"]' ]
+}
+
+@test "${kind}/varnishncsa: no -n when workDir empty" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.workDir=' \
+        --set 'server.varnishncsa.startupProbe.periodSeconds=5' \
+        --set-json 'server.varnishncsa.extraArgs=[]' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-ncsa")' |
+            tee -a /dev/stderr)
+    [ -n "${container}" ]
+
+    local actual=$(echo "$container" | yq -o=json -I=0 '.args' | tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+
+    local actual=$(echo "$container" | yq -r '.startupProbe.exec.command[2]' | tee -a /dev/stderr)
+    [ "${actual}" == '/usr/bin/varnishncsa -d -t3' ]
 }
 
 @test "${kind}/varnishncsa/image: inherit from varnish-enterprise by default" {

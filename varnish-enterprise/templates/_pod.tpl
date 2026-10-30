@@ -270,7 +270,10 @@ Declares the Varnish container
 {{/*
 Composing the $varnishArgs list or arguments
 */}}
-{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port ) }}
+{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" }}
+{{- if include "varnish-common.isSet" .Values.server.admin.port }}
+  {{- $varnishArgs = concat $varnishArgs (list "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port )) }}
+{{- end }}
 {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 {{- if not (empty .Values.server.vcls.routes) }}
   {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli" "-f" "") }}
@@ -295,13 +298,16 @@ Composing the $varnishArgs list or arguments
 {{/*
     Parameter list
 */}}
-{{- $varnishParams := merge (dict
-    "thread_pool_min" (toString .Values.server.minThreads)
-    "thread_pool_max" (toString .Values.server.maxThreads)
-    "thread_pool_timeout" (toString .Values.server.threadTimeout)
-    )
-    .Values.server.parameters
- }}
+{{- $threadParams := dict }}
+{{- range $pKey, $pValue := dict
+    "thread_pool_min" .Values.server.minThreads
+    "thread_pool_max" .Values.server.maxThreads
+    "thread_pool_timeout" .Values.server.threadTimeout }}
+  {{- if include "varnish-common.isSet" $pValue }}
+    {{- $_ := set $threadParams $pKey (toString $pValue) }}
+  {{- end }}
+{{- end }}
+{{- $varnishParams := merge $threadParams .Values.server.parameters }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
   {{- if not (include "varnish-common.isEnterprise" .) }}
     {{- fail "'server.delayedShutdown.method' 'shutdown_delay' requires Varnish Enterprise, use 'sleep' or 'mempool' instead" }}
@@ -321,15 +327,17 @@ Composing the $varnishArgs list or arguments
 {{/*
     Working directory
 */}}
-{{- if (eq .Values.server.workDir "-" ) }}
+{{- if eq (include "varnish-common.workDir" .) "-" }}
 {{- $varnishArgs = concat $varnishArgs (list "-n" "$(VARNISH_WORKDIR)" )  }}
-{{- else }}
-{{- $varnishArgs = concat $varnishArgs (list "-n" (toString .Values.server.workDir)) }}
+{{- else if not (eq (include "varnish-common.workDir" .) "") }}
+{{- $varnishArgs = concat $varnishArgs (list "-n" (include "varnish-common.workDir" .)) }}
 {{- end }}
 {{/*
     TTL
 */}}
+{{- if include "varnish-common.isSet" .Values.server.ttl }}
 {{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
+{{- end }}
 {{/*
     Listen address
 */}}
@@ -526,15 +534,7 @@ Composing the $varnishArgs list or arguments
           fieldPath: metadata.name
     {{- end }}
     {{- end }}
-    {{- if eq .Values.server.workDir "-" }}
-    - name: VARNISH_WORKDIR
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.name
-    {{- else }}
-    - name: VARNISH_WORKDIR
-      value: "{{ .Values.server.workDir }}"
-    {{- end }}
+    {{- include "varnish-common.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
     {{- if (include "varnish-common.clusterEnabled" .) }}
     - name: VARNISH_CLUSTER_TOKEN
       valueFrom:
@@ -547,7 +547,7 @@ Composing the $varnishArgs list or arguments
           key: token
     {{- end }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
-  {{- if gt (len .Values.server.command) 0 }}
+  {{- if .Values.server.command }}
   command:
     {{- .Values.server.command | toYaml | nindent 4 }}
   {{- else }}
@@ -696,21 +696,25 @@ Declares the Varnish NCSA container
   {{- include "varnish-common.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
-  {{- if and .Values.server.varnishncsa.extraArgs (not (empty .Values.server.varnishncsa.extraArgs)) }}
-  args: {{- toYaml ( concat (list "-n"  "$(VARNISH_WORKDIR)" ) .Values.server.varnishncsa.extraArgs ) | nindent 4 }}
+  {{- $ncsaArgs := list }}
+  {{- if not (eq (include "varnish-common.workDir" .) "") }}
+    {{- $ncsaArgs = list "-n" "$(VARNISH_WORKDIR)" }}
+  {{- end }}
+  {{- if eq (kindOf .Values.server.varnishncsa.extraArgs) "string" }}
+    {{- $extra := .Values.server.varnishncsa.extraArgs | trim }}
+    {{- if $extra }}
+      {{- $ncsaArgs = concat $ncsaArgs (regexSplit "\\s+" $extra -1) }}
+    {{- end }}
+  {{- else if .Values.server.varnishncsa.extraArgs }}
+    {{- $ncsaArgs = concat $ncsaArgs .Values.server.varnishncsa.extraArgs }}
+  {{- end }}
+  {{- if $ncsaArgs }}
+  args: {{- toYaml $ncsaArgs | nindent 4 }}
   {{- end }}
   env:
     - name: VSM_NOPID
       value: "1"
-  {{- if eq .Values.server.workDir "-" }}
-    - name: VARNISH_WORKDIR
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.name
-  {{- else }}
-    - name: VARNISH_WORKDIR
-      value: "{{ .Values.server.workDir }}"
-  {{- end }}
+    {{- include "varnish-common.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
   {{- if and .Values.server.varnishncsa.extraEnvs (not (empty .Values.server.varnishncsa.extraEnvs)) }}
   {{- range $k, $v := .Values.server.varnishncsa.extraEnvs }}
     - name: {{ $k | quote }}
@@ -723,7 +727,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish-common.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
@@ -732,7 +736,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish-common.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
@@ -741,7 +745,7 @@ Declares the Varnish NCSA container
       command:
         - /bin/sh
         - -c
-        - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish-common.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
     {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
@@ -772,15 +776,7 @@ Declares the Varnish Otel container
   {{- include "varnish-common.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
   command: ["/usr/bin/varnish-otel"]
   env:
-    {{- if eq .Values.server.workDir "-" }}
-    - name: OTEL_VARNISH_WORKDIR
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.name
-    {{- else }}
-    - name: OTEL_VARNISH_WORKDIR
-      value: "{{ .Values.server.workDir }}"
-    {{- end }}
+    {{- include "varnish-common.workDirEnv" (dict "name" "OTEL_VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
   {{- if .Values.server.otel.env }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.otel.env) .) | nindent 4 }}
   {{- end }}
@@ -797,6 +793,9 @@ Declares the Varnish Controller Agent container
 */}}
 {{- define "varnish-common.agentContainer" -}}
 {{- if (include "varnish-common.agentEnabled" .) }}
+{{- if eq (include "varnish-common.workDir" .) "" }}
+  {{- fail "'server.workDir' cannot be empty when 'server.agent.enabled' is set" }}
+{{- end }}
 - name: {{ .Chart.Name }}-agent
   {{- include "varnish-common.securityContext" (merge (dict "section" "server.agent") .) | nindent 2 }}
   {{- include "varnish-common.image" (merge (dict "image" .Values.server.agent.image) .) | nindent 2 }}
@@ -810,7 +809,7 @@ Declares the Varnish Controller Agent container
     - name: VARNISH_CONTROLLER_VARNISH_ADMIN_PORT
       value: {{ .Values.server.admin.port | quote }}
     - name: VARNISH_CONTROLLER_VARNISH_NAME
-      value: {{ (toString .Values.server.workDir) | quote }}
+      value: {{ (include "varnish-common.workDir" .) | quote }}
     {{- if .Values.server.http.enabled }}
     - name: VARNISH_CONTROLLER_VARNISH_PORT
       value: {{ .Values.server.http.port | quote }}
