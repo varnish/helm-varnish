@@ -6,12 +6,12 @@ chart=$(chart_name)
 
 @test "StatefulSet: disabled by default" {
     cd "$(chart_dir)"
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" = "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"could not find template"* ]]
 }
 
 @test "StatefulSet: can be enabled" {
@@ -20,7 +20,7 @@ chart=$(chart_name)
         --set 'server.kind=StatefulSet' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'length > 0' | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -34,7 +34,7 @@ chart=$(chart_name)
         --set 'server.strategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"'server.strategy' cannot be enabled"* ]]
@@ -48,7 +48,7 @@ chart=$(chart_name)
         --set 'server.updateStrategy=' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
@@ -63,7 +63,7 @@ chart=$(chart_name)
         --set 'server.updateStrategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
@@ -83,7 +83,7 @@ rollingUpdate:
         --set "server.updateStrategy=$updateStrategy" \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
@@ -97,7 +97,7 @@ rollingUpdate:
         --set 'server.kind=StatefulSet' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -127,7 +127,7 @@ rollingUpdate:
         --set 'server.mse.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -158,7 +158,7 @@ rollingUpdate:
         --set 'server.kind=StatefulSet' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -178,7 +178,7 @@ rollingUpdate:
         --set 'server.mse.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -198,7 +198,7 @@ rollingUpdate:
         --set 'server.mse.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -224,7 +224,7 @@ rollingUpdate:
         --set 'server.mse.persistence.storageSize=100G' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -253,7 +253,7 @@ rollingUpdate:
         --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -284,7 +284,7 @@ rollingUpdate:
         --set 'server.mse4.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -316,7 +316,7 @@ rollingUpdate:
         --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -336,7 +336,7 @@ rollingUpdate:
         --set 'server.mse4.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -355,7 +355,7 @@ rollingUpdate:
         --set 'server.mse4.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -382,7 +382,7 @@ rollingUpdate:
         --set 'server.mse4.persistence.storageSize=100G' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -414,7 +414,7 @@ rollingUpdate:
         --set 'server.agent.persistence.storageSize=1G' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -444,7 +444,7 @@ rollingUpdate:
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -462,7 +462,7 @@ rollingUpdate:
         --set "server.kind=StatefulSet" \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -480,7 +480,7 @@ rollingUpdate:
         --set "server.extraVolumeClaimTemplates[0].spec.resources.requests.storage=10Gi" \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -503,7 +503,7 @@ rollingUpdate:
         --set "server.extraVolumeClaimTemplates[0].spec.resources.requests.storage=10Gi" \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local appVersion=$(app_version)
@@ -530,7 +530,7 @@ rollingUpdate:
         --set "server.extraVolumeClaimTemplates=${volumeClaimTemplates}" \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -561,7 +561,7 @@ rollingUpdate:
         --set "server.extraVolumeClaimTemplates=${volumeClaimTemplates}" \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local appVersion=$(app_version)
@@ -582,7 +582,7 @@ rollingUpdate:
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |

@@ -26,7 +26,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.metadata.name | test("-vcl-bundle-")) | .metadata.name' \
         | tee -a /dev/stderr | wc -l | tr -d ' ')
     [ "${actual}" != "0" ]
@@ -39,7 +39,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.metadata.name | test("-vcl-bundle-router$")) | .metadata.name' \
         | tee -a /dev/stderr)
     [ "${actual}" = "release-name-${chart}-vcl-bundle-router" ]
@@ -54,7 +54,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("foo_com.vcl")) | .data | has("foo_com.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
@@ -68,7 +68,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("my_site.vcl")) | .data | has("my_site.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
@@ -80,7 +80,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("any.vcl")) | .data | has("any.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
@@ -93,7 +93,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[0].hostnames[0]=api.bar-baz.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("api_bar_baz_com.vcl")) | .data | has("api_bar_baz_com.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
@@ -108,7 +108,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --set "server.vcls.routes[1].hostnames[0]=*.api.bar.com" \
         --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r 'select(.metadata.name == "release-name-'"$(chart_name)"'-vcl-bundle-cmds") | .data["cmds.cli"]' |
@@ -143,7 +143,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
         | tee -a /dev/stderr)
     [[ "${actual}" == *'req.http.No-Port-Host == "foo.com"'* ]]
@@ -158,7 +158,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
         | tee -a /dev/stderr)
     [[ "${actual}" == *'return(vcl(any))'* ]]
@@ -171,7 +171,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
         | tee -a /dev/stderr)
     [[ "${actual}" == *'return(synth(404, "No matching route"))'* ]]
@@ -199,7 +199,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[1]=www.foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' \
         | tee -a /dev/stderr)
     [[ "${actual}" == *'req.http.No-Port-Host == "foo.com" || req.http.No-Port-Host == "www.foo.com"'* ]]
@@ -214,7 +214,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("cmds.cli")) | .data."cmds.cli"' \
         | tee -a /dev/stderr)
     [[ "${actual}" == *'vcl.load route_foo_com_0 /etc/varnish/vcls/foo_com.vcl'* ]]
@@ -232,7 +232,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.includes.helpers\\.vcl=sub common_recv {}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("helpers.vcl")) | .data | has("helpers.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
@@ -426,7 +426,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
     [[ "${actual}" == *"import activedns;"* ]]
     [[ "${actual}" == *'include "cluster.vcl";'* ]]
@@ -442,7 +442,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
     [[ "${actual}" == *"sub vcl_init {"* ]]
     [[ "${actual}" == *"cluster.subscribe"* ]]
@@ -458,7 +458,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.http.enabled=true" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
     [[ "${actual}" == *"-peers:"* ]]
 }
@@ -473,7 +473,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "cluster.headlessServiceName=my-peers-svc" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
     [[ "${actual}" == *'"my-peers-svc:'* ]]
 }
@@ -488,7 +488,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "cluster.trace=true" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data."router.vcl"' | tee -a /dev/stderr)
     [[ "${actual}" == *'cluster_opts.set("trace", "true")'* ]]
 }
@@ -517,7 +517,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-router") | .configMap.name' \
         | tee -a /dev/stderr)
     [ "${actual}" = "release-name-${chart}-vcl-bundle-router" ]
@@ -530,7 +530,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-cmds") | .configMap.name' \
         | tee -a /dev/stderr)
     [ "${actual}" = "release-name-${chart}-vcl-bundle-cmds" ]
@@ -543,7 +543,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-foo-com") | .configMap.name' \
         | tee -a /dev/stderr)
     [ "${actual}" = "release-name-${chart}-vcl-bundle-foo-com" ]
@@ -556,7 +556,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-router") |
@@ -571,7 +571,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-cmds") |
@@ -586,7 +586,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-foo-com") |
@@ -601,7 +601,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("cmds.cli")) | .data | has("cmds.cli")' | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -613,7 +613,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("router.vcl")) | .data | has("router.vcl")' | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -661,7 +661,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .command | join(" ")' | tee -a /dev/stderr)
@@ -805,7 +805,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.includes.sub/helpers\\.vcl=sub common_recv {}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name | test("bundle-include")) |
@@ -820,7 +820,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.includes.sub/helpers\\.vcl=sub common_recv {}" \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'select(.data | has("helpers.vcl")) | .data | has("helpers.vcl")' | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -832,7 +832,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '
             .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .command | join(" ")' | tee -a /dev/stderr)
@@ -846,7 +846,7 @@ vcl.label route___api_bar_com route_route___api_bar_com_0" ]
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/deployment.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.spec.template.metadata.annotations | has("checksum/release-name-vcl-bundle")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]

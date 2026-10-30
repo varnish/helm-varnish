@@ -12,7 +12,7 @@ load _helpers
         --set 'server.tls.port=443' \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.spec.ports[1].port' | tee -a /dev/stderr)
     [ "${actual}" = "443" ]
 }
@@ -23,7 +23,7 @@ load _helpers
     local object=$((helm template \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -40,7 +40,7 @@ load _helpers
         --set 'server.service.externalTrafficPolicy=Local' \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -57,7 +57,7 @@ load _helpers
     local object=$((helm template \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -74,7 +74,7 @@ load _helpers
         --set 'server.service.internalTrafficPolicy=Local' \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
