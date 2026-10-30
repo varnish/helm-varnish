@@ -134,6 +134,7 @@ env: {
 {{/*
 Normalizes a route object's name for use as a VCL filename and Varnish label.
 Takes a route object as context. Replaces non-alphanumeric characters with underscores.
+Names derived from a hostname that does not start with a letter get a "route_" prefix.
 */}}
 {{- define "varnish.vclBundleK8sName" -}}
 {{- $s := regexReplaceAll "[^a-z0-9]" (. | lower) "-" -}}
@@ -145,9 +146,17 @@ Takes a route object as context. Replaces non-alphanumeric characters with under
 {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" .name -}}
 {{- fail (printf "server.vcls.routes: name '%s' contains path traversal sequence" .name) -}}
 {{- end -}}
+{{- if not (regexMatch "^[a-zA-Z]" .name) -}}
+{{- fail (printf "server.vcls.routes: name '%s' must start with a letter, as it is used as a VCL label" .name) -}}
+{{- end -}}
 {{- regexReplaceAll "[^a-zA-Z0-9]" .name "_" -}}
 {{- else if .hostnames -}}
-{{- regexReplaceAll "[^a-zA-Z0-9]" (first .hostnames) "_" -}}
+{{- $name := regexReplaceAll "[^a-zA-Z0-9]" (first .hostnames) "_" -}}
+{{- /* VCL labels must start with a letter */ -}}
+{{- if not (regexMatch "^[a-zA-Z]" $name) -}}
+{{- $name = printf "route_%s" $name -}}
+{{- end -}}
+{{- $name -}}
 {{- else -}}
 any
 {{- end -}}

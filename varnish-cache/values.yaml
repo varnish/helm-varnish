@@ -471,7 +471,7 @@ server:
     # Type: object list
     # Example:
     #   routes:
-    #     - name: foo-site            # optional; defaults to first hostname or "any"
+    #     - name: foo-site            # optional, must start with a letter; defaults to first hostname or "any"
     #       hostnames:                # the hostnames to match for this VCL. If empty, this VCL will be used as a catch-all.
     #         - foo.com
     #         - www.foo.com
