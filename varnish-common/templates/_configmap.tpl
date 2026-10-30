@@ -183,6 +183,10 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- if not (eq .Values.server.cmdfileConfigPath "/etc/varnish/cmds.cli") -}}
       {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
     {{- end -}}
+    {{- $routerVolName := printf "%s-config-vcl-bundle-router" $.Release.Name -}}
+    {{- if gt (len $routerVolName) 63 -}}
+      {{- fail (printf "server.vcls.routes: volume name '%s' exceeds 63 characters, use a shorter release name" $routerVolName) -}}
+    {{- end -}}
     {{- $seen := dict -}}
     {{- $seenK8s := dict -}}
     {{- $seenMountPaths := dict "router.vcl" "reserved" "cmds.cli" "reserved" -}}

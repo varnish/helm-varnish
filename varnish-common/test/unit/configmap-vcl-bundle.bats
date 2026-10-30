@@ -866,6 +866,29 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     [[ "$stderr" == *"exceeds 63 characters"* ]]
 }
 
+@test "vcl-bundle: error when router volume name exceeds 63 characters" {
+    cd "$(chart_dir)"
+    # "-config-vcl-bundle-router" is 25 characters
+    local release=$(printf 'r%.0s' {1..39})
+    run --separate-stderr helm template "${release}" \
+        --namespace default \
+        --set "server.vcls.routes[0].name=a" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.routes: volume name '${release}-config-vcl-bundle-router' exceeds 63 characters"* ]]
+
+    release="${release%r}"
+    run --separate-stderr helm template "${release}" \
+        --namespace default \
+        --set "server.vcls.routes[0].name=a" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -eq 0 ]
+}
+
 @test "vcl-bundle: error when include volume name exceeds 63 characters" {
     cd "$(chart_dir)"
     # "myrel-config-vcl-bundle-include-" is 32 characters
