@@ -471,6 +471,12 @@ Composing the $varnishArgs list or arguments
   {{- include "varnish-common.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server") .) | nindent 2 }}
   env:
+    {{- if and .Values.server.http.enabled .Values.server.http.podIP }}
+    - name: POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    {{- end }}
     {{- if include "varnish-common.isEnterprise" . }}
     {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
     {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
