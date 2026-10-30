@@ -90,13 +90,48 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
-        --set "server.vcls.routes[0].hostnames[0]=*.api.bar.com" \
+        --set "server.vcls.routes[0].hostnames[0]=api.bar-baz.com" \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --show-only templates/configmap-vcl.yaml \
         . || echo "---") | tee -a /dev/stderr |
-        yq -r 'select(.data | has("__api_bar_com.vcl")) | .data | has("__api_bar_com.vcl")' \
+        yq -r 'select(.data | has("api_bar_baz_com.vcl")) | .data | has("api_bar_baz_com.vcl")' \
         | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
+}
+
+@test "vcl-bundle: hostname not starting with a letter gets a route_ prefix" {
+    cd "$(chart_dir)"
+    local object=$( (helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].hostnames[0]=1.example.com" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --set "server.vcls.routes[1].hostnames[0]=*.api.bar.com" \
+        --set "server.vcls.routes[1].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        . || echo "---") | tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r 'select(.metadata.name == "release-name-'"$(chart_name)"'-vcl-bundle-cmds") | .data["cmds.cli"]' |
+        grep '^vcl.label' | tee -a /dev/stderr)
+    [ "${actual}" = "vcl.label route_1_example_com route_route_1_example_com_0
+vcl.label route___api_bar_com route_route___api_bar_com_0" ]
+
+    local actual=$(echo "$object" |
+        yq -r 'select(.data | has("route_1_example_com.vcl")) | .metadata.name' |
+        tee -a /dev/stderr)
+    [ "${actual}" = "release-name-$(chart_name)-vcl-bundle-route-1-example-com" ]
+}
+
+@test "vcl-bundle: error when route name does not start with a letter" {
+    cd "$(chart_dir)"
+    run --separate-stderr helm template \
+        --namespace default \
+        --set "server.vcls.routes[0].name=1site" \
+        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
+        --show-only templates/configmap-vcl.yaml \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"server.vcls.routes: name '1site' must start with a letter"* ]]
 }
 
 # ── Routing VCL ───────────────────────────────────────────────────────────────
@@ -818,18 +853,6 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 # ── Kubernetes name limits ─────────────────────────────────────────────────────
-
-@test "vcl-bundle: error when route k8s name is empty" {
-    cd "$(chart_dir)"
-    run --separate-stderr helm template \
-        --namespace default \
-        --set "server.vcls.routes[0].name=_" \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"server.vcls.routes: name '_' produces an empty k8s name"* ]]
-}
 
 @test "vcl-bundle: error when route volume name exceeds 63 characters" {
     cd "$(chart_dir)"
