@@ -1,4 +1,4 @@
-# VCL routing by hostname; Varnish Enterprise only (for now).
+# VCL routing by hostname.
 server:
   vcls:
     routes:
@@ -7,7 +7,7 @@ server:
           - foo.example.com
         vclContent: |
           vcl 4.1;
-          include "helpers.vcl";
+          include "./helpers.vcl";
           backend default none;
           sub vcl_recv { call common_recv; return (synth(200)); }
       - vclContent: |
