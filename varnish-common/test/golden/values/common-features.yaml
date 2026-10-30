@@ -1,0 +1,67 @@
+# Features available in both Varnish Cache and Varnish Enterprise charts.
+nameOverride: golden
+serviceAccount:
+  create: true
+  labels:
+    team: web
+global:
+  imagePullSecrets:
+    - name: pull-secret
+  podLabels:
+    tier: edge
+server:
+  replicas: 2
+  labels:
+    deploy-label: x
+  annotations:
+    deploy-annotation: y
+  extraListens:
+    - name: proxy
+      proto: PROXY
+      port: 8088
+  extraEnvs:
+    FOO: bar
+  extraArgs:
+    - -p
+    - thread_pool_stack=96k
+  secret: s3cr3t
+  vclConfig: |
+    vcl 4.1;
+    backend default { .host = "{{ .Release.Name }}-backend"; .port = "8080"; }
+  cmdfileConfig: |
+    vcl.list
+  autoscaling:
+    enabled: true
+    maxReplicas: 5
+  pdb:
+    enabled: true
+    minAvailable: 1
+  service:
+    type: ClusterIP
+    externalTrafficPolicy: ""
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - host: www.example.com
+    tls:
+      - secretName: example-tls
+        hosts:
+          - www.example.com
+  resources:
+    limits:
+      memory: 1Gi
+  varnishncsa:
+    extraArgs:
+      - -F
+      - '%h %r %s'
+extraManifests:
+  - name: extra-cm
+    checksum: true
+    data: |
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: {{ .Release.Name }}-extra
+      data:
+        key: value

@@ -1,0 +1,527 @@
+---
+# Source: varnish-enterprise/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: golden-varnish-enterprise
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: varnish-enterprise/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: golden-varnish-enterprise-secret
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  secret: czNjcjN0
+---
+# Source: varnish-enterprise/templates/configmap-mse.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-enterprise-mse
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  mse.conf: |
+    env: {
+      id = "mse";
+      memcache_size = "auto";
+      books = ( {
+        id = "book";
+        directory = "/var/lib/mse/book";
+        database_size = "214748364";
+        stores = ( {
+          id = "store";
+          filename = "/var/lib/mse/store.dat";
+          size = "19542101196";
+        } );
+      } );
+    };
+---
+# Source: varnish-enterprise/templates/configmap-tls.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-enterprise-tls
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  tls.conf: |
+    frontend = {
+      host = ""
+      port = "6443"
+    }
+    pem-file = "/etc/varnish/certs/example.pem"
+---
+# Source: varnish-enterprise/templates/configmap-vcl.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-enterprise-vcl-wrapped-default-vcl
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  wrapped-default.vcl: |
+    vcl 4.1;
+    import activedns;
+    include "cluster.vcl";
+    sub vcl_init {
+      # Turn on trace headers for debug (optional)
+      # For dynamic cluster, create a DNS group with the domain name for headless service
+      new cluster_group = activedns.dns_group(
+        "golden-varnish-enterprise-peers:6081"
+      );
+      # Subscribe the cluster director to the DNS group
+      cluster.subscribe(cluster_group.get_tag());
+      # Set the cluster token
+      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
+    }
+    include "/etc/varnish/default.vcl";
+---
+# Source: varnish-enterprise/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: golden-varnish-enterprise
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: http
+      port: 80
+      targetPort: 6081
+  selector:
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+---
+# Source: varnish-enterprise/templates/service.yaml
+# Headless service so pods can discover each other
+apiVersion: v1
+kind: Service
+metadata:
+  name: golden-varnish-enterprise-peers
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+  ports:
+    - name: http
+      port: 6081
+      targetPort: 6081
+---
+# Source: varnish-enterprise/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: golden-varnish-enterprise
+  labels:
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/version: APP_VERSION
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+spec:
+  serviceName: golden-varnish-enterprise
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: varnish-enterprise
+      app.kubernetes.io/instance: golden
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: golden
+        app.kubernetes.io/name: varnish-enterprise
+      annotations:
+        checksum/golden-mse: 1c67517c566038ad2dcfd2b6ae9fc4a700017ef18d099fe0a3bbb97613dbb20f
+        checksum/golden-secret: 4e738ca5563c06cfd0018299933d58db1dd8bf97f6973dc99bf6cdc64b5550bd
+        checksum/golden-tls: 50f7b62aaa3af5ec74b343ed5e0f9156f95fbdaded43ddb690f4f7711f1172bb
+    spec:
+      serviceAccountName: golden-varnish-enterprise
+      securityContext:
+        fsGroup: 999
+      shareProcessNamespace: false
+      containers:
+        - name: varnish-enterprise
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 6081
+              protocol: TCP
+            - name: https
+              containerPort: 6443
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 6081
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 6081
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          env:
+            - name: MSE_CONFIG
+              value: /etc/varnish/mse.conf
+            - name: VARNISH_TLS_CFG
+              value: /etc/varnish/tls.conf
+            - name: VARNISH_WORKDIR
+              value: "/var/lib/varnish/golden"
+            - name: VARNISH_CLUSTER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-token
+                  key: token
+          command:
+            - /usr/sbin/varnishd
+            - -F
+            - -T
+            - 127.0.0.1:6082
+            - -I
+            - /etc/varnish/shared/agent/cmds.cli
+            - -f
+            - /etc/varnish/wrapped-default.vcl
+            - -p
+            - default_ttl=60
+            - -p
+            - thread_pool_max=1000
+            - -p
+            - thread_pool_min=50
+            - -p
+            - thread_pool_timeout=120
+            - -n
+            - /var/lib/varnish/golden
+            - -t
+            - "120"
+            - -a
+            - http=0.0.0.0:6081
+            - -S
+            - /etc/varnish/secret
+            - -s
+            - mse,/etc/varnish/mse.conf
+            - -A
+            - /etc/varnish/tls.conf
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+            - name: varnish-license-volume
+              mountPath: /etc/varnish/varnish-enterprise.lic
+              readOnly: true
+              subPath: varnish-enterprise.lic
+            - name: golden-config-mse
+              mountPath: /etc/varnish/mse.conf
+              subPath: mse.conf
+            - name: golden-config-tls
+              mountPath: /etc/varnish/tls.conf
+              subPath: tls.conf
+            - name: golden-config-secret
+              mountPath: /etc/varnish/secret
+              subPath: secret
+            - name: golden-config-vcl-wrapped-default-vcl
+              mountPath: "/etc/varnish/wrapped-default.vcl"
+              subPath: "wrapped-default.vcl"
+            - name: golden-mse
+              mountPath: /var/lib/mse
+            - name: golden-varnish-controller
+              mountPath: /var/lib/varnish-controller
+        - name: varnish-enterprise-ncsa
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/bin/varnishncsa"]
+          args:
+            - -n
+            - $(VARNISH_WORKDIR)
+            - -c
+          env:
+            - name: VSM_NOPID
+              value: "1"
+            - name: VARNISH_WORKDIR
+              value: "/var/lib/varnish/golden"
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+        - name: varnish-enterprise-otel
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/bin/varnish-otel"]
+          env:
+            - name: OTEL_VARNISH_WORKDIR
+              value: "/var/lib/varnish/golden"
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+        - name: varnish-enterprise-agent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-controller-agent:7.5.1-6.0.16r13"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: VARNISH_CONTROLLER_VARNISH_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: VARNISH_CONTROLLER_VARNISH_ADMIN_HOST
+              value: "127.0.0.1"
+            - name: VARNISH_CONTROLLER_VARNISH_ADMIN_PORT
+              value: "6082"
+            - name: VARNISH_CONTROLLER_VARNISH_NAME
+              value: "/var/lib/varnish/golden"
+            - name: VARNISH_CONTROLLER_VARNISH_PORT
+              value: "6081"
+            - name: VARNISH_CONTROLLER_VARNISH_SECRET
+              value: /etc/varnish/secret
+            - name: VARNISH_CONTROLLER_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: VARNISH_CONTROLLER_LOG
+              value: "debug"
+            - name: VARNISH_CONTROLLER_NATS_USER
+              value: varnish-controller
+            - name: VARNISH_CONTROLLER_NATS_HOST
+              value: "varnish-controller-nats.default.svc.cluster.local:4222"
+            - name: VARNISH_CONTROLLER_NATS_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: "varnish-controller-credentials"
+                  key: "nats-varnish-password"
+            - name: VARNISH_CONTROLLER_NATS_SERVER
+              value: "$(VARNISH_CONTROLLER_NATS_USER):$(VARNISH_CONTROLLER_NATS_PASS)@$(VARNISH_CONTROLLER_NATS_HOST)"
+            - name: VARNISH_CONTROLLER_BASE_URL
+              value: "http://$(VARNISH_CONTROLLER_VARNISH_HOST):6081"
+          command: ["/usr/bin/varnish-controller-agent"]
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+            - name: golden-config-secret
+              mountPath: /etc/varnish/secret
+              subPath: secret
+            - name: golden-varnish-controller
+              mountPath: /var/lib/varnish-controller
+        - name: varnish-enterprise-vcli
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-controller-cli:7.5.1"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              vcli login || exit 1
+              sleep inf
+          env:
+            - name: VARNISH_CONTROLLER_CLI_ENDPOINT
+              value: "http://varnish-controller-apigw.default.svc.cluster.local:8080"
+            - name: VARNISH_CONTROLLER_CLI_USERNAME
+              value: "admin"
+            - name: VARNISH_CONTROLLER_CLI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "varnish-controller-credentials"
+                  key: "varnish-admin-password"
+            - name: VARNISH_CONTROLLER_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    vcli login
+                    while true; do
+                      echo >&2 "Waiting for Varnish Controller Agent to shutdown..."
+                      if vcli agent list -f "name=${VARNISH_CONTROLLER_AGENT_NAME},state=3" 2>/dev/null; then
+                        agentId=$(vcli agent list --csv -f "name=${VARNISH_CONTROLLER_AGENT_NAME},state=3" | tail -n1 | cut -d, -f1)
+                        echo "Removing ${VARNISH_CONTROLLER_AGENT_NAME} from Varnish Controller"
+                        vcli agent delete -y "${agentId}"
+                        break
+                      fi
+                      sleep 1
+                    done
+      initContainers:
+        - name: mse-config
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+           - /bin/busybox
+           - sh
+           - -c
+           - mkfs.mse -c /etc/varnish/mse.conf || mkfs.mse -c /etc/varnish/mse.conf -r
+          volumeMounts:
+           - name: golden-mse
+             mountPath: /var/lib/mse
+           - name: golden-config-mse
+             mountPath: /etc/varnish/mse.conf
+             subPath: mse.conf
+        - name: init-agent
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              ln -sf \
+                  /var/lib/varnish-controller/varnish-controller-agent/"${VARNISH_CONTROLLER_AGENT_NAME}" \
+                  /etc/varnish/shared/agent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          env:
+            - name: VARNISH_CONTROLLER_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      volumes:
+      - name: golden-varnish-vsm
+        emptyDir:
+          medium: "Memory"
+      - name: golden-config-shared
+        emptyDir:
+          medium: "Memory"
+      - name: varnish-license-volume
+        secret:
+          secretName: varnish-license
+      - name: golden-config-mse
+        configMap:
+          name: golden-varnish-enterprise-mse
+      - name: golden-config-tls
+        configMap:
+          name: golden-varnish-enterprise-tls
+      - name: golden-config-secret
+        secret:
+          secretName: golden-varnish-enterprise-secret
+      - name: golden-config-vcl-wrapped-default-vcl
+        configMap:
+          name: golden-varnish-enterprise-vcl-wrapped-default-vcl
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: varnish-enterprise
+                  app.kubernetes.io/instance: golden
+              topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 45
+  volumeClaimTemplates:
+    - metadata:
+        name: golden-varnish-controller
+        labels:
+          helm.sh/chart: varnish-enterprise-CHART_VERSION
+          app.kubernetes.io/name: varnish-enterprise
+          app.kubernetes.io/instance: golden
+          app.kubernetes.io/version: "APP_VERSION"
+          app.kubernetes.io/managed-by: Helm
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: "512Mi"
+    - metadata:
+        name: golden-mse
+        labels:
+          helm.sh/chart: varnish-enterprise-CHART_VERSION
+          app.kubernetes.io/name: varnish-enterprise
+          app.kubernetes.io/instance: golden
+          app.kubernetes.io/version: "APP_VERSION"
+          app.kubernetes.io/managed-by: Helm
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: "20Gi"

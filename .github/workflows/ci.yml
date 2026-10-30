@@ -55,9 +55,20 @@ jobs:
           if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then
             ${{ matrix.chart }}/test/unit_common/run.sh -j 50
           fi
+      - name: "Golden tests"
+        run: |
+          if [ -x ${{ matrix.chart }}/test/golden/run.sh ]; then
+            ${{ matrix.chart }}/test/golden/run.sh
+          fi
       - name: Create package
         run: |
           helm package "${{ matrix.chart }}"
+          # Templates shared through varnish-common/ are symlinks in the repo,
+          # make sure they were packaged as regular files.
+          if tar tvzf "${{ matrix.chart }}"-*.tgz | grep '^l'; then
+            echo "Error: ${{ matrix.chart }} package contains symbolic links"
+            exit 1
+          fi
           mkdir -p /tmp/artifacts
           cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
       - name: "Check version does not already exist"

@@ -1,0 +1,1 @@
+../../../varnish-common/test/golden/run.sh

@@ -30,6 +30,9 @@ jobs:
           - chart_dir: 'varnish-enterprise'
             docker_image: 'varnish/varnish-enterprise:latest'
             version_command: varnishd -V 2>&1 | sed -En 's/.*varnish-plus-(\S+).*/\1/p'
+          - chart_dir: 'varnish-cache'
+            docker_image: 'docker.io/varnish:latest'
+            version_command: varnishd -V 2>&1 | sed -En 's/.*\(varnish-([0-9][^ ]*) revision.*/\1/p'
     steps:
       - uses: actions/checkout@v4
         with:

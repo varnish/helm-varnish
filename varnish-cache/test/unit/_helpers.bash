@@ -1,3 +1,1 @@
-chart_dir() {
-    echo "${BATS_TEST_DIRNAME}"/../..
-}
+../../../varnish-common/test/unit/_helpers.bash

@@ -1,0 +1,249 @@
+---
+# Source: varnish-enterprise/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: golden-varnish-enterprise
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: varnish-enterprise/templates/configmap-tls.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: golden-varnish-enterprise-tls
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+data:
+  tls.conf: |
+    frontend = {
+      host = ""
+      port = "6443"
+    }
+    pem-file = "/etc/varnish/certs/example.pem"
+---
+# Source: varnish-enterprise/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: golden-varnish-enterprise
+  labels:
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/version: "APP_VERSION"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: NodePort
+  externalTrafficPolicy: Cluster
+  ports:
+    - name: http
+      port: 80
+      targetPort: 6081
+    - name: https
+      port: 443
+      targetPort: 6443
+  selector:
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/instance: golden
+---
+# Source: varnish-enterprise/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: golden-varnish-enterprise
+  labels:
+    app.kubernetes.io/instance: golden
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: varnish-enterprise
+    app.kubernetes.io/version: APP_VERSION
+    helm.sh/chart: varnish-enterprise-CHART_VERSION
+spec:
+  serviceName: golden-varnish-enterprise
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: varnish-enterprise
+      app.kubernetes.io/instance: golden
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: golden
+        app.kubernetes.io/name: varnish-enterprise
+      annotations:
+        checksum/golden-tls: 50f7b62aaa3af5ec74b343ed5e0f9156f95fbdaded43ddb690f4f7711f1172bb
+    spec:
+      serviceAccountName: golden-varnish-enterprise
+      securityContext:
+        fsGroup: 999
+      shareProcessNamespace: false
+      containers:
+        - name: varnish-enterprise
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 6081
+              protocol: TCP
+            - name: https
+              containerPort: 6443
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 6081
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: 6081
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          env:
+            - name: VARNISH_TLS_CFG
+              value: /etc/varnish/tls.conf
+            - name: VARNISH_WORKDIR
+              value: "golden"
+          command:
+            - /usr/sbin/varnishd
+            - -F
+            - -T
+            - 127.0.0.1:6082
+            - -f
+            - /etc/varnish/default.vcl
+            - -p
+            - backend_idle_timeout=60
+            - -p
+            - feature=+http2
+            - -p
+            - thread_pool_max=1000
+            - -p
+            - thread_pool_min=50
+            - -p
+            - thread_pool_timeout=120
+            - -n
+            - golden
+            - -t
+            - "120"
+            - -a
+            - http=0.0.0.0:6081
+            - -s
+            - mse
+            - -A
+            - /etc/varnish/tls.conf
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+            - name: golden-config-tls
+              mountPath: /etc/varnish/tls.conf
+              subPath: tls.conf
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  while [ "$(varnishstat -n "$VARNISH_WORKDIR" -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
+                    echo >&2 "Waiting for Varnish to drain connections..."
+                    sleep 1
+                  done
+                  sleep 5
+        - name: varnish-enterprise-ncsa
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/bin/varnishncsa"]
+          args:
+            - -n
+            - $(VARNISH_WORKDIR)
+            - -c
+          env:
+            - name: VSM_NOPID
+              value: "1"
+            - name: VARNISH_WORKDIR
+              value: "golden"
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+        - name: varnish-enterprise-otel
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command: ["/usr/bin/varnish-otel"]
+          env:
+            - name: OTEL_VARNISH_WORKDIR
+              value: "golden"
+            - name: "OTEL_EXPORTER_OTLP_ENDPOINT"
+              value: "http://otel-collector:4318"
+          volumeMounts:
+            - name: golden-varnish-vsm
+              mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      volumes:
+      - name: golden-varnish-vsm
+        emptyDir:
+          medium: "Memory"
+      - name: golden-config-shared
+        emptyDir:
+          medium: "Memory"
+      - name: golden-config-tls
+        configMap:
+          name: golden-varnish-enterprise-tls
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: varnish-enterprise
+                  app.kubernetes.io/instance: golden
+              topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 120
