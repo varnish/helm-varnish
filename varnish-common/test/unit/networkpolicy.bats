@@ -4,12 +4,12 @@ load _helpers
 
 @test "NetworkPolicy: disabled by default" {
     cd "$(chart_dir)"
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --show-only templates/networkpolicy.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" == "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"could not find template"* ]]
 }
 
 @test "NetworkPolicy: allows all ingress and egress by default when enabled" {
@@ -19,7 +19,7 @@ load _helpers
         --set 'server.networkPolicy.enabled=true' \
         --namespace default \
         --show-only templates/networkpolicy.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -55,7 +55,7 @@ load _helpers
         --set 'server.networkPolicy.extraEgress[0].ports[0].port=80' \
         --namespace default \
         --show-only templates/networkpolicy.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |

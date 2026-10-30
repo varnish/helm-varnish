@@ -11,7 +11,7 @@ load _helpers
     --set 'server.ingress.hosts[0].host=example.com' \
     --namespace default \
     --show-only templates/ingress.yaml \
-    . || echo "---") | tee -a /dev/stderr |
+    . || render_failed) | tee -a /dev/stderr |
     yq -r '.spec.rules[0].http.paths[0].backend.service.port.number' | tee -a /dev/stderr)
 
   [ "${actual}" == "8888" ]
@@ -29,7 +29,7 @@ load _helpers
     --set 'server.ingress.hosts[0].host=example.com' \
     --namespace default \
     --show-only templates/ingress.yaml \
-    . || echo "---") | tee -a /dev/stderr |
+    . || render_failed) | tee -a /dev/stderr |
     yq -r '.spec.rules[0].http.paths[0].backend.service.port.number' | tee -a /dev/stderr)
 
   [ "${actual}" == "8080" ]

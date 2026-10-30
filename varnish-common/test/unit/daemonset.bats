@@ -7,12 +7,12 @@ chart=$(chart_name)
 @test "DaemonSet: disabled by default" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" = "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"could not find template"* ]]
 }
 
 @test "DaemonSet: can be enabled" {
@@ -22,7 +22,7 @@ chart=$(chart_name)
         --set 'server.kind=DaemonSet' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r 'length > 0' | tee -a /dev/stderr)
     [ "${actual}" = "true" ]
 }
@@ -36,7 +36,7 @@ chart=$(chart_name)
         --set 'server.strategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"'server.strategy' cannot be enabled"* ]]
@@ -50,7 +50,7 @@ chart=$(chart_name)
         --set 'server.updateStrategy=' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
@@ -65,7 +65,7 @@ chart=$(chart_name)
         --set 'server.updateStrategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"rollingUpdate":{"maxUnavailable":1},"type":"RollingUpdate"}' ]
@@ -85,7 +85,7 @@ rollingUpdate:
         --set "server.updateStrategy=$updateStrategy" \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
@@ -95,14 +95,14 @@ rollingUpdate:
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --set 'server.kind=DaemonSet' \
         --set 'server.mse.persistence.enabled=true' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" == "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'"* ]]
 }
 
 @test "DaemonSet/agent/persistence: cannot be enabled" {
@@ -116,7 +116,7 @@ rollingUpdate:
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
@@ -133,7 +133,7 @@ rollingUpdate:
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
@@ -154,7 +154,7 @@ rollingUpdate:
         --set "server.extraVolumeClaimTemplates[0].spec.resources.requests.storage=10Gi" \
         --namespace default \
         --show-only templates/daemonset.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
 
     [[ "${actual}" == *"'server.extraVolumeClaimTemplates' cannot be enabled"* ]]

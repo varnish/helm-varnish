@@ -4,12 +4,12 @@ load _helpers
 
 @test "extraManifests: disabled by default" {
     cd "$(chart_dir)"
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --show-only templates/extra.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" == "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"could not find template"* ]]
 }
 
 @test "extraManifests: can be enabled as templated string" {
@@ -48,7 +48,7 @@ EOF
         --set "server.kind=Deployment" \
         --namespace default \
         --show-only templates/extra.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | xargs | tee -a /dev/stderr)
@@ -97,7 +97,7 @@ EOF
         --set "server.kind=Deployment" \
         --namespace default \
         --show-only templates/extra.yaml \
-        . || echo "---") |
+        . || render_failed) |
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" | yq -o=json -I=0 | wc -l | xargs | tee -a /dev/stderr)

@@ -4,12 +4,12 @@ load _helpers
 
 @test "HorizontalPodAutoscaler: disabled by default" {
     cd "$(chart_dir)"
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --show-only templates/hpa.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" == "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"could not find template"* ]]
 }
 
 @test "HorizontalPodAutoscaler: inherits minReplicas from replicas " {
@@ -22,7 +22,7 @@ load _helpers
         --set 'server.autoscaling.maxReplicas=10' \
         --namespace default \
         --show-only templates/hpa.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 'length > 0' |
@@ -54,7 +54,7 @@ load _helpers
         --set 'server.autoscaling.maxReplicas=10' \
         --namespace default \
         --show-only templates/hpa.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 'length > 0' |
@@ -87,7 +87,7 @@ load _helpers
         --set "server.autoscaling.behavior.scaleDown.policies[0].periodSeconds=60" \
         --namespace default \
         --show-only templates/hpa.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '.spec.behavior' |
@@ -110,7 +110,7 @@ scaleDown:
         --set "server.autoscaling.behavior=$behavior" \
         --namespace default \
         --show-only templates/hpa.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '.spec.behavior' |
@@ -129,7 +129,7 @@ scaleDown:
         --set "server.autoscaling.metrics[0].resource.target.averageUtilization=50" \
         --namespace default \
         --show-only templates/hpa.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '.spec.metrics' |
@@ -153,7 +153,7 @@ scaleDown:
         --set "server.autoscaling.metrics=$metrics" \
         --namespace default \
         --show-only templates/hpa.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '.spec.metrics' |

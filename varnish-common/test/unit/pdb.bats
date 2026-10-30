@@ -4,12 +4,12 @@ load _helpers
 
 @test "PodDisruptionBudget: disabled by default" {
     cd "$(chart_dir)"
-    local actual=$((helm template \
+    run --separate-stderr helm template \
         --namespace default \
         --show-only templates/pdb.yaml \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" == "false" ]
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"could not find template"* ]]
 }
 
 @test "PodDisruptionBudget: can be enabled with minAvailable" {
@@ -20,7 +20,7 @@ load _helpers
         --set 'server.pdb.minAvailable=30%' \
         --namespace default \
         --show-only templates/pdb.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 'length > 0' |
@@ -52,7 +52,7 @@ load _helpers
         --set 'server.pdb.minAvailable=5' \
         --namespace default \
         --show-only templates/pdb.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 'length > 0' |
@@ -83,7 +83,7 @@ load _helpers
         --set 'server.pdb.maxUnavailable=30%' \
         --namespace default \
         --show-only templates/pdb.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 'length > 0' |
@@ -115,7 +115,7 @@ load _helpers
         --set 'server.pdb.maxUnavailable=5' \
         --namespace default \
         --show-only templates/pdb.yaml \
-        . || echo "---") | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 'length > 0' |
@@ -145,7 +145,7 @@ load _helpers
         --set 'server.pdb.enabled=true' \
         --namespace default \
         --show-only templates/pdb.yaml \
-        . || echo "---") 2>&1 |
+        . || true) 2>&1 |
         tee -a /dev/stderr)
     [[ "${actual}" == *"'server.pdb.minAvailable' or 'server.pdb.maxUnavailable' must be set"* ]]
 }
