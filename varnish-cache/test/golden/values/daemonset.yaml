@@ -1,2 +1,1 @@
-server:
-  kind: DaemonSet
+../../../../varnish-common/test/golden/values/daemonset.yaml

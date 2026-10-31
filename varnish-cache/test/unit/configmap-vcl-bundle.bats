@@ -1,0 +1,1 @@
+../../../varnish-common/test/unit/configmap-vcl-bundle.bats
