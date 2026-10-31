@@ -2,6 +2,8 @@
 
 load _helpers
 
+chart=$(chart_name)
+
 @test "StatefulSet: disabled by default" {
     cd "$(chart_dir)"
     local actual=$((helm template \
@@ -88,6 +90,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/mse/persistence: disabled by default" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -109,13 +112,14 @@ rollingUpdate:
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-mse")' |
             tee -a /dev/stderr)
     [ "${actual}" = "" ]
 }
 
 @test "StatefulSet/mse/persistence: can be enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -136,17 +140,18 @@ rollingUpdate:
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
             tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-mse","configMap":{"name":"release-name-varnish-enterprise-mse"}}' ]
+    [ "${actual}" = '{"name":"release-name-config-mse","configMap":{"name":"release-name-'"${chart}"'-mse"}}' ]
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-mse")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-mse","mountPath":"/var/lib/mse"}' ]
 }
 
 @test "StatefulSet/mse/persistence: initContainer is not defined by default" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -164,6 +169,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/mse/persistence: initContainer is defined when persistence is configured" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -183,6 +189,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/mse/persistence: can be enabled with custom values" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -203,7 +210,7 @@ rollingUpdate:
     [ "${actual}" == '{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"100G"}}}' ]
 
     local containerObject=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[] | select(.name == "varnish-enterprise")' |
+        yq -r '.spec.template.spec.containers[] | select(.name == "'"${chart}"'")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$containerObject" |
@@ -213,6 +220,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/mse4/persistence: disabled by default" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -235,13 +243,14 @@ rollingUpdate:
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" = "" ]
 }
 
 @test "StatefulSet/mse4/persistence: can be enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -263,17 +272,18 @@ rollingUpdate:
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse4")' |
             tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-mse4","configMap":{"name":"release-name-varnish-enterprise-mse4"}}' ]
+    [ "${actual}" = '{"name":"release-name-config-mse4","configMap":{"name":"release-name-'"${chart}"'-mse4"}}' ]
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-mse4","mountPath":"/var/lib/mse4"}' ]
 }
 
 @test "StatefulSet/mse4/persistence: initContainer is not defined by default" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -292,6 +302,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/mse4/persistence: initContainer is defined when persistence is configured" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -311,6 +322,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/mse4/persistence: can be enabled with custom values" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -332,7 +344,7 @@ rollingUpdate:
     [ "${actual}" == '{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"100G"}}}' ]
 
     local containerObject=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[] | select(.name == "varnish-enterprise")' |
+        yq -r '.spec.template.spec.containers[] | select(.name == "'"${chart}"'")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$containerObject" |
@@ -342,6 +354,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/agent/persistence: can be enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -357,7 +370,7 @@ rollingUpdate:
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-agent") |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .volumeMounts[]? | select(.name == "release-name-varnish-controller")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"release-name-varnish-controller","mountPath":"/var/lib/varnish-controller"}' ]
@@ -372,6 +385,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/agent/persistence: can be enabled with volume name" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -386,7 +400,7 @@ rollingUpdate:
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-agent") |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .volumeMounts[]? | select(.name == "my-varnish-controller-volume")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"my-varnish-controller-volume","mountPath":"/var/lib/varnish-controller"}' ]
@@ -426,6 +440,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/extraVolumeClaimTemplates: can be configured with persistency" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -475,6 +490,7 @@ rollingUpdate:
 }
 
 @test "StatefulSet/extraVolumeClaimTemplates: can be configured with templated string with persistency" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local volumeClaimTemplates='
@@ -503,4 +519,25 @@ rollingUpdate:
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '.spec.volumeClaimTemplates[] | select (.metadata.name == "release-name-pv")' | tee -a /dev/stderr)
     [ "${actual}" == '{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
+}
+
+@test "StatefulSet/agent/persistence: PVC kept when agent disabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    # volumeClaimTemplates cannot change on an existing StatefulSet, so
+    # disabling the agent must not drop its PVC.
+    local object=$((helm template \
+        --set 'server.kind=StatefulSet' \
+        --set 'server.agent.enabled=false' \
+        --set 'server.agent.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-varnish-controller") | .metadata.name' |
+            tee -a /dev/stderr)
+    [ "${actual}" = "release-name-varnish-controller" ]
 }

@@ -17,6 +17,7 @@ load _helpers
 
     local object=$((helm template \
         --set 'server.autoscaling.enabled=true' \
+        --set 'server.autoscaling.minReplicas=-' \
         --set 'server.replicas=2' \
         --set 'server.autoscaling.maxReplicas=10' \
         --namespace default \

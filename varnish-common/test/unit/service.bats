@@ -50,8 +50,9 @@ load _helpers
     [ "${actual}" == "Local" ]
 }
 
-@test "Service/internalTrafficPolicy: not set by default" {
+@test "Service/internalTrafficPolicy: follows the values default" {
     cd "$(chart_dir)"
+    local expected=$(yq -r '.server.service.internalTrafficPolicy' < values.yaml)
 
     local object=$((helm template \
         --namespace default \
@@ -60,10 +61,10 @@ load _helpers
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec | has("internalTrafficPolicy")' |
+        yq -r -o=json -I=0 '.spec.internalTrafficPolicy // ""' |
         tee -a /dev/stderr)
 
-    [ "${actual}" == "false" ]
+    [ "${actual}" == "${expected}" ]
 }
 
 @test "Service/internalTrafficPolicy: can be changed by user, for example Local" {

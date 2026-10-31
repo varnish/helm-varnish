@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 load _helpers
+
+chart=$(chart_name)
 bats_require_minimum_version 1.5.0
 
 VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200)); }'
@@ -40,7 +42,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r 'select(.metadata.name | test("-vcl-bundle-router$")) | .metadata.name' \
         | tee -a /dev/stderr)
-    [ "${actual}" = "release-name-varnish-enterprise-vcl-bundle-router" ]
+    [ "${actual}" = "release-name-${chart}-vcl-bundle-router" ]
 }
 
 # ── Route VCL keys ─────────────────────────────────────────────────────────────
@@ -204,6 +206,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 # ── Conflict checks ───────────────────────────────────────────────────────────
 
 @test "vcl-bundle: error when server.vcls.routes and server.agent.enabled both set" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -379,6 +382,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 @test "vcl-bundle: router.vcl imports activedns when cluster enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -394,6 +398,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 @test "vcl-bundle: router.vcl has vcl_init with cluster setup when cluster enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -410,6 +415,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 @test "vcl-bundle: router.vcl uses default peers service name when cluster.headlessServiceName unset" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -423,6 +429,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 @test "vcl-bundle: router.vcl uses cluster.headlessServiceName when set" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -437,6 +444,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 @test "vcl-bundle: router.vcl includes trace opt when cluster.trace enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$( (helm template \
         --namespace default \
@@ -451,6 +459,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 @test "vcl-bundle: router.vcl has no trace opt when cluster.trace disabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$(helm template \
         --namespace default \
@@ -476,7 +485,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-router") | .configMap.name' \
         | tee -a /dev/stderr)
-    [ "${actual}" = "release-name-varnish-enterprise-vcl-bundle-router" ]
+    [ "${actual}" = "release-name-${chart}-vcl-bundle-router" ]
 }
 
 @test "vcl-bundle: deployment has volume for cmds" {
@@ -489,7 +498,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-cmds") | .configMap.name' \
         | tee -a /dev/stderr)
-    [ "${actual}" = "release-name-varnish-enterprise-vcl-bundle-cmds" ]
+    [ "${actual}" = "release-name-${chart}-vcl-bundle-cmds" ]
 }
 
 @test "vcl-bundle: deployment has volume for each route" {
@@ -502,7 +511,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         . || echo "---") | tee -a /dev/stderr |
         yq -r '.spec.template.spec.volumes[] | select(.name == "release-name-config-vcl-bundle-foo-com") | .configMap.name' \
         | tee -a /dev/stderr)
-    [ "${actual}" = "release-name-varnish-enterprise-vcl-bundle-foo-com" ]
+    [ "${actual}" = "release-name-${chart}-vcl-bundle-foo-com" ]
 }
 
 @test "vcl-bundle: deployment mounts router.vcl with subPath" {
@@ -514,7 +523,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-router") |
             [.mountPath, .subPath] | join(":")' | tee -a /dev/stderr)
     [ "${actual}" = "/etc/varnish/vcls/router.vcl:router.vcl" ]
@@ -529,7 +538,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-cmds") |
             [.mountPath, .subPath] | join(":")' | tee -a /dev/stderr)
     [ "${actual}" = "/etc/varnish/vcls/cmds.cli:cmds.cli" ]
@@ -544,7 +553,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name == "release-name-config-vcl-bundle-foo-com") |
             [.mountPath, .subPath] | join(":")' | tee -a /dev/stderr)
     [ "${actual}" = "/etc/varnish/vcls/foo_com.vcl:foo_com.vcl" ]
@@ -575,6 +584,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
 }
 
 @test "vcl-bundle: varnishd -f arg is empty string when routes and cluster both set" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$(helm template \
         --namespace default \
@@ -585,13 +595,14 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .command | join(" ")' | tee -a /dev/stderr)
     [[ "${actual}" == *"-f "* ]]
     [[ "${actual}" != *"wrapped-default"* ]]
 }
 
 @test "vcl-bundle: wrapped-default.vcl not mounted when routes and cluster both set" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
     local actual=$(helm template \
         --namespace default \
@@ -602,7 +613,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name | test("wrapped-default")) | .name' \
         | tee -a /dev/stderr)
     [ "${actual}" = "" ]
@@ -617,7 +628,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .command | join(" ")' | tee -a /dev/stderr)
     [[ "${actual}" == *"-f "* ]]
 }
@@ -724,7 +735,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .volumeMounts[] | select(.name | test("bundle-include")) |
             [.mountPath, .subPath] | join(":")' | tee -a /dev/stderr)
     [ "${actual}" = "/etc/varnish/vcls/sub/helpers.vcl:helpers.vcl" ]
@@ -751,7 +762,7 @@ VCL_CONTENT='vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(200))
         --show-only templates/deployment.yaml \
         . || echo "---") | tee -a /dev/stderr |
         yq -r '
-            .spec.template.spec.containers[] | select(.name == "varnish-enterprise") |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
             .command | join(" ")' | tee -a /dev/stderr)
     [[ "${actual}" == *"-I /etc/varnish/vcls/cmds.cli"* ]]
 }

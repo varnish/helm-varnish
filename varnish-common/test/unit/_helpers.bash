@@ -2,10 +2,18 @@ chart_dir() {
   echo "${BATS_TEST_DIRNAME}"/../..
 }
 
-app_version() {
-  yq -r '.appVersion' < "${BATS_TEST_DIRNAME}"/../../Chart.yaml
+chart_name() {
+  yq -r '.name' < "$(chart_dir)/Chart.yaml"
 }
 
-chart_name() {
-  yq -r '.name' < "${BATS_TEST_DIRNAME}"/../../Chart.yaml
+app_version() {
+  yq -r '.appVersion' < "$(chart_dir)/Chart.yaml"
+}
+
+is_enterprise() {
+  [ "$(yq -r '.annotations.flavor' < "$(chart_dir)/Chart.yaml")" == "enterprise" ]
+}
+
+skip_unless_enterprise() {
+  is_enterprise || skip "Varnish Enterprise only"
 }

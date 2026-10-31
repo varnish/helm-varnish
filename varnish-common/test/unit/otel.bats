@@ -2,6 +2,8 @@
 
 load _helpers
 
+chart=$(chart_name)
+
 @test "Deployment/otel: disabled by default" {
     cd "$(chart_dir)"
     local object=$((helm template \
@@ -10,7 +12,7 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .name' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
         tee -a /dev/stderr)
 
     [ "${actual}" == "" ]
@@ -25,10 +27,10 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .name' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
         tee -a /dev/stderr)
 
-    [ "${actual}" == "varnish-enterprise-otel" ]
+    [ "${actual}" == "${chart}-otel" ]
 }
 
 @test "Deployment/otel: uses correct command" {
@@ -40,7 +42,7 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .command[0]' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .command[0]' |
         tee -a /dev/stderr)
 
     [ "${actual}" == "/usr/bin/varnish-otel" ]
@@ -57,11 +59,11 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local endpoint=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .env[]? | select(.name == "OTEL_EXPORTER_OTLP_ENDPOINT") | .value' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .env[]? | select(.name == "OTEL_EXPORTER_OTLP_ENDPOINT") | .value' |
         tee -a /dev/stderr)
 
     local service=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .env[]? | select(.name == "OTEL_SERVICE_NAME") | .value' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .env[]? | select(.name == "OTEL_SERVICE_NAME") | .value' |
         tee -a /dev/stderr)
 
     [ "${endpoint}" == "http://datadog:4317" ]
@@ -77,7 +79,7 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[] | select(.name == "varnish-enterprise-otel") | .volumeMounts[] | select(.mountPath == "/var/lib/varnish") | .mountPath' |
+        yq -r '.spec.template.spec.containers[] | select(.name == "'"${chart}"'-otel") | .volumeMounts[] | select(.mountPath == "/var/lib/varnish") | .mountPath' |
         tee -a /dev/stderr)
 
     [ "${actual}" = "/var/lib/varnish" ]
@@ -92,7 +94,7 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[] | select(.name == "varnish-enterprise-otel") | .volumeMounts[] | select(.mountPath == "/etc/varnish/shared") | .mountPath' |
+        yq -r '.spec.template.spec.containers[] | select(.name == "'"${chart}"'-otel") | .volumeMounts[] | select(.mountPath == "/etc/varnish/shared") | .mountPath' |
         tee -a /dev/stderr)
 
     [ "${actual}" = "/etc/varnish/shared" ]
@@ -109,7 +111,7 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .image' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .image' |
         tee -a /dev/stderr)
 
     [ "${actual}" == "custom/varnish-otel:custom-tag" ]
@@ -126,7 +128,7 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .image' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .image' |
         tee -a /dev/stderr)
 
     [ "${actual}" == "quay.io/varnish-software/varnish-plus:6.0.16r3" ]
@@ -143,11 +145,11 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local cpu=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .resources.limits.cpu' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .resources.limits.cpu' |
         tee -a /dev/stderr)
 
     local memory=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .resources.limits.memory' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .resources.limits.memory' |
         tee -a /dev/stderr)
 
     [ "${cpu}" == "200m" ]
@@ -164,10 +166,10 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .name' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
         tee -a /dev/stderr)
 
-    [ "${actual}" == "varnish-enterprise-otel" ]
+    [ "${actual}" == "${chart}-otel" ]
 }
 
 @test "DaemonSet/otel: can be enabled" {
@@ -180,8 +182,28 @@ load _helpers
         . || echo "---") | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "varnish-enterprise-otel") | .name' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
         tee -a /dev/stderr)
 
-    [ "${actual}" == "varnish-enterprise-otel" ]
+    [ "${actual}" == "${chart}-otel" ]
+}
+
+@test "Deployment/otel: no OTEL_VARNISH_WORKDIR when workDir empty" {
+    cd "$(chart_dir)"
+    local object=$((helm template \
+        --set 'server.otel.enabled=true' \
+        --set 'server.workDir=' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || echo "---") | tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == "${chart}-otel" ]
+
+    local actual=$(echo "$object" |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .env[]? | select(.name == "OTEL_VARNISH_WORKDIR") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == "" ]
 }

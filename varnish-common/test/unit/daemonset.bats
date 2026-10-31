@@ -2,6 +2,8 @@
 
 load _helpers
 
+chart=$(chart_name)
+
 @test "DaemonSet: disabled by default" {
     cd "$(chart_dir)"
 
@@ -90,6 +92,7 @@ rollingUpdate:
 }
 
 @test "DaemonSet/mse/persistence: cannot be enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local actual=$((helm template \
@@ -103,6 +106,7 @@ rollingUpdate:
 }
 
 @test "DaemonSet/agent/persistence: cannot be enabled" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local actual=$((helm template \
@@ -119,6 +123,7 @@ rollingUpdate:
 }
 
 @test "DaemonSet/agent/persistence: can be enabled with volume name" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -133,7 +138,7 @@ rollingUpdate:
 
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "varnish-enterprise-agent") |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
             .volumeMounts[]? | select(.name == "my-varnish-controller-volume")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"my-varnish-controller-volume","mountPath":"/var/lib/varnish-controller"}' ]
