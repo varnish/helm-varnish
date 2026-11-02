@@ -169,3 +169,90 @@ default_store() {
         .) | yq -r '.data."config.yaml"' | yqj '.varnish.storage.stores[0]')
     [ "${actual}" = '{"name":"disk1","path":"/var/lib/varnish-supervisor/storage/disk1","size":"10G"}' ]
 }
+
+# A store whose book is sent to a volume of its own.
+book_path_store() {
+    echo "--set kind=StatefulSet \
+          --set orca.varnish.storage.stores[0].name=disk1 \
+          --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+          --set orca.varnish.storage.stores[0].size=100G \
+          --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/book/disk1 \
+          --set orca.varnish.storage.stores[0].book_volume.size=10G"
+}
+
+@test "Book volume: book_path adds a second vCT" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(book_path_store) \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yqj '[.spec.volumeClaimTemplates[].metadata.name]')
+    [ "${actual}" = '["orca-storage-disk1","orca-book-disk1"]' ]
+}
+
+@test "Book volume: no second vCT without book_path" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(default_store) \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yqj '[.spec.volumeClaimTemplates[].metadata.name]')
+    [ "${actual}" = '["orca-storage-disk1"]' ]
+}
+
+@test "Book volume: sized from book_volume.size, not book_size" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(book_path_store) \
+        --set orca.varnish.storage.stores[0].book_size=5G \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yq -r '.spec.volumeClaimTemplates[1].spec.resources.requests.storage')
+    [ "${actual}" = "10Gi" ]
+}
+
+@test "Book volume: mounted at book_path" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(book_path_store) \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yqj '.spec.template.spec.containers[0].volumeMounts[] | select(.name == "orca-book-disk1")')
+    [ "${actual}" = '{"name":"orca-book-disk1","mountPath":"/var/lib/varnish-supervisor/book/disk1"}' ]
+}
+
+@test "Book volume: own storageClassName overrides the shared default" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(book_path_store) \
+        --set storage.storageClassName=bulk \
+        --set orca.varnish.storage.stores[0].book_volume.storageClassName=fast-nvme \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yqj '[.spec.volumeClaimTemplates[].spec.storageClassName]')
+    [ "${actual}" = '["bulk","fast-nvme"]' ]
+}
+
+@test "Book volume: falls back to the shared storageClassName" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(book_path_store) \
+        --set storage.storageClassName=bulk \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yq -r '.spec.volumeClaimTemplates[1].spec.storageClassName')
+    [ "${actual}" = "bulk" ]
+}
+
+@test "Book volume: own accessModes override the shared default" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(book_path_store) \
+        --set 'orca.varnish.storage.stores[0].book_volume.accessModes={ReadWriteOncePod}' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yqj '[.spec.volumeClaimTemplates[].spec.accessModes]')
+    [ "${actual}" = '[["ReadWriteOnce"],["ReadWriteOncePod"]]' ]
+}
+
+@test "Book volume: book_path reaches the config but book_volume does not" {
+    cd "$(chart_dir)"
+    local actual=$((helm template $(book_path_store) \
+        --namespace default \
+        --show-only templates/configmap.yaml \
+        .) | yq -r '.data."config.yaml"' | yqj '.varnish.storage.stores[0]')
+    [ "${actual}" = '{"book_path":"/var/lib/varnish-supervisor/book/disk1","name":"disk1","path":"/var/lib/varnish-supervisor/storage/disk1","size":"100G"}' ]
+}

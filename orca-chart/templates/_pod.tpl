@@ -94,6 +94,14 @@ spec:
       {{- range $i, $store := dig "varnish" "storage" "stores" (list) (default (dict) .Values.orca) }}
       - name: orca-storage-{{ $store.name }}
         mountPath: {{ $store.path | quote }}
+      {{- /* The supervisor refuses to create a missing book_path, so that a
+      volume which failed to mount is caught rather than quietly filled. The
+      mount is what makes the directory, which is why it is rendered here and
+      not left to an initContainer. */}}
+      {{- if eq (include "orca.storeHasBookVolume" $store) "true" }}
+      - name: orca-book-{{ $store.name }}
+        mountPath: {{ $store.book_path | quote }}
+      {{- end }}
       {{- end }}
       {{- with .Values.volumeMounts }}
       {{- toYaml . | nindent 6 }}

@@ -198,3 +198,202 @@ load _helpers
         .) | yq -r '.spec.volumeClaimTemplates[0].spec.resources.requests.storage')
     [ "${actual}" = "1000Gi" ]
 }
+
+@test "Validation: book_path without book_volume.size fails" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/book/disk1 \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'book_volume.size' is required"* ]]
+}
+
+@test "Validation: book_volume without book_path fails" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_volume.size=10G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'book_volume' needs 'book_path'"* ]]
+}
+
+
+@test "Validation: book_volume.size below book_size plus overhead fails" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_size=20G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/book/disk1 \
+        --set orca.varnish.storage.stores[0].book_volume.size=10G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'book_volume.size'"* ]]
+    [[ "${output}" == *"must be greater than book_size plus filesystem overhead"* ]]
+}
+
+@test "Validation: book_volume.size equal to book_size fails, the filesystem needs its own room" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/book/disk1 \
+        --set orca.varnish.storage.stores[0].book_volume.size=5G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'book_volume.size'"* ]]
+}
+
+@test "Validation: a book volume clearing book_size plus the 1G floor is allowed" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/book/disk1 \
+        --set orca.varnish.storage.stores[0].book_volume.size=7G \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yq -r '.spec.volumeClaimTemplates[1].spec.resources.requests.storage')
+    [ "${actual}" = "7Gi" ]
+}
+
+@test "Validation: book_path keeps book_size in the store's size minimum" {
+    cd "$(chart_dir)"
+    # Separate claims are not a promise of separate devices: a local-path
+    # provisioner hands out directories on one node filesystem, and the
+    # supervisor compares device IDs. So book_size stays in the minimum.
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=10G \
+        --set orca.varnish.storage.stores[0].book_size=20G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/book/disk1 \
+        --set orca.varnish.storage.stores[0].book_volume.size=40G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"must be greater than book_size plus filesystem overhead"* ]]
+}
+
+@test "Validation: book_path equal to the store path fails" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/storage/disk1/ \
+        --set orca.varnish.storage.stores[0].book_volume.size=10G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"already mounted by store"* ]]
+}
+
+@test "Validation: book_path inside the store path fails" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/storage/disk1/book \
+        --set orca.varnish.storage.stores[0].book_volume.size=10G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"nests with"* ]]
+}
+
+@test "Validation: two stores sharing one book_path fail" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_path=/books \
+        --set orca.varnish.storage.stores[0].book_volume.size=10G \
+        --set orca.varnish.storage.stores[1].name=disk2 \
+        --set orca.varnish.storage.stores[1].path=/var/lib/varnish-supervisor/storage/disk2 \
+        --set orca.varnish.storage.stores[1].size=100G \
+        --set orca.varnish.storage.stores[1].book_path=/books \
+        --set orca.varnish.storage.stores[1].book_volume.size=10G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"already mounted by store \"disk1\""* ]]
+}
+
+@test "Validation: two stores sharing one path fail" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/shared \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[1].name=disk2 \
+        --set orca.varnish.storage.stores[1].path=/var/lib/varnish-supervisor/storage/shared \
+        --set orca.varnish.storage.stores[1].size=100G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"already mounted by store \"disk1\""* ]]
+}
+
+@test "Validation: one store's book_path inside another store's path fails" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[1].name=disk2 \
+        --set orca.varnish.storage.stores[1].path=/var/lib/varnish-supervisor/storage/disk2 \
+        --set orca.varnish.storage.stores[1].size=100G \
+        --set orca.varnish.storage.stores[1].book_path=/var/lib/varnish-supervisor/storage/disk1/book \
+        --set orca.varnish.storage.stores[1].book_volume.size=10G \
+        --namespace default \
+        .
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"nests with"* ]]
+}
+
+@test "Validation: distinct store and book paths are allowed" {
+    cd "$(chart_dir)"
+    local actual=$((helm template \
+        --set kind=StatefulSet \
+        --set orca.varnish.storage.stores[0].name=disk1 \
+        --set orca.varnish.storage.stores[0].path=/var/lib/varnish-supervisor/storage/disk1 \
+        --set orca.varnish.storage.stores[0].size=100G \
+        --set orca.varnish.storage.stores[0].book_path=/var/lib/varnish-supervisor/book/disk1 \
+        --set orca.varnish.storage.stores[0].book_volume.size=10G \
+        --set orca.varnish.storage.stores[1].name=disk2 \
+        --set orca.varnish.storage.stores[1].path=/var/lib/varnish-supervisor/storage/disk2 \
+        --set orca.varnish.storage.stores[1].size=100G \
+        --set orca.varnish.storage.stores[1].book_path=/var/lib/varnish-supervisor/book/disk2 \
+        --set orca.varnish.storage.stores[1].book_volume.size=10G \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        .) | yqj '[.spec.volumeClaimTemplates[].metadata.name]')
+    [ "${actual}" = '["orca-storage-disk1","orca-book-disk1","orca-storage-disk2","orca-book-disk2"]' ]
+}
