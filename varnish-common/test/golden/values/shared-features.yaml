@@ -1,0 +1,27 @@
+# Features shared by Varnish Cache and Varnish Enterprise since the charts
+# share templates.
+server:
+  kind: StatefulSet
+  workDir: golden
+  parameters:
+    backendIdleTimeout: "60"
+    feature:
+      - +http2
+  terminationGracePeriodSeconds: 120
+  delayedShutdown:
+    method: mempool
+  tls:
+    enabled: true
+    config: |
+      frontend = {
+        host = ""
+        port = "{{ .Values.server.tls.port }}"
+      }
+      pem-file = "/etc/varnish/certs/example.pem"
+  service:
+    https:
+      enabled: true
+  otel:
+    enabled: true
+    env:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318

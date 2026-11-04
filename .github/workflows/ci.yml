@@ -16,7 +16,51 @@ on:
           - varnish-controller-router
 
 jobs:
+  check_versions:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.publish.outputs.charts }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: "Check varnish-cache and varnish-enterprise have the same version"
+        # Both charts are built from varnish-common/, and a parent chart
+        # depending on both gets a single copy of their shared named
+        # templates, so the same version must mean the same templates.
+        run: |
+          CACHE_VERSION=$(yq -r '.version' varnish-cache/Chart.yaml)
+          ENTERPRISE_VERSION=$(yq -r '.version' varnish-enterprise/Chart.yaml)
+          if [ "$CACHE_VERSION" != "$ENTERPRISE_VERSION" ]; then
+            echo "::error::varnish-cache ($CACHE_VERSION) and varnish-enterprise ($ENTERPRISE_VERSION) must have the same version"
+            exit 1
+          fi
+      - name: "List the charts to publish"
+        id: publish
+        # varnish-cache and varnish-enterprise are always published together.
+        env:
+          PUBLISH: ${{ github.event.inputs.publish }}
+        run: |
+          case "$PUBLISH" in
+            "") charts='[]' ;;
+            varnish-cache|varnish-enterprise) charts='["varnish-cache","varnish-enterprise"]' ;;
+            *) charts="[\"$PUBLISH\"]" ;;
+          esac
+          echo "charts=$charts" >> "$GITHUB_OUTPUT"
+      - name: "Check versions do not already exist"
+        # Checked here rather than in build_and_push, so that a chart pushed
+        # by one matrix job is not seen as already existing by the other.
+        if: ${{ github.event.inputs.publish != '' }}
+        run: |
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
+          for chart in $(echo '${{ steps.publish.outputs.charts }}' | jq -r '.[]'); do
+            VERSION=$(yq -r '.version' "$chart/Chart.yaml")
+            if helm pull "oci://registry-1.docker.io/varnish/$chart" --version "$VERSION" --destination /tmp 2>/dev/null; then
+              echo "Error: $chart version $VERSION already exists in the registry"
+              exit 1
+            fi
+          done
+
   build_and_push:
+    needs: check_versions
     strategy:
       matrix:
         chart:
@@ -55,27 +99,29 @@ jobs:
           if [ -x ${{ matrix.chart }}/test/unit_common/run.sh ]; then
             ${{ matrix.chart }}/test/unit_common/run.sh -j 50
           fi
+      - name: "Golden tests"
+        run: |
+          if [ -x ${{ matrix.chart }}/test/golden/run.sh ]; then
+            ${{ matrix.chart }}/test/golden/run.sh
+          fi
       - name: Create package
         run: |
           helm package "${{ matrix.chart }}"
-          mkdir -p /tmp/artifacts
-          cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
-      - name: "Check version does not already exist"
-        if: ${{ github.event.inputs.publish == matrix.chart }}
-        run: |
-          VERSION=$(yq -r '.version' "${{ matrix.chart }}/Chart.yaml")
-          echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
-          if helm pull "oci://registry-1.docker.io/varnish/${{ matrix.chart }}" --version "$VERSION" --destination /tmp 2>/dev/null; then
-            echo "Error: ${{ matrix.chart }} version $VERSION already exists in the registry"
+          # Templates shared through varnish-common/ are symlinks in the repo,
+          # make sure they were packaged as regular files.
+          if tar tvzf "${{ matrix.chart }}"-*.tgz | grep '^l'; then
+            echo "Error: ${{ matrix.chart }} package contains symbolic links"
             exit 1
           fi
+          mkdir -p /tmp/artifacts
+          cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
       - name: "Push chart"
-        if: ${{ github.event.inputs.publish == matrix.chart }}
+        if: ${{ contains(fromJSON(needs.check_versions.outputs.publish), matrix.chart) }}
         run: |
           echo ${{ secrets.DOCKERHUB_TOKEN }} | helm registry login -u "varnish" --password-stdin registry-1.docker.io
           helm push "${{ matrix.chart }}"-*.tgz "oci://registry-1.docker.io/varnish"
       - name: Push to packagecloud
-        if: ${{ github.event.inputs.publish == matrix.chart }}
+        if: ${{ contains(fromJSON(needs.check_versions.outputs.publish), matrix.chart) }}
         run: |
           sudo gem install package_cloud
           PACKAGECLOUD_TOKEN=${{ secrets.PACKAGECLOUD_TOKEN }} package_cloud push  varnishplus/helm-staging/helm/v1 "${{ matrix.chart }}"-*.tgz
