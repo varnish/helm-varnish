@@ -152,7 +152,7 @@ spec:
         app.kubernetes.io/instance: golden
         app.kubernetes.io/name: varnish-cache
       annotations:
-        checksum/golden-vcl-bundle: f100db064d290ee6898e1cbbf58dc79c1fa57636a2d7238020ca78e38927af8b
+        checksum/golden-vcl-bundle: b05da256f58ae9ff864c0def8600f36610607dee5b5e1f73a96a77666a047000
     spec:
       serviceAccountName: golden-varnish-cache
       securityContext:

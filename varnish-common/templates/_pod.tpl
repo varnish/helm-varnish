@@ -40,12 +40,9 @@ Sets up Pod annotations
 {{- $bundleData := dict
     "routes" .Values.server.vcls.routes
     "includes" .Values.server.vcls.includes
-    "serverHttpPort" .Values.server.http.port
 }}
 {{- if include "varnish-common.isEnterprise" . }}
 {{- $_ := set $bundleData "clusterEnabled" .Values.cluster.enabled }}
-{{- $_ := set $bundleData "clusterTrace" .Values.cluster.trace }}
-{{- $_ := set $bundleData "clusterHeadlessServiceName" .Values.cluster.headlessServiceName }}
 {{- end }}
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl-bundle") (sha256sum (toJson $bundleData))) $checksum) }}
 {{- end }}
@@ -532,15 +529,7 @@ Composing the $varnishArgs list or arguments
     {{- end }}
     {{- include "varnish-common.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
     {{- if (include "varnish-common.clusterEnabled" .) }}
-    - name: VARNISH_CLUSTER_TOKEN
-      valueFrom:
-        secretKeyRef:
-          {{- if .Values.cluster.secretName }}
-          name: {{ .Values.cluster.secretName }}
-          {{- else }}
-          name: {{ include "varnish-common.fullname" . }}-cluster-secret
-          {{- end }}
-          key: token
+    {{- include "varnish-common.clusterEnv" . | nindent 4 }}
     {{- end }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
   {{- if .Values.server.command }}

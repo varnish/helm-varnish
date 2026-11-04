@@ -86,19 +86,7 @@ metadata:
 data:
   wrapped-default.vcl: |
     vcl 4.1;
-    import activedns;
-    include "cluster.vcl";
-    sub vcl_init {
-      # Turn on trace headers for debug (optional)
-      # For dynamic cluster, create a DNS group with the domain name for headless service
-      new cluster_group = activedns.dns_group(
-        "golden-varnish-enterprise-peers:6081"
-      );
-      # Subscribe the cluster director to the DNS group
-      cluster.subscribe(cluster_group.get_tag());
-      # Set the cluster token
-      cluster_opts.set("token", std.getenv("VARNISH_CLUSTER_TOKEN") );
-    }
+    include "cluster_auto_dns.vcl";
     include "/etc/varnish/default.vcl";
 ---
 # Source: varnish-enterprise/templates/service.yaml
@@ -219,6 +207,14 @@ spec:
                 secretKeyRef:
                   name: cluster-token
                   key: token
+            - name: VARNISH_CLUSTER_PEER_DOMAIN
+              value: "golden-varnish-enterprise-peers:6081"
+            - name: VARNISH_CLUSTER_TRACE
+              value: "true"
+            - name: VARNISH_CLUSTER_PRIMARIES
+              value: "3"
+            - name: VARNISH_CLUSTER_FALLBACK
+              value: "0"
           command:
             - /usr/sbin/varnishd
             - -F
