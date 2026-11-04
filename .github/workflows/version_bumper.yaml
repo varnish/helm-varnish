@@ -16,87 +16,103 @@ on:
 
 jobs:
   version_bump:
-    name: Chart appVersion bump
+    name: Chart appVersion bump (${{ matrix.group.name }})
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
     strategy:
       fail-fast: false
       matrix:
-        chart_details:
-          - chart_dir: 'orca-chart'
-            docker_image: 'varnish/orca:latest'
-            version_command: 'varnish-supervisor --version | head -n 1'
-          - chart_dir: 'varnish-enterprise'
-            docker_image: 'varnish/varnish-enterprise:latest'
-            version_command: varnishd -V 2>&1 | sed -En 's/.*varnish-plus-(\S+).*/\1/p'
-          - chart_dir: 'varnish-cache'
-            docker_image: 'docker.io/varnish:latest'
-            version_command: varnishd -V 2>&1 | sed -En 's/.*\(varnish-([0-9][^ ]*) revision.*/\1/p'
+        # Charts in the same group share one version: they are checked
+        # together, and a single PR bumps the appVersion of each outdated
+        # chart and the version of every chart in the group.
+        # varnish-cache and varnish-enterprise share their templates and must
+        # keep the same version (checked in ci.yml).
+        group:
+          - name: 'orca-chart'
+            charts:
+              - chart_dir: 'orca-chart'
+                docker_image: 'varnish/orca:latest'
+                version_command: 'varnish-supervisor --version | head -n 1'
+          - name: 'varnish'
+            charts:
+              - chart_dir: 'varnish-enterprise'
+                docker_image: 'varnish/varnish-enterprise:latest'
+                version_command: varnishd -V 2>&1 | sed -En 's/.*varnish-plus-(\S+).*/\1/p'
+              - chart_dir: 'varnish-cache'
+                docker_image: 'docker.io/varnish:latest'
+                version_command: varnishd -V 2>&1 | sed -En 's/.*\(varnish-([0-9][^ ]*) revision.*/\1/p'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Check and Compare Version for ${{ matrix.chart_details.chart_dir }}
+      - name: Check and compare appVersions
         id: version_check
+        env:
+          CHARTS: ${{ toJSON(matrix.group.charts) }}
         run: |
           set -ex
-          CHART_NAME="${{ matrix.chart_details.chart_dir }}"
-          CHART_PATH="${{ matrix.chart_details.chart_dir }}/Chart.yaml"
-          DOCKER_IMAGE="${{ matrix.chart_details.docker_image }}"
-          VERSION_CMD="${{ matrix.chart_details.version_command }}"
 
-          if [ ! -f "$CHART_PATH" ]; then
-            echo "::warning file=$CHART_PATH::Chart.yaml not found at $CHART_PATH. Skipping."
-            echo "version_match=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          CHART_DIRS=""
+          UPDATES=""
+          CURRENT_CHART_VERSION=""
+          for i in $(seq 0 $(($(jq length <<< "$CHARTS") - 1))); do
+            CHART_DIR=$(jq -r ".[$i].chart_dir" <<< "$CHARTS")
+            DOCKER_IMAGE=$(jq -r ".[$i].docker_image" <<< "$CHARTS")
+            VERSION_CMD=$(jq -r ".[$i].version_command" <<< "$CHARTS")
+            CHART_PATH="$CHART_DIR/Chart.yaml"
+            CHART_DIRS="$CHART_DIRS $CHART_DIR"
 
-          # Get current appVersion and chart version using yq
-          CURRENT_APP_VERSION=$(yq '.appVersion' "$CHART_PATH")
-          CURRENT_CHART_VERSION=$(yq '.version' "$CHART_PATH")
+            # Get current appVersion and chart version using yq
+            CURRENT_APP_VERSION=$(yq '.appVersion' "$CHART_PATH" | xargs)
+            CHART_VERSION=$(yq '.version' "$CHART_PATH")
 
-          # The patch bump needs three numbers. A failed $(( )) survives set -e,
-          # so without this the PR step would push a version like "1.8.".
-          if [[ ! "$CURRENT_CHART_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error file=$CHART_PATH::version '$CURRENT_CHART_VERSION' is not X.Y.Z."
-            exit 1
-          fi
+            # The patch bump needs three numbers. A failed $(( )) survives set -e,
+            # so without this the PR step would push a version like "1.8.".
+            if [[ ! "$CHART_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error file=$CHART_PATH::version '$CHART_VERSION' is not X.Y.Z."
+              exit 1
+            fi
+            if [ -n "$CURRENT_CHART_VERSION" ] && [ "$CHART_VERSION" != "$CURRENT_CHART_VERSION" ]; then
+              echo "::error file=$CHART_PATH::version '$CHART_VERSION' differs from '$CURRENT_CHART_VERSION' in the same group."
+              exit 1
+            fi
+            CURRENT_CHART_VERSION="$CHART_VERSION"
 
-          # Get latest app version
-          LATEST_APP_VERSION=$(docker run --rm "$DOCKER_IMAGE" sh -c "$VERSION_CMD" | xargs)
+            # Get latest app version
+            LATEST_APP_VERSION=$(docker run --rm "$DOCKER_IMAGE" sh -c "$VERSION_CMD" | xargs)
 
-          # Anything but a bare version means the command's output format
-          # changed, and it would end up in a branch name and in appVersion.
-          if [[ ! "$LATEST_APP_VERSION" =~ ^[0-9A-Za-z._+-]+$ ]]; then
-            echo "::error::$DOCKER_IMAGE reported '$LATEST_APP_VERSION', which is not a version."
-            exit 1
-          fi
+            # Anything but a bare version means the command's output format
+            # changed, and it would end up in a branch name and in appVersion.
+            if [[ ! "$LATEST_APP_VERSION" =~ ^[0-9A-Za-z._+-]+$ ]]; then
+              echo "::error::$DOCKER_IMAGE reported '$LATEST_APP_VERSION', which is not a version."
+              exit 1
+            fi
 
-          # Clean up any leading/trailing whitespace from the version strings
-          CURRENT_APP_VERSION=$(echo "$CURRENT_APP_VERSION" | xargs)
+            echo "Chart $CHART_DIR: appVersion $CURRENT_APP_VERSION, latest $LATEST_APP_VERSION, version $CHART_VERSION"
 
-          echo "Processing Chart: $CHART_NAME (${{ matrix.chart_details.chart_dir }})"
-          echo "Current appVersion: $CURRENT_APP_VERSION"
-          echo "Current Chart Version: $CURRENT_CHART_VERSION"
-          echo "Latest Docker Version: $LATEST_APP_VERSION"
+            if [ "$LATEST_APP_VERSION" != "$CURRENT_APP_VERSION" ]; then
+              echo "New appVersion $LATEST_APP_VERSION available for $CHART_DIR."
+              UPDATES="$UPDATES $CHART_DIR=$LATEST_APP_VERSION"
+            fi
+          done
 
           # Set environment variables for the next steps
-          echo "LATEST_APP_VERSION=$LATEST_APP_VERSION" >> "$GITHUB_ENV"
-          echo "CURRENT_CHART_VERSION=$CURRENT_CHART_VERSION" >> "$GITHUB_ENV"
-          echo "CHART_PATH=$CHART_PATH" >> "$GITHUB_ENV"
-          echo "CHART_NAME=$CHART_NAME" >> "$GITHUB_ENV"
+          {
+            echo "CHART_DIRS=${CHART_DIRS# }"
+            echo "UPDATES=${UPDATES# }"
+            echo "CURRENT_CHART_VERSION=$CURRENT_CHART_VERSION"
+          } >> "$GITHUB_ENV"
 
-          if [ "$LATEST_APP_VERSION" != "$CURRENT_APP_VERSION" ]; then
-            echo "New appVersion $LATEST_APP_VERSION available. A PR will be created for $CHART_NAME."
+          if [ -n "$UPDATES" ]; then
             echo "version_match=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Chart $CHART_NAME is already up-to-date with appVersion $CURRENT_APP_VERSION. No action needed."
+            echo "All charts are up-to-date. No action needed."
             echo "version_match=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create PR to update appVersion and Chart Version in ${{ env.CHART_PATH }}
+      - name: Create PR to update appVersions and chart versions
         if: steps.version_check.outputs.version_match == 'false'
         run: |
           set -ex
@@ -104,13 +120,16 @@ jobs:
           # 1. Calculate New Chart Patch Version
           # Split version (X.Y.Z), increment Z (patch), then join back.
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_CHART_VERSION"
-          NEW_PATCH=$((PATCH + 1))
-          NEW_CHART_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          NEW_CHART_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
           echo "New chart version calculated: $NEW_CHART_VERSION"
-          echo "NEW_CHART_VERSION=$NEW_CHART_VERSION" >> "$GITHUB_ENV"
 
-          BRANCH="auto-pr-$CHART_NAME-appversion-$LATEST_APP_VERSION"
-          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          BRANCH="auto-pr"
+          SUMMARY=""
+          for update in $UPDATES; do
+            BRANCH="$BRANCH-${update%%=*}-appversion-${update#*=}"
+            SUMMARY="$SUMMARY, ${update%%=*} appVersion to ${update#*=}"
+          done
+          SUMMARY="${SUMMARY#, }"
 
           if git ls-remote --exit-code origin "$BRANCH"; then
             echo "Branch $BRANCH already exists, bailing out."
@@ -125,20 +144,19 @@ jobs:
 
           # 2. Use yq to safely update appVersion and Chart version
           # yq is more reliable than sed for YAML files.
-          yq -i ".appVersion = \"$LATEST_APP_VERSION\"" "$CHART_PATH"
-          yq -i ".version = \"$NEW_CHART_VERSION\"" "$CHART_PATH"
+          for update in $UPDATES; do
+            yq -i ".appVersion = \"${update#*=}\"" "${update%%=*}/Chart.yaml"
+          done
+          for chart in $CHART_DIRS; do
+            yq -i ".version = \"$NEW_CHART_VERSION\"" "$chart/Chart.yaml"
+            git add "$chart/Chart.yaml"
+          done
 
-          if [ -z "$(git diff "$CHART_PATH")" ]; then
-            echo "$CHART_PATH seems up-to-date. Skipping PR creation."
-            exit 0
-          fi
-
-          git add "$CHART_PATH"
-          git commit -m "Bump $CHART_NAME appVersion to $LATEST_APP_VERSION and chart version to $NEW_CHART_VERSION"
+          git commit -m "Bump $SUMMARY and chart version to $NEW_CHART_VERSION"
           git push origin "$BRANCH"
 
           gh pr create \
-            --title "[$CHART_NAME] Bump appVersion to $LATEST_APP_VERSION (Chart $NEW_CHART_VERSION)" \
-            --body "Automated PR to update the Helm Chart's \`appVersion\` to \`$LATEST_APP_VERSION\` and bump the chart \`version\` to \`$NEW_CHART_VERSION\` in \`$CHART_PATH\`." \
+            --title "Bump $SUMMARY (Chart $NEW_CHART_VERSION)" \
+            --body "Automated PR to bump $SUMMARY, and the chart \`version\` of ${CHART_DIRS// /, } to \`$NEW_CHART_VERSION\`." \
             --base main \
             --head "$BRANCH"

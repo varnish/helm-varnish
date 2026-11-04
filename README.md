@@ -34,7 +34,10 @@ chart (`helm package` copies the files they point to). Only `values.yaml`,
   `varnish.`, which a parent chart created with `helm create varnish` would
   override. Helm keeps only one definition per template name across a
   parent chart and its subcharts, so a parent chart depending on both
-  charts must use releases built from the same `varnish-common` revision.
+  charts must use the same version of both.
+- For that reason, both charts always have the same `version` in
+  `Chart.yaml` (CI checks it), and are published together: publishing one
+  of them from the CI workflow publishes both.
 
 ## License
 
