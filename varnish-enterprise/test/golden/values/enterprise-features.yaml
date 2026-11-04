@@ -32,3 +32,6 @@ server:
 cluster:
   enabled: true
   secretName: cluster-token
+  trace: true
+  primaries: 3
+  fallback: 0
