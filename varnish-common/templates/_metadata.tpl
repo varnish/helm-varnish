@@ -188,6 +188,21 @@ Sets up the common MSE4 PVC labels
 {{- end }}
 
 {{/*
+Sets up the common Agent PVC extra annotations
+*/}}
+{{- define "varnish-common.agentAnnotations" -}}
+{{- if .Values.server.agent.persistence.annotations }}
+annotations:
+  {{- $tp := kindOf .Values.server.agent.persistence.annotations }}
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.server.agent.persistence.annotations . | trim | nindent 2 }}
+  {{- else }}
+    {{- toYaml .Values.server.agent.persistence.annotations | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
 Sets up the common Agent PVC labels
 */}}
 {{- define "varnish-common.agentPvcLabels" -}}

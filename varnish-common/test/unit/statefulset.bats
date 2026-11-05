@@ -455,6 +455,81 @@ rollingUpdate:
     [ "${actual}" == '{"name":"my-varnish-controller-volume","mountPath":"/var/lib/varnish-controller"}' ]
 }
 
+@test "StatefulSet/agent/persistence: no annotations by default" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=StatefulSet" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set 'server.agent.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.volumeClaimTemplates[]? |
+            select(.metadata.name == "release-name-varnish-controller") |
+            .metadata | has("annotations")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == 'false' ]
+}
+
+@test "StatefulSet/agent/persistence: can be configured with annotations" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=StatefulSet" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set 'server.agent.persistence.enabled=true' \
+        --set 'server.agent.persistence.annotations.foo=bar' \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.volumeClaimTemplates[]? |
+            select(.metadata.name == "release-name-varnish-controller") |
+            .metadata.annotations' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"foo":"bar"}' ]
+}
+
+@test "StatefulSet/agent/persistence: can be configured with annotations as templated string" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local annotations='
+release-name: {{ .Release.Name }}
+'
+
+    local object=$((helm template \
+        --set "server.kind=StatefulSet" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set 'server.agent.persistence.enabled=true' \
+        --set "server.agent.persistence.annotations=${annotations}" \
+        --namespace default \
+        --show-only templates/statefulset.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.volumeClaimTemplates[]? |
+            select(.metadata.name == "release-name-varnish-controller") |
+            .metadata.annotations' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"release-name":"release-name"}' ]
+}
+
 @test "StatefulSet/extraVolumeClaimTemplates: disabled by default" {
     cd "$(chart_dir)"
 
