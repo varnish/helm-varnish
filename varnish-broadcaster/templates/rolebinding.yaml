@@ -1,0 +1,16 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "helm.fullname" . }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "helm.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "helm.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

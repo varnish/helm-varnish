@@ -1,0 +1,10 @@
+---
+apiVersion: v2
+name: varnish-broadcaster
+description: Varnish Broadcaster Helm chart, with varnish-discovery tracking Varnish pods
+type: application
+version: 0.1.0
+appVersion: 6.0.18r6
+maintainers:
+  - email: containers@varnish-software.com
+    name: Varnish Software
