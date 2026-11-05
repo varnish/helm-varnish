@@ -274,7 +274,7 @@ server:
 
     # Configures the address on which Varnish will listen for HTTPS traffic. Only used when
     # neither `server.tls.config` nor `server.tls.configFile` is set.
-    # Type: template string
+    # Type: string
     address: "0.0.0.0"
 
     # The TLS configuration. See also [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/) for configuration options. It is recommended

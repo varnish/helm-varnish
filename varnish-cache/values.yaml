@@ -213,7 +213,7 @@ server:
 
     # Configures the address on which Varnish will listen for HTTPS traffic. Only used when
     # neither `server.tls.config` nor `server.tls.configFile` is set.
-    # Type: template string
+    # Type: string
     address: "0.0.0.0"
 
     # The TLS configuration (passed to varnishd with -A). It is recommended
