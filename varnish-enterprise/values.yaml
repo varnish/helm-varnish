@@ -183,6 +183,10 @@ server:
   # Type: object or template string
   labels: {}
 
+  # Sets the secret for using a varnish-enterprise.lic file.
+  # See https://docs.varnish-software.com/varnish-helm/varnish-enterprise/installation/
+  licenseSecret:
+
   # Applies extra annotations to a workload. The value can be set as either an object or a template string.
   # workload annotations can be used to for applying additional metadata or for integrating with external
   # tooling. The annotations specified here will be applied to the workload itself. To apply labels on the
@@ -1434,10 +1438,6 @@ server:
     # Sets a [Varnish Controller private token][varnish-controller-private-token].
     # Availability: v1.5.0
     privateToken: ""
-
-    # Sets the secret for using a varnish-enterprise.lic file.
-    # See https://docs.varnish-software.com/varnish-helm/varnish-enterprise/installation/
-    licenseSecret:
 
     # Sets the extra environment variables for Varnish Controller Agent.
     # Can be set as either an object, a list, or a templated string.
