@@ -1623,7 +1623,7 @@ server:
         securityContext: {}
 
         # Configures Varnish Controller Agent to use external Varnish Controller endpoint.
-        # Ignored if `server.vcli.internal.enabled` is set to `true`.
+        # Ignored if `server.agent.autoRemove.vcli.internal.enabled` is set to `true`.
         externalAddress: ""
 
         # Configures the username to connect to Varnish Controller API.
