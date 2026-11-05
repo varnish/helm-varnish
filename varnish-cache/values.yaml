@@ -458,7 +458,7 @@ server:
   #
   # If the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated
   # in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.
-  # Type: object or template string
+  # Type: object (filename to template string)
   # Example:
   #   vclConfigs:
   #     main.vcl: |

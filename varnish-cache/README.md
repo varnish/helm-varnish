@@ -765,7 +765,7 @@ server:
 
 **server.vclConfigs**
 
-- Type: object of template string
+- Type: object of template strings
 
 Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`. For example, given the following configuration:
 
