@@ -42,6 +42,14 @@ jobs:
               - chart_dir: 'varnish-cache'
                 docker_image: 'docker.io/varnish:latest'
                 version_command: varnishd -V 2>&1 | sed -En 's/.*\(varnish-([0-9][^ ]*) revision.*/\1/p'
+          # Runs broadcaster and varnish-discovery from the varnish-enterprise
+          # image, so it tracks the same version; its own group, as its chart
+          # version is independent.
+          - name: 'varnish-broadcaster'
+            charts:
+              - chart_dir: 'varnish-broadcaster'
+                docker_image: 'varnish/varnish-enterprise:latest'
+                version_command: varnishd -V 2>&1 | sed -En 's/.*varnish-plus-(\S+).*/\1/p'
     steps:
       - uses: actions/checkout@v4
         with:
