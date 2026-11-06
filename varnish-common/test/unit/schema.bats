@@ -134,3 +134,28 @@ EOT
 @test "Schema: rejects unknown server.vcls keys" {
   schema_rejects "additional properties 'route' not allowed" --set server.vcls.route=x
 }
+
+@test "Schema: rejects a list server.labels" {
+  schema_rejects "at '/server/labels'" --set server.labels[0]=a
+}
+
+@test "Schema: accepts template-string labels" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  cat > "${values}" <<'EOT'
+server:
+  labels: "foo: {{ .Release.Name }}"
+EOT
+  schema_accepts -f "${values}"
+}
+
+@test "Schema: accepts arbitrary keys in passthrough objects" {
+  schema_accepts --set server.resources.ignore-this=1 --set server.securityContext.foo=bar
+}
+
+@test "Schema: accepts an empty-string probe" {
+  schema_accepts --set server.livenessProbe=
+}
+
+@test "Schema: rejects a numeric probe" {
+  schema_rejects "at '/server/livenessProbe'" --set server.livenessProbe=5
+}

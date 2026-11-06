@@ -469,6 +469,18 @@ When `server.autoscaling.enabled` is set to `true`, and `server.autoscaling.minR
 
 Specifies the type of workload to deploy Varnish Cache server. The value can be one of `Deployment`, `DaemonSet`, or `StatefulSet` depending on usage scenarios.
 
+**server.labels**
+
+- Type: object or template string
+
+Applies extra labels to the workload. The value can be set as either an object or a template string. Labels specified here will be applied to the workload itself. To apply labels on the Pod, use `server.podLabels`.
+
+**server.annotations**
+
+- Type: object or template string
+
+Applies extra annotations to the workload. The value can be set as either an object or a template string. Workload annotations can be used for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the workload itself. To apply annotations on the Pod, use `server.podAnnotations`.
+
 **server.strategy**
 
 - Type: object or template string
@@ -785,6 +797,97 @@ server:
     backendIdleTimeout: "60"
     feature:
       - "+http2"
+```
+
+**server.extraInitContainers**
+
+- Type: array or template string
+
+An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Note that `initContainers` cannot be changed once it is applied. To update this value after the initial deploy, uninstall Varnish Cache Helm Chart from the cluster and reinstall. The value can be set as either an array of objects or a template string.
+
+For example:
+
+```yaml
+server:
+  extraInitContainers: |
+    - name: varnish-setup-tls
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 4 }}
+      image: debian:latest
+      command:
+        - sh -c "sleep 3600"
+```
+
+**server.extraContainers**
+
+- Type: array or template string
+
+An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string.
+
+For example:
+
+```yaml
+server:
+  extraContainers: |
+    - name: varnish-hello
+      securityContext:
+        {{- toYaml .Values.global.securityContext | nindent 4 }}
+      image: hello-world:latest
+      volumeMounts:
+        - name: {{ .Release.Name }}-varnish-vsm
+          mountPath: /var/lib/varnish
+```
+
+**server.extraVolumeClaimTemplates**
+
+- Type: array or template string
+
+An array of objects that conforms to the Kubernetes [VolumeClaimTemplates][k8s-volume-claim-templates] definition of a StatefulSet workload. This configuration is only available when `server.kind` is set to StatefulSet.
+
+For example:
+
+```yaml
+server:
+  extraVolumeClaimTemplates: |
+    - metadata:
+        name: {{ .Release.Name }}-pv
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: "10G"
+```
+
+**server.extraVolumeMounts**
+
+- Type: array or template string
+
+An array of objects that conforms to the Kubernetes [volumeMounts][k8s-pod-v1-containers] definition of a Container. This configuration is used to mount extra volumes defined in `server.extraVolumes` into the Varnish Cache container. The value can be set as either an array of objects or a template string.
+
+For example:
+
+```yaml
+server:
+  extraVolumeMounts: |
+    - name: {{ .Release.Name }}-local-data
+      mountPath: /var/lib/data
+```
+
+**server.extraVolumes**
+
+- Type: array or template string
+
+An array of objects that conforms to the Kubernetes [volumes][k8s-pod-v1-pods] definition of a Pod. This configuration is used to define volumes to be used in `server.extraVolumeMounts`, or within `server.extraContainers`, or within `server.extraInitContainers`. The value can be set as either an array of objects or a template string.
+
+For example:
+
+```yaml
+server:
+  extraVolumes: |
+    - name: {{ .Release.Name }}-local-data
+      hostPath:
+        path: /data
+        type: Directory
 ```
 
 **server.secret**
@@ -1118,118 +1221,44 @@ Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image. T
 
 Sets the tag for the Varnish Cache image. By default, this is set to the same application version as in the Varnish Cache Helm Chart. If the tag is set to non-exact versions (such as "latest"), make sure to set `server.image.pullPolicy` to "Always" to make sure the image is always updated.
 
-### extraManifests
-
-**extraManifests**
-
-- Type: array of objects
-
-An array of objects to attach Kubernetes manifests to the workload.
-
-For example:
-
-```yaml
-extraManifests:
-  - name: clusterrole
-    data: |
-      apiVersion: rbac.authorization.k8s.io/v1
-      kind: ClusterRole
-      metadata:
-        name: {{ .Release.Name }}-clusterrole
-      # ...
-```
-
-**extraManifests[].name**
-
-- Type: string
-
-The name of the manifest. Only used if `extraManifests[].checksum` is `true`.
-
-**extraManifests[].checksum**
-
-- Type: boolean
-
-Whether to attach the manifest's checksum to that of the workload in order to force an automatic rollout when the manifest is updated.
-
-**extraManifests[].data**
-
-- Type: object or template string
-
-The full content of the manifest.
-
-[k8s-daemonset-updatestrategy]: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
-[k8s-deployment-strategy]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
-[k8s-pod-v1-containers]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers
-[k8s-pod-v1-pods]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
-[k8s-statefulset-updatestrategy]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
-[varnish-cmdfile]: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
-[varnishd]: https://varnish-cache.org/docs/6.0/reference/varnishd.html
-
-<!-- END GENERATED VALUES -->
-
-### Server configurations
-
-**server.labels**
-
-- Type: object or template string
-
-Applies extra labels to the deployment. The value can be set as either an object or a template string. Labels specified here will be applied to the deployment itself. To apply labels on the Pod, use `server.podLabels`.
-
-**server.annotations**
-
-- Type: object or template string
-
-Applies extra annotations to the deployment. The value can be set as either an object or a template string. Deployment annotations can be used to for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the deployment itself. To apply labels on the Pod, use `server.podAnnotations`.
-
-**server.extraInitContainers**
-
-- Type: array of objects or template string
-- Default: `[]`
-
-An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Note that `initContainers` cannot be changed once it is applied. To update this value after the initial deploy, uninstall Varnish Cache Helm Chart from the cluster and reinstall. The value can be set as either an array of objects or a template string.
-
-**server.extraContainers**
-
-- Type: array of objects or template string
-- Default: `[]`
-
-An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string.
-
-**server.extraVolumeClaimTemplates**
-
-- Type: array of objects or template string
-
-An array of objects that conforms to the Kubernetes [VolumeClaimTemplates][k8s-volume-claim-templates] definition of a StatefulSet workload. This configuration is only available when `server.kind` is set to StatefulSet.
-
-**server.extraVolumeMounts**
-
-- Type: array of objects or template string
-
-An array of objects that conforms to the Kubernetes [volumeMounts][k8s-pod-v1-containers] definition of a Container. This configuration is used to mount extra volumes defined in `server.extraVolumes` into the Varnish Cache container. The value can be set as either an array of objects or a template string.
-
-**server.extraVolumes**
-
-- Type: array of objects or template string
-
-An array of objects that conforms to the Kubernetes [volumes][k8s-pod-v1-pods] definition of a Pod. This configuration is used to define volumes to be used in `server.extraVolumeMounts`, or within `server.extraContainers`, or within `server.extraInitContainers`. The value can be set as either an array of objects or a template string.
-
 **server.podAnnotations**
 
 - Type: object or template string
 
-Applies extra annotations to the Pod. The value can be set as either an object or a template string. Pod annotations can be used to for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to the Pod. To apply labels on the deployment, use `server.annotations`.
+Applies extra annotations to the Pod. The value can be set as either an object or a template string. Pod annotations can be used for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to the Pod. To apply annotations on the workload, use `server.annotations`.
+
+For example:
+
+```yaml
+server:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9273"
+    prometheus.io/scheme: http
+```
 
 **server.podLabels**
 
 - Type: object or template string
 
-Applies extra labels to the Pod. The value can be set as either an object or a template string. Labels specified here will be applied to the Pod itself. To apply labels on the deployment, use `server.labels`.
+Applies extra labels to the Pod. The value can be set as either an object or a template string. Labels specified here will be applied to the Pod itself. To apply labels on the workload, use `server.labels`.
+
+For example:
+
+```yaml
+server:
+  podLabels:
+    varnish-software.com/tier: edge
+```
 
 **server.securityContext**
 
-- Type: object
+- Type: object or template string
 
-An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
+
+This securityContext will be set on the Varnish Cache container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
 
 For example:
 
@@ -1238,8 +1267,6 @@ server:
   securityContext:
     runAsUser: 1000
 ```
-
-This securityContext will be set on the Varnish Cache container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
 
 **server.startupProbe**
 
@@ -1257,6 +1284,11 @@ server:
     timeoutSeconds: 1
     successThreshold: 1
     failureThreshold: 3
+    httpGet:
+      path: /health
+      httpHeaders:
+        - name: Host
+          value: example.com
 ```
 
 **server.startupProbe.httpGet**
@@ -1265,27 +1297,7 @@ server:
 
 Uses Kubernetes [httpGet probe][k8s-probes] instead of TCP probe. Port will be automatically injected. It is possible to provide extra configuration options that conforms to the Kubernetes httpGet probe definition.
 
-For example, to enable httpGet probe mode:
-
-```yaml
-server:
-  startupProbe:
-    httpGet:
-```
-
-To specify path and add extra headers:
-
-```yaml
-server:
-  startupProbe:
-    httpGet:
-      path: "/healthz"
-      httpHeaders:
-        - name: X-Health-Check
-          value: k8s
-```
-
-Varnish Helm Chart doesn't provide a default health check endpoint, so it is necessary to configure Varnish to return 200 OK for this endpoint via a VCL. For example:
+The Varnish Cache Helm chart doesn't provide a default health check endpoint, so it is necessary to configure Varnish Cache to return 200 OK for this endpoint via a VCL. For example:
 
 ```yaml
 server:
@@ -1305,17 +1317,51 @@ server:
     }
 ```
 
+For example, to enable httpGet probe mode:
+
+```yaml
+server:
+  startupProbe:
+    httpGet: {}
+```
+
+To specify path and add extra headers:
+
+```yaml
+server:
+  startupProbe:
+    httpGet:
+      path: /healthz
+      httpHeaders:
+        - name: X-Health-Check
+          value: k8s
+```
+
 **server.readinessProbe**
 
 - Type: object
 
-An object that confirms to the Kubernetes [readienssProbe][k8s-pod-v1-containers] definition of a Container.
+An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container.
+
+For example:
+
+```yaml
+server:
+  readinessProbe:
+    httpGet:
+      path: /health
+      httpHeaders:
+        - name: Host
+          value: example.com
+```
 
 **server.readinessProbe.httpGet**
 
 - Type: object
 
 Uses Kubernetes [httpGet probe][k8s-probes] instead of TCP probe. Port will be automatically injected. It is possible to provide extra configuration options that conforms to the Kubernetes httpGet probe definition.
+
+See also `server.startupProbe.httpGet`.
 
 **server.readinessProbe.initialDelaySeconds**
 
@@ -1356,7 +1402,19 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 - Type: object
 
-An object that confirms to the Kubernetes [readienssProbe][k8s-pod-v1-containers] definition of a Container.
+An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container.
+
+For example:
+
+```yaml
+server:
+  livenessProbe:
+    httpGet:
+      path: /health
+      httpHeaders:
+        - name: Host
+          value: example.com
+```
 
 **server.livenessProbe.httpGet**
 
@@ -1403,9 +1461,22 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 **server.resources**
 
-- Type: object
+- Type: object or template string
 
 An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Cache container.
+
+For example:
+
+```yaml
+server:
+  resources:
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+```
 
 **server.nodeSelector**
 
@@ -1413,17 +1484,25 @@ An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] def
 
 An object that conforms to the Kubernetes [nodeSelector][k8s-pod-v1-pods] definition of a Pod. This configuration is used to select a node to schedule a Pod to. The value can be set as either an object or a template string.
 
+For example:
+
+```yaml
+server:
+  nodeSelector:
+    beta.kubernetes.io/arch: amd64
+```
+
 **server.tolerations**
 
-- Type: array of strings or template string
+- Type: array or template string
 
-An object that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definition of a Pod. This configuration is used to allow the Pod to be scheduled to nodes with specific taints. The value can be set as either an array of strings or a template string.
+An array of objects that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definition of a Pod. This configuration is used to allow the Pod to be scheduled to nodes with specific taints. The value can be set as either an array of objects or a template string.
 
 **server.affinity**
 
 - Type: object or template string
-- Default (template string):
-    ```string
+- Default: template string:
+    ```yaml
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
@@ -1434,6 +1513,59 @@ An object that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definit
     ```
 
 This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Cache Pods are always run in a different node. To disable this behavior, set to empty string (""). The value can be set as either an object or a template string.
+
+### extraManifests
+
+**extraManifests**
+
+- Type: array of objects
+
+An array of objects to attach Kubernetes manifests to the workload.
+
+For example:
+
+```yaml
+extraManifests:
+  - name: clusterrole
+    data: |
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: {{ .Release.Name }}-clusterrole
+      # ...
+```
+
+**extraManifests[].name**
+
+- Type: string
+
+The name of the manifest. Only used if `extraManifests[].checksum` is `true`.
+
+**extraManifests[].checksum**
+
+- Type: boolean
+
+Whether to attach the manifest's checksum to that of the workload in order to force an automatic rollout when the manifest is updated.
+
+**extraManifests[].data**
+
+- Type: object or template string
+
+The full content of the manifest.
+
+[k8s-daemonset-updatestrategy]: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
+[k8s-deployment-strategy]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+[k8s-pod-v1-containers]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers
+[k8s-pod-v1-pods]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
+[k8s-probes]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+[k8s-statefulset-updatestrategy]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+[k8s-volume-claim-templates]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#volume-claim-templates
+[varnish-cmdfile]: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
+[varnishd]: https://varnish-cache.org/docs/6.0/reference/varnishd.html
+
+<!-- END GENERATED VALUES -->
+
+### Server configurations
 
 **server.autoscaling**
 
