@@ -1,0 +1,146 @@
+# The values of the varnish-cache and varnish-enterprise charts: a draft-07 JSON
+# Schema with x- keywords. generate.py turns it into each chart's
+# values.schema.json and values docs. See README.md next to this file.
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+additionalProperties: false
+
+definitions:
+  objectOrTemplate:
+    x-type-label: object or template string
+    type: [object, string, "null"]
+  arrayOrTemplate:
+    x-type-label: array or template string
+    type: [array, string, "null"]
+  env:
+    x-type-label: array of objects, object, or template string
+    type: [object, array, string, "null"]
+  k8sObject:
+    x-type-label: object
+    type: [object, "null"]
+  extraArgs:
+    x-type-label: string or array of strings
+    type: [array, string, "null"]
+    items:
+      type: [string, number, boolean]
+  port:
+    x-type-label: number
+    anyOf:
+      - type: integer
+        minimum: 0
+        maximum: 65535
+      - type: string
+        pattern: "^[0-9]+$"
+  nonNegInt:
+    x-type-label: number
+    anyOf:
+      - type: integer
+        minimum: 0
+      - type: string
+        pattern: "^[0-9]+$"
+  intOrDash:
+    x-type-label: number or "-"
+    anyOf:
+      - type: integer
+      - const: "-"
+  boolOrDash:
+    x-type-label: boolean or "-"
+    anyOf:
+      - type: boolean
+      - const: "-"
+  probe:
+    x-type-label: object
+    anyOf:
+      - type: [object, "null"]
+      - const: ""
+  sizeString:
+    x-type-label: string
+    type: string
+    pattern: "^([0-9]+(K|Ki|M|Mi|G|Gi|T|Ti|P|Pi)?)?$"
+  sizeOrPercent:
+    x-type-label: string
+    type: string
+    pattern: "^([0-9]+(K|Ki|M|Mi|G|Gi|T|Ti|P|Pi|%)?)?$"
+  pullPolicy:
+    x-type-label: string
+    enum: [Always, IfNotPresent, Never, ""]
+  image:
+    x-type-label: object
+    type: object
+    additionalProperties: false
+    properties:
+      repository:
+        type: string
+      tag:
+        type: [string, integer, number]
+      pullPolicy:
+        $ref: "#/definitions/pullPolicy"
+  sidecarImage:
+    x-type-label: object
+    type: object
+    additionalProperties: false
+    properties:
+      repository:
+        anyOf:
+          - type: string
+          - const: "-"
+      tag:
+        anyOf:
+          - type: [string, integer, number]
+          - const: "-"
+      pullPolicy:
+        anyOf:
+          - $ref: "#/definitions/pullPolicy"
+          - const: "-"
+
+properties:
+  nameOverride:
+    x-docs-section: Chart configurations
+    type: string
+    default: ""
+    x-default-text: name of the chart
+    description: |
+      Overrides the name of the chart (without the release name). For example, setting `nameOverride` to "hello" would produce a workload named "release-name-hello". Containers within a pod derive their name from this setting.
+
+      By default, the name of the chart is used.
+
+  fullnameOverride:
+    type: string
+    default: ""
+    x-default-text: composition of a release name and name of the chart
+    description: |
+      Overrides the full name of the chart (with the release name). This setting allows overriding both the release name and the workload name altogether. For example, setting `fullnameOverride` to "hello" would produce a workload named "hello".
+
+  global:
+    type: object
+
+  enabled:
+    type: boolean
+    x-docs-skip: true
+    x-values-skip: true
+
+  serviceAccount:
+    type: object
+
+  server:
+    type: object
+    properties:
+      mse:
+        x-flavor: enterprise
+      mse4:
+        x-flavor: enterprise
+      agent:
+        x-flavor: enterprise
+      initAgent:
+        x-flavor: enterprise
+      licenseSecret:
+        x-flavor: enterprise
+      baseUrl:
+        x-flavor: enterprise
+
+  extraManifests:
+    type: [array, "null"]
+
+  cluster:
+    x-flavor: enterprise
+    type: object

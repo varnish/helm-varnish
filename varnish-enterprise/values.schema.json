@@ -1,0 +1,224 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Generated from varnish-common/schema/values.schema.yaml by generate.py. Do not edit.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "objectOrTemplate": {
+      "type": [
+        "object",
+        "string",
+        "null"
+      ]
+    },
+    "arrayOrTemplate": {
+      "type": [
+        "array",
+        "string",
+        "null"
+      ]
+    },
+    "env": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "null"
+      ]
+    },
+    "k8sObject": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "extraArgs": {
+      "type": [
+        "array",
+        "string",
+        "null"
+      ],
+      "items": {
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
+      }
+    },
+    "port": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        }
+      ]
+    },
+    "nonNegInt": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        }
+      ]
+    },
+    "intOrDash": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "const": "-"
+        }
+      ]
+    },
+    "boolOrDash": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "const": "-"
+        }
+      ]
+    },
+    "probe": {
+      "anyOf": [
+        {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        {
+          "const": ""
+        }
+      ]
+    },
+    "sizeString": {
+      "type": "string",
+      "pattern": "^([0-9]+(K|Ki|M|Mi|G|Gi|T|Ti|P|Pi)?)?$"
+    },
+    "sizeOrPercent": {
+      "type": "string",
+      "pattern": "^([0-9]+(K|Ki|M|Mi|G|Gi|T|Ti|P|Pi|%)?)?$"
+    },
+    "pullPolicy": {
+      "enum": [
+        "Always",
+        "IfNotPresent",
+        "Never",
+        ""
+      ]
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "tag": {
+          "type": [
+            "string",
+            "integer",
+            "number"
+          ]
+        },
+        "pullPolicy": {
+          "$ref": "#/definitions/pullPolicy"
+        }
+      }
+    },
+    "sidecarImage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "const": "-"
+            }
+          ]
+        },
+        "tag": {
+          "anyOf": [
+            {
+              "type": [
+                "string",
+                "integer",
+                "number"
+              ]
+            },
+            {
+              "const": "-"
+            }
+          ]
+        },
+        "pullPolicy": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/pullPolicy"
+            },
+            {
+              "const": "-"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "properties": {
+    "nameOverride": {
+      "type": "string",
+      "default": "",
+      "description": "Overrides the name of the chart (without the release name). For example, setting `nameOverride` to \"hello\" would produce a workload named \"release-name-hello\". Containers within a pod derive their name from this setting.\n\nBy default, the name of the chart is used.\n"
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "default": "",
+      "description": "Overrides the full name of the chart (with the release name). This setting allows overriding both the release name and the workload name altogether. For example, setting `fullnameOverride` to \"hello\" would produce a workload named \"hello\".\n"
+    },
+    "global": {
+      "type": "object"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "serviceAccount": {
+      "type": "object"
+    },
+    "server": {
+      "type": "object",
+      "properties": {
+        "mse": {},
+        "mse4": {},
+        "agent": {},
+        "initAgent": {},
+        "licenseSecret": {},
+        "baseUrl": {}
+      }
+    },
+    "extraManifests": {
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "cluster": {
+      "type": "object"
+    }
+  }
+}
