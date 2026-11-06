@@ -623,6 +623,178 @@
         },
         "mse": {},
         "mse4": {},
+        "secret": {
+          "type": "string",
+          "default": "",
+          "description": "Sets the Varnish secret for accessing the varnishd admin interface. Either this value or `server.secretFrom` can be set. If unset, Varnish will generate one on every Pod start.\n"
+        },
+        "secretFrom": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "default": {},
+          "description": "Sets the Varnish secret from an external Kubernetes secret for accessing the varnishd admin interface. Either this value or `server.secret` can be set.\n",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the Kubernetes secret. Required when `server.secretFrom` is set.\n"
+            },
+            "key": {
+              "type": "string",
+              "description": "The key of the Kubernetes secret holding the Varnish secret. Required when `server.secretFrom` is set.\n"
+            }
+          },
+          "examples": [
+            {
+              "name": "secret-name",
+              "key": "varnish-secret"
+            }
+          ]
+        },
+        "secretFile": {
+          "type": "string",
+          "default": "",
+          "description": "Use the content of the given file path as Varnish secret. The file will be parsed as templated string. Will override `server.secret` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.\n",
+          "examples": [
+            "files/secret"
+          ]
+        },
+        "vclConfigPath": {
+          "type": "string",
+          "default": "/etc/varnish/default.vcl",
+          "description": "A path to the main VCL configuration. This configuration affects the location where `server.vclConfig` will be saved to, as well as the `VARNISH_VCL_CONF` environment variable in the Varnish Enterprise container.\n"
+        },
+        "vclConfig": {
+          "type": "string",
+          "default": "",
+          "description": "A VCL configuration for Varnish Enterprise.\n",
+          "examples": [
+            "vcl 4.1;\n\nbackend default {\n  .host = \"www.example.com\";\n  .port = \"80\";\n}\n\nsub vcl_backend_fetch {\n  set bereq.http.Host = \"www.example.com\";\n}\n"
+          ]
+        },
+        "vclConfigFile": {
+          "type": "string",
+          "default": "",
+          "description": "Use the content of the given file path as VCL configuration. The file will be parsed as templated string. Will override `server.vclConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.\n",
+          "examples": [
+            "files/default.vcl"
+          ]
+        },
+        "vclConfigs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`.\n\nIf the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.\n",
+          "examples": [
+            {
+              "extra.vcl": "vcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8090\";\n}\n"
+            },
+            {
+              "default.vcl": "vcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8090\";\n}\n"
+            }
+          ]
+        },
+        "vcls": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields. `server.cmdfileConfig` and `server.cmdfileConfigFile` must not be set when `server.vcls.routes` is non-empty.\n",
+          "properties": {
+            "routes": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "default": [],
+              "description": "Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig`, `server.vclConfigFile`, `server.vclConfigs` and `server.cmdfileConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.\n",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "vclContent"
+                ],
+                "properties": {
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The name of the route, used as a VCL label, so it must start with a letter. Defaults to the first hostname, prefixed with `route_` if it does not start with a letter, or to `any` for a route without hostnames.\n"
+                  },
+                  "hostnames": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The hostnames to match for this route. A route without hostnames is a catch-all and must be the last one.\n"
+                  },
+                  "vclContent": {
+                    "type": "string",
+                    "description": "The VCL of the route. Required.\n"
+                  }
+                }
+              },
+              "examples": [
+                [
+                  {
+                    "name": "foo-site",
+                    "hostnames": [
+                      "foo.com",
+                      "www.foo.com"
+                    ],
+                    "vclContent": "vcl 4.1;\nbackend default { .host = \"foo-backend\"; }\n"
+                  },
+                  {
+                    "vclContent": "vcl 4.1;\nbackend default none;\nsub vcl_recv { return (synth(404)); }\n"
+                  }
+                ]
+              ]
+            },
+            "includes": {
+              "type": "object",
+              "propertyNames": {
+                "pattern": "^[-._a-zA-Z0-9/]+$"
+              },
+              "additionalProperties": {
+                "type": "string"
+              },
+              "default": {},
+              "description": "Shared VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs. Each key is a filename and each value a template string. Requires `server.vcls.routes`. Route VCLs include them with a relative path (`include \"./helpers.vcl\";`), as plain filenames are looked up in `vcl_path` instead.\n",
+              "examples": [
+                {
+                  "helpers.vcl": "sub common_recv {\n}\n"
+                }
+              ]
+            }
+          }
+        },
+        "cmdfileConfigPath": {
+          "type": "string",
+          "default": "/etc/varnish/cmds.cli",
+          "description": "A path to the [CLI command file][varnish-cmdfile]. This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the `-I` argument in the Varnish Enterprise container when `server.cmdfileConfig` is not empty.\n"
+        },
+        "cmdfileConfig": {
+          "type": "string",
+          "default": "",
+          "description": "A [CLI command file][varnish-cmdfile] for running management commands when `varnishd` is launched. For example, when loading extra VCL in multi-tenancy mode. See also [External VCL ConfigMap](https://docs.varnish-software.com/varnish-helm/guides/using-external-vcl-configmap/#configmap-for-multiple-vcl-files).\n",
+          "examples": [
+            "vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl\nvcl.label label_tenant1 vcl_tenant1\nvcl.load vcl_main /etc/varnish/main.vcl\nvcl.use vcl_main\n"
+          ]
+        },
+        "cmdfileConfigFile": {
+          "type": "string",
+          "default": "",
+          "description": "Use the content of the given file path as a cmdfile. The file will be parsed as templated string. Will override `server.cmdfileConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.\n",
+          "examples": [
+            "files/cmds.cli"
+          ]
+        },
         "baseUrl": {},
         "terminationGracePeriodSeconds": {
           "type": "integer",

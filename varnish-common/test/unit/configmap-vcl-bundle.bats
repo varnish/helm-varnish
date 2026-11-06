@@ -423,7 +423,7 @@ vcl.use router-0" ]
         --show-only templates/configmap-vcl.yaml \
         .
     [ "$status" -ne 0 ]
-    [[ "$stderr" == *"must set vclContent"* ]]
+    [[ "$stderr" == *"at '/server/vcls/routes/0'"* ]]
 }
 
 # ── Cluster ───────────────────────────────────────────────────────────────────
@@ -744,7 +744,9 @@ vcl.use router-0" ]
         --show-only templates/configmap-vcl.yaml \
         .
     [ "$status" -ne 0 ]
-    [[ "$stderr" == *"contains invalid characters"* ]]
+    # Helm 4 reports a wrong location for propertyNames errors, so match the
+    # error itself.
+    [[ "$stderr" == *"invalid propertyName 'sub!helpers.vcl'"* ]]
 }
 
 @test "vcl-bundle: include with subdirectory path mounts under vcls/" {

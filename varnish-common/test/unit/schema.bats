@@ -114,3 +114,23 @@ EOT
 @test "Schema: rejects an unknown delayedShutdown.method" {
   schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=wait
 }
+
+@test "Schema: rejects a string server.vclConfigs" {
+  schema_rejects "at '/server/vclConfigs'" --set server.vclConfigs=foo
+}
+
+@test "Schema: rejects a numeric server.secret" {
+  schema_rejects "at '/server/secret'" --set server.secret=1234
+}
+
+@test "Schema: rejects unknown secretFrom keys" {
+  schema_rejects "additional properties 'nme' not allowed" --set server.secretFrom.nme=a
+}
+
+@test "Schema: vcls routes need vclContent" {
+  schema_rejects "at '/server/vcls/routes/0'" --set server.vcls.routes[0].name=a
+}
+
+@test "Schema: rejects unknown server.vcls keys" {
+  schema_rejects "additional properties 'route' not allowed" --set server.vcls.route=x
+}
