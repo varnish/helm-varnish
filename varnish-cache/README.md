@@ -451,50 +451,6 @@ Applies extra annotations to the service account. The value can be set as either
 
 Overrides the name of the service account. By default, the full name of the chart is used when `serviceAccount.create` is `true`, and `default` otherwise.
 
-### extraManifests
-
-**extraManifests**
-
-- Type: array of objects
-
-An array of objects to attach Kubernetes manifests to the workload.
-
-For example:
-
-```yaml
-extraManifests:
-  - name: clusterrole
-    data: |
-      apiVersion: rbac.authorization.k8s.io/v1
-      kind: ClusterRole
-      metadata:
-        name: {{ .Release.Name }}-clusterrole
-      # ...
-```
-
-**extraManifests[].name**
-
-- Type: string
-
-The name of the manifest. Only used if `extraManifests[].checksum` is `true`.
-
-**extraManifests[].checksum**
-
-- Type: boolean
-
-Whether to attach the manifest's checksum to that of the workload in order to force an automatic rollout when the manifest is updated.
-
-**extraManifests[].data**
-
-- Type: object or template string
-
-The full content of the manifest.
-
-[k8s-pod-v1-containers]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers
-[k8s-pod-v1-pods]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
-
-<!-- END GENERATED VALUES -->
-
 ### Server configurations
 
 **server.replicas**
@@ -502,26 +458,16 @@ The full content of the manifest.
 - Type: number
 - Default: `1`
 
-Specifies the number of replicas to deploy Varnish Cache server. The value is ignored if `server.autoscaling.enabled` is set to true, or `server.kind` is "DaemonSet".
+Specifies the number of replicas to deploy Varnish Cache server. The value is ignored if `server.kind` is "DaemonSet".
+
+When `server.autoscaling.enabled` is set to `true`, and `server.autoscaling.minReplicas` is `-`, the value of `server.replicas` will be used. `server.replicas` is ignored if `server.autoscaling.minReplicas` is set to a number.
 
 **server.kind**
 
-- Type: string
+- Type: string, one of `Deployment`, `DaemonSet`, or `StatefulSet`
 - Default: `Deployment`
 
-Specifies the type of deployment to deploy Varnish Cache server. The value can be one of `Deployment`, `DaemonSet`, or `StatefulSet` depending on usage scenarios (see examples).
-
-**server.labels**
-
-- Type: object or template string
-
-Applies extra labels to the deployment. The value can be set as either an object or a template string. Labels specified here will be applied to the deployment itself. To apply labels on the Pod, use `server.podLabels`.
-
-**server.annotations**
-
-- Type: object or template string
-
-Applies extra annotations to the deployment. The value can be set as either an object or a template string. Deployment annotations can be used to for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the deployment itself. To apply labels on the Pod, use `server.podAnnotations`.
+Specifies the type of workload to deploy Varnish Cache server. The value can be one of `Deployment`, `DaemonSet`, or `StatefulSet` depending on usage scenarios.
 
 **server.strategy**
 
@@ -537,16 +483,25 @@ Configures update strategy for updating Pods when a change is made to the manife
 
 *Note: While both StatefulSet and DaemonSet share the same `updateStrategy` configuration key, its applicable values are different. See [updateStrategy on StatefulSet][k8s-statefulset-updatestrategy] and [updateStrategy on DaemonSet][k8s-daemonset-updatestrategy].*
 
+**server.hostNetwork**
+
+- Type: boolean
+- Default: `false`
+
+Whether to enable hostNetwork for the Varnish Cache Pod. This will make the Varnish Cache Pod bind to the port of the host instead of using a container network provided by Kubernetes.
+
+Setting this will also set the DNS policy to `ClusterFirstWithHostNet` to allow the Pod to communicate with Kubernetes DNS.
+
 **server.shareProcessNamespace**
 
 - Type: boolean
+- Default: `false`
 
 Whether to enable shared PID namespace between all containers in a Pod. This is useful for a scenario where it is necessary to send a signal to a process across a container.
 
 **server.workDir**
 
-- Type: string
-- Default: `""`
+- Type: string or number
 
 Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to "-", the Pod name is used. When empty, varnishd runs without `-n` and uses the Varnish default, so `varnishstat`, `varnishadm` and `varnishlog` work without `-n` in `kubectl exec` and in extra containers.
 
@@ -598,6 +553,8 @@ Configures Varnish to listen for HTTPS traffic using native TLS. When enabled, `
 
 Configures the TCP port on which Varnish will listen for HTTPS traffic. This port is used for Varnish to bind to within a container. To change the port exposed via service to other applications, see `server.service.https.port`.
 
+This port is used by the HTTPS service as a targetPort.
+
 **server.tls.hostPort**
 
 - Type: number
@@ -622,7 +579,6 @@ For example:
 ```yaml
 server:
   tls:
-    enabled: true
     config: |
       frontend = {
         host = ""
@@ -637,6 +593,14 @@ server:
 - Type: string
 
 Uses the content of the given file as `server.tls.config`. The file is parsed as a template string and must be placed inside the `files/` directory of the Helm chart. Overrides `server.tls.config` if set.
+
+For example:
+
+```yaml
+server:
+  tls:
+    configFile: files/tls.cfg
+```
 
 **server.admin.address**
 
@@ -661,18 +625,18 @@ An array of extra ports for Varnish to listen to.
 For example:
 
 ```yaml
-extraListens:
-  - name: proxy
-    address: "0.0.0.0"
-    port: 6888
-    proto: "PROXY"
-
-  - name: proxy-sock
-    path: "/tmp/varnish-proxy.sock"
-    user: "www"
-    group: "www"
-    mode: "0700"
-    proto: "PROXY"
+server:
+  extraListens:
+    - name: proxy
+      address: "0.0.0.0"
+      port: 6888
+      proto: PROXY
+    - name: proxy-sock
+      path: /tmp/varnish-proxy.sock
+      user: www
+      group: www
+      mode: "0700"
+      proto: PROXY
 ```
 
 **server.extraListens[].name**
@@ -690,15 +654,14 @@ The protocol of the listen. Must be one of `PROXY` or `HTTP`. Default to HTTP if
 **server.extraListens[].port**
 
 - Type: number
-- Required: yes, unless `server.extraListens[].path` is set
 
-The port to listens to. Only applicable for TCP listens.
+The port to listen to. Required unless `server.extraListens[].path` is set. Only applicable for TCP listens.
 
 **server.extraListens[].address**
 
 - Type: string
 
-The address to listens to. Only applicable for TCP listens.
+The address to listen to. Only applicable for TCP listens.
 
 **server.extraListens[].hostPort**
 
@@ -709,70 +672,112 @@ The port to expose this listen directly on the node the Pod runs on, as the cont
 **server.extraListens[].path**
 
 - Type: string
-- Required: yes, unless `server.extraListens[].port` is set
 
-The path of UNIX domain socket to listens as. Only applicable for UNIX domain socket.
+The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets.
 
 **server.extraListens[].user**
 
 - Type: string
 
-The user owning the UNIX domain socket. Only applicable for UNIX domain socket.
+The user owning the UNIX domain socket. Only applicable for UNIX domain sockets.
 
 **server.extraListens[].group**
 
 - Type: string
 
-The group owning the UNIX domain socket. Only applicable for UNIX domain socket.
+The group owning the UNIX domain socket. Only applicable for UNIX domain sockets.
 
 **server.extraListens[].mode**
 
 - Type: string
 
-The file mode octet for the UNIX domain socket. Only applicable for UNIX domain socket.
+The file mode octet for the UNIX domain socket, as a quoted string (e.g. "0700"). Only applicable for UNIX domain sockets.
+
+**server.extraEnvs**
+
+- Type: array of objects, object, or template string
+
+Sets additional environment variables for the Varnish Cache container. The value can be set as an object, an array of objects, or a template string.
+
+For example, as an object:
+
+```yaml
+server:
+  extraEnvs:
+    MY_ENV_VAR: value
+    MY_OTHER_ENV_VAR: other_value
+```
+
+As an array of objects:
+
+```yaml
+server:
+  extraEnvs:
+    - name: MY_ENV_VAR
+      value: value
+    - name: MY_OTHER_ENV_VAR
+      valueFrom:
+        configMapKeyRef:
+          name: my-config-map
+          key: my-key
+```
+
+As a template string:
+
+```yaml
+server:
+  extraEnvs: |
+    - name: RELEASE_NAMESPACE
+      value: {{ .Release.Namespace }}
+```
 
 **server.ttl**
 
-- Type: number
+- Type: number or string
 - Default: `120`
 
 Sets the default Time To Live (in seconds) for a cached object.
 
 **server.minThreads**
 
-- Type: number
+- Type: number or string
 - Default: `50`
 
 Sets the minimum number of worker threads in each pool. See also [varnishd documentation][varnishd].
 
 **server.maxThreads**
 
-- Type: number
+- Type: number or string
 - Default: `1000`
 
 Sets the maximum number of worker threads in each pool. See also [varnishd documentation][varnishd].
 
 **server.threadTimeout**
 
-- Type: number
+- Type: number or string
 - Default: `120`
 
-Sets the threshold in seconds where idle threads are destroyed after least this duration.
+Sets the number of seconds after which idle threads are destroyed.
+
+**server.command**
+
+- Type: array of strings
+
+Sets the command for Varnish Cache. Note that by overriding this, you will also override parameters, listening ports, etc. See also [varnishd documentation][varnishd].
 
 **server.extraArgs**
 
 - Type: string or array of strings
-- Default: `[]`
 
-Sets the extra arguments to the varnishd. A string is split on whitespace into separate arguments, while each item of a list is passed as a single argument, so use a list for values containing spaces.
+Sets the extra arguments to varnishd. A string is split on whitespace into separate arguments, while each item of a list is passed as a single argument, so use a list for values containing spaces.
 
 **server.parameters**
 
 - Type: object
 
-Sets Varnish parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.
+Sets Varnish Cache parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.
 
-For example:
+For example, the following results in `-p backend_idle_timeout=60 -p feature=+http2`:
 
 ```yaml
 server:
@@ -782,7 +787,170 @@ server:
       - "+http2"
 ```
 
-will result in `-p backend_idle_timeout=60 -p feature=+http2`.
+**server.terminationGracePeriodSeconds**
+
+- Type: number
+- Default: `0`
+
+Sets the termination grace period seconds to wait for Varnish Cache to shut down. Once this number of seconds is reached without the Varnish Cache Pod shutting down, Kubernetes will send SIGKILL to the Pod. When `server.delayedShutdown` is used, this value should be set to a higher value than the **maximum** time (in seconds) it took for Varnish Cache to fully shut down after a delayed shutdown.
+
+The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
+
+**server.delayedHaltSeconds**
+
+- Type: number
+
+Deprecated: use `server.delayedShutdown` instead.
+
+Delays stopping of the Varnish Cache container by the given seconds.
+
+**server.delayedShutdown**
+
+- Type: object
+
+Configures delayed shutdown for zero-downtime downscaling.
+
+**server.delayedShutdown.method**
+
+- Type: string, one of `none`, `sleep`, or `mempool`
+- Default: `none`
+- Availability: v1.1.0
+
+Sets the method for delaying the shutdown of Varnish Cache. This is useful for rolling updates or when scaling down, where the load balancer component may still attempt to forward requests to the Varnish Cache instance when Varnish Cache has already received a SIGHUP, leading to HTTP 502 errors.
+
+Multiple methods are provided here:
+
+- `sleep` will simply sleep in the `preStop` for `server.delayedShutdown.sleep.seconds` seconds. This is the simplest way to delay the shutdown of Varnish Cache when the time taken for the load balancer component to stop forwarding traffic to Varnish Cache is largely fixed.
+- `mempool` polls varnishstat for `MEMPOOL.sess` to go down to zero. This allows for the quickest shutdown but requires tuning `server.delayedShutdown.mempool.pollSeconds` to traffic patterns (as `MEMPOOL.sess` may become 0 momentarily, resulting in an early shutdown).
+
+When `server.delayedShutdown.method` is set to a value other than "none", `server.terminationGracePeriodSeconds` **must** also be set.
+
+**server.delayedShutdown.sleep**
+
+- Type: object
+
+Configures the "sleep" delayed shutdown method.
+
+**server.delayedShutdown.sleep.seconds**
+
+- Type: number or string
+- Default: `90`
+- Availability: v1.1.0
+
+Sets the number of seconds to sleep before SIGHUP is sent to Varnish Cache. Only applicable when `server.delayedShutdown.method` is set to "sleep".
+
+**server.delayedShutdown.mempool**
+
+- Type: object
+
+Configures the "mempool" delayed shutdown method.
+
+**server.delayedShutdown.mempool.pollSeconds**
+
+- Type: number or string
+- Default: `1`
+- Availability: v1.1.0
+
+Sets the number of seconds to poll for `MEMPOOL.sess` stats. Only applicable when `server.delayedShutdown.method` is set to "mempool".
+
+This value requires tuning to traffic patterns. If the time between each traffic took more than `server.delayedShutdown.mempool.pollSeconds`, then Varnish Cache could be signaled to SIGHUP too early, leading to an HTTP 502 error on the load balancer (as Varnish Cache already stopped accepting connection).
+
+**server.delayedShutdown.mempool.waitSeconds**
+
+- Type: number or string
+- Default: `5`
+- Availability: v1.1.0
+
+Sets the number of seconds to wait after `MEMPOOL.sess` turned zero. Only applicable when `server.delayedShutdown.method` is set to "mempool".
+
+**server.image**
+
+- Type: object
+
+Sets the image and tag to use to deploy Varnish Cache.
+
+**server.image.repository**
+
+- Type: string
+- Default: `docker.io/varnish`
+
+Sets the repository for Varnish Cache image.
+
+**server.image.pullPolicy**
+
+- Type: string
+- Default: `IfNotPresent`
+
+Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image. This can be one of Always, Never, or IfNotPresent.
+
+**server.image.tag**
+
+- Type: string or number
+- Default: _same as appVersion_
+
+Sets the tag for the Varnish Cache image. By default, this is set to the same application version as in the Varnish Cache Helm Chart. If the tag is set to non-exact versions (such as "latest"), make sure to set `server.image.pullPolicy` to "Always" to make sure the image is always updated.
+
+### extraManifests
+
+**extraManifests**
+
+- Type: array of objects
+
+An array of objects to attach Kubernetes manifests to the workload.
+
+For example:
+
+```yaml
+extraManifests:
+  - name: clusterrole
+    data: |
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: {{ .Release.Name }}-clusterrole
+      # ...
+```
+
+**extraManifests[].name**
+
+- Type: string
+
+The name of the manifest. Only used if `extraManifests[].checksum` is `true`.
+
+**extraManifests[].checksum**
+
+- Type: boolean
+
+Whether to attach the manifest's checksum to that of the workload in order to force an automatic rollout when the manifest is updated.
+
+**extraManifests[].data**
+
+- Type: object or template string
+
+The full content of the manifest.
+
+[k8s-daemonset-updatestrategy]: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
+[k8s-deployment-strategy]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+[k8s-pod-v1-containers]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers
+[k8s-pod-v1-pods]: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
+[k8s-statefulset-updatestrategy]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+[varnishd]: https://varnish-cache.org/docs/6.0/reference/varnishd.html
+
+<!-- END GENERATED VALUES -->
+
+### Server configurations
+
+**server.labels**
+
+- Type: object or template string
+
+Applies extra labels to the deployment. The value can be set as either an object or a template string. Labels specified here will be applied to the deployment itself. To apply labels on the Pod, use `server.podLabels`.
+
+**server.annotations**
+
+- Type: object or template string
+
+Applies extra annotations to the deployment. The value can be set as either an object or a template string. Deployment annotations can be used to for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the deployment itself. To apply labels on the Pod, use `server.podAnnotations`.
 
 **server.extraInitContainers**
 
@@ -984,27 +1152,6 @@ server:
 - Default: `/etc/varnish/cmds.cli`
 
 A path to the [CLI command file][varnish-cmdfile]. This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the `-I` argument in the Varnish Cache container when `server.cmdfileConfig` is not empty.
-
-**server.image.repository**
-
-- Type: string
-- Default: `quay.io/varnish-software/varnish-plus`
-
-Sets the repository for Varnish Cache image.
-
-**server.image.pullPolicy**
-
-- Type: string
-- Default: `IfNotPresent`
-
-Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image. This can be one of Always, Never, or IfNotPreset.
-
-**server.image.tag**
-
-- Type: string
-- Default: _same as appVersion_
-
-Sets the tag for the Varnish Cache image. By default, this is set to the same application version as in the Varnish Cache Helm Chart. If the tag is set to non-exact versions (such as "latest", or "6.0"), make sure to set `server.image.pullPolicy` to "Always" to make sure the image is always updated.
 
 **server.podAnnotations**
 
@@ -1227,54 +1374,6 @@ An object that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definit
     ```
 
 This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Cache Pods are always run in a different node. To disable this behavior, set to empty string (""). The value can be set as either an object or a template string.
-
-**server.delayedShutdown.method**
-
-- Type: string, one of `none`, `sleep`, or `mempool`
-- Availability: v1.1.0
-
-Sets the method for Kubernetes to delay sending a SIGHUP to Varnish Cache. This is useful for rolling updates or when scaling down, where the load balancer component may still attempt to forward requests to Varnish Cache instance when Varnish Cache has already received a SIGHUP, leading to HTTP 502 errors.
-
-Multiple methods are provided here:
-
-- `sleep` will simply sleep in the `preStop` for `server.delayedShutdown.sleep.seconds` seconds. This is the simplest way to delay the shutdown of Varnish Cache when the time taken for the load balancer component to stop forwarding traffic to Varnish Cache is largely fixed.
-- `mempool` polls varnishstat for `MEMPOOL.sess` to go down to zero. This allows for the quickest shutdown but requires tuning `server.delayedShutdown.mempool.pollSeconds` to traffic patterns (as `MEMPOOL.sess` may become 0 momentary).
-
-When `server.delayedShutdown.method` is set to a value other than "none", `server.terminationGracePeriodSeconds` **must** also be set.
-
-**server.delayedShutdown.sleep.seconds**
-
-- Type: number
-- Default: `90`
-- Availability: v1.1.0
-
-Sets the number of seconds to sleep before SIGHUP is sent to Varnish Cache. Only applicable when `server.delayedShutdown.method` is set to "sleep".
-
-**server.delayedShutdown.mempool.pollSeconds**
-
-- Type: number
-- Default: `1`
-- Availability: v1.1.0
-
-Sets the number of seconds to poll for `MEMPOOL.sess` stats. Only applicable when `server.delayedShutdown.method` is set to "mempool".
-
-This value requires tuning to traffic patterns. If the time between each traffic took more than `server.delayedShutdown.mempool.pollSeconds`, then Varnish Cache could be signaled to SIGHUP too early, leading to an HTTP 502 error on the load balancer (as Varnish Cache already stopped accepting connection).
-
-**server.delayedShutdown.mempool.waitSeconds**
-
-- Type: number
-- Default: `5`
-- Availability: v1.1.0
-
-Sets the number of seconds to wait after `MEMPOOL.sess` turned zero. Only applicable when `server.delayedShutdown.method` is set to "mempool".
-
-**server.terminationGracePeriodSeconds**
-
-- Type: number
-
-Sets the termination grace period seconds for Varnish Cache to shut down until Kubernetes sends the process a SIGKILL. When `server.delayedShutdown` is used, this value should be set to the **maximum** time it took for Varnish Cache to fully shutdown.
-
-The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
 
 **server.autoscaling**
 

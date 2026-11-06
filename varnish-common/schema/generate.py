@@ -438,6 +438,18 @@ def type_label(node, definitions):
     return " or ".join(unique)
 
 
+def type_text(node, definitions, flavor):
+    """The "Type" of a node in the docs and values.yaml: its label, followed
+    by its enum values for the flavor unless x-type-label is set."""
+    label = type_label(node, definitions)
+    if "enum" not in node or "x-type-label" in node:
+        return label
+    values = [f"`{v}`" for v in enum_values(node, flavor)]
+    if len(values) > 2:
+        values = [", ".join(values[:-1]) + ","] + values[-1:]
+    return f"{label}, one of {' or '.join(values)}"
+
+
 def json_type(value):
     if isinstance(value, bool):
         return "boolean"
@@ -455,7 +467,7 @@ def comment_lines(node, name, indent, definitions, flavor):
     text = description_text(node, flavor)
     if text:
         lines += wrap(text, indent)
-    label = type_label(node, definitions)
+    label = type_text(node, definitions, flavor)
     if label and text:
         lines.append(f"{pad}# Type: {label}")
     since = node.get("x-since", {}).get(flavor)
@@ -553,7 +565,7 @@ def docs_entries(node, prefix, definitions, flavor):
 
 def docs_entry(node, path, definitions, flavor):
     facts = []
-    label = type_label(node, definitions)
+    label = type_text(node, definitions, flavor)
     if label:
         facts.append(f"- Type: {label}")
     default = docs_default(node, flavor)

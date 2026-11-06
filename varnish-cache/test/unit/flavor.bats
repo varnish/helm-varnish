@@ -75,5 +75,5 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
         --namespace default \
         .
     [ "$status" -ne 0 ]
-    [[ "$output" == *"'shutdown_delay' requires Varnish Enterprise"* ]]
+    [[ "$output" == *"at '/server/delayedShutdown/method'"* ]]
 }

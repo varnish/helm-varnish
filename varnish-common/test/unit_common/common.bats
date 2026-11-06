@@ -3843,6 +3843,7 @@ env: {
 }
 
 @test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown shutdown_delay seconds" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \

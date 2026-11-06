@@ -2,30 +2,6 @@
 
 load _helpers
 
-# Renders the chart, for the schema checks below.
-schema_template() {
-  cd "$(chart_dir)"
-  run helm template t . --namespace default "$@"
-  echo "$output" >&2
-}
-
-# schema_rejects <substring> <helm args...>: the values fail the schema, with
-# an error containing <substring>.
-schema_rejects() {
-  local expected="$1"
-  shift
-  schema_template "$@"
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"values don't meet the specifications"* ]]
-  [[ "$output" == *"${expected}"* ]]
-}
-
-# schema_accepts <helm args...>: the values pass the schema and render.
-schema_accepts() {
-  schema_template "$@"
-  [ "$status" -eq 0 ]
-}
-
 @test "Schema: generated files are up to date" {
   run "$(chart_dir)/../varnish-common/schema/generate.py" --check
   echo "$output" >&2
@@ -87,4 +63,54 @@ EOT
 
 @test "Schema: rejects a string global.imagePullSecrets" {
   schema_rejects "at '/global/imagePullSecrets'" --set global.imagePullSecrets=foo
+}
+
+@test "Schema: rejects an unknown server.kind" {
+  schema_rejects "at '/server/kind'" --set server.kind=Pod
+}
+
+@test "Schema: rejects a non-numeric server.replicas" {
+  schema_rejects "at '/server/replicas'" --set server.replicas=abc
+}
+
+@test "Schema: rejects unknown server.http keys" {
+  schema_rejects "additional properties 'prot' not allowed" --set server.http.prot=1
+}
+
+@test "Schema: accepts numeric and string image tags" {
+  # --set makes 7 an integer, which the image helper must compare as a string
+  schema_accepts --set server.image.tag=7
+  [[ "$output" == *'image: "'*':7"'* ]]
+
+  schema_accepts --set server.image.tag=7.6
+  [[ "$output" == *'image: "'*':7.6"'* ]]
+}
+
+@test "Schema: accepts null on keys without a default" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  cat > "${values}" <<EOT
+server:
+  http:
+    hostPort: null
+  delayedHaltSeconds: null
+EOT
+  schema_accepts -f "${values}"
+}
+
+@test "Schema: accepts a quoted port" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  cat > "${values}" <<EOT
+server:
+  http:
+    port: "8080"
+EOT
+  schema_accepts -f "${values}"
+}
+
+@test "Schema: extraListens items need a name" {
+  schema_rejects "at '/server/extraListens/0'" --set server.extraListens[0].port=8088
+}
+
+@test "Schema: rejects an unknown delayedShutdown.method" {
+  schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=wait
 }
