@@ -8,9 +8,19 @@ additionalProperties: false
 x-links:
   k8s-daemonset-updatestrategy: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
   k8s-deployment-strategy: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+  k8s-hpa: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+  k8s-ingress: https://kubernetes.io/docs/concepts/services-networking/ingress/
+  k8s-ingress-class: https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class
+  k8s-ingress-path-type: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types
+  k8s-ingress-tls: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
+  k8s-networkpolicy: https://kubernetes.io/docs/concepts/services-networking/network-policies/
+  k8s-networkpolicy-v1: https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/network-policy-v1/#NetworkPolicySpec
+  k8s-pdb: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
   k8s-pod-v1-containers: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers
   k8s-pod-v1-pods: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
   k8s-probes: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  k8s-service: https://kubernetes.io/docs/concepts/services-networking/service/
+  k8s-service-clusterip: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip
   k8s-statefulset-updatestrategy: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
   k8s-volume-claim-templates: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#volume-claim-templates
   varnish-cmdfile: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
@@ -1018,6 +1028,348 @@ properties:
             description: |
               Sets the tag for the {product} image. By default, this is set to the same application version as in the {product} Helm Chart. If the tag is set to non-exact versions (such as "latest"), make sure to set `server.image.pullPolicy` to "Always" to make sure the image is always updated.
 
+      autoscaling:
+        type: object
+        additionalProperties: false
+        description: |
+          An object for configuring [HorizontalPodAutoscaling][k8s-hpa].
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              Enables the [HorizontalPodAutoscaling][k8s-hpa] with the {product} Pod. `server.replicas` is ignored if autoscaling is enabled.
+
+          minReplicas:
+            $ref: "#/definitions/intOrDash"
+            x-default:
+              cache: 1
+              enterprise: "-"
+            description: |
+              Sets the minimum number of replicas to always keep running. When set to "-", the value of `server.replicas` is used.
+
+          maxReplicas:
+            type: integer
+            x-type-label: number
+            default: 100
+            description: |
+              Sets the maximum number of replicas to run at most.
+
+          behavior:
+            $ref: "#/definitions/objectOrTemplate"
+            default: ""
+            x-since:
+              cache: v1.1.0
+              enterprise: v1.6.0
+            description: |
+              Sets the [HorizontalPodAutoscaling][k8s-hpa] behavior. The value can be set as either an object or a template string.
+            x-examples:
+              - description: "For example:"
+                value:
+                  scaleDown:
+                    stabilizationWindowSeconds: 120
+                    policies:
+                      - type: Percent
+                        value: 50
+                        periodSeconds: 60
+                  scaleUp:
+                    policies:
+                      - type: Percent
+                        value: 100
+                        periodSeconds: 60
+                      - type: Pods
+                        value: 4
+                        periodSeconds: 60
+                    selectPolicy: Max
+
+          metrics:
+            $ref: "#/definitions/arrayOrTemplate"
+            default: ""
+            description: |
+              Sets the [HorizontalPodAutoscaling][k8s-hpa] metrics. The value can be set as either an array or a template string.
+            x-examples:
+              - description: "For example:"
+                value: |
+                  - type: Resource
+                    resource:
+                      name: cpu
+                      targetAverageUtilization: 80
+
+      pdb:
+        type: object
+        additionalProperties: false
+        description: |
+          An object for configuring [PodDisruptionBudget][k8s-pdb]. See also [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/).
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            x-since:
+              enterprise: v1.2.0
+            description: |
+              Enables PodDisruptionBudget.
+
+          minAvailable:
+            x-type-label: string or number
+            anyOf:
+              - type: integer
+              - type: string
+                pattern: "^([0-9]+%?)?$"
+            default: ""
+            x-since:
+              enterprise: v1.2.0
+            description: |
+              Sets the number or percentage of pods that must be available after the eviction. Required if `server.pdb.enabled` is true and `server.pdb.maxUnavailable` is not set.
+
+          maxUnavailable:
+            x-type-label: string or number
+            anyOf:
+              - type: integer
+              - type: string
+                pattern: "^([0-9]+%?)?$"
+            default: ""
+            x-since:
+              enterprise: v1.2.0
+            description: |
+              Sets the number or percentage of pods that can be unavailable after the eviction. Required if `server.pdb.enabled` is true and `server.pdb.minAvailable` is not set.
+
+      service:
+        type: object
+        additionalProperties: false
+        description: |
+          An object for configuring [Service][k8s-service].
+        properties:
+          enabled:
+            type: boolean
+            default: true
+            description: |
+              Enables the [Service][k8s-service] for {product}.
+
+          labels:
+            $ref: "#/definitions/objectOrTemplate"
+            default: {}
+            description: |
+              Applies extra labels to the Service. The value can be set as either an object or a template string.
+
+          annotations:
+            $ref: "#/definitions/objectOrTemplate"
+            default: {}
+            description: |
+              Applies extra annotations to the Service. The value can be set as either an object or a template string.
+
+          type:
+            type: string
+            default: NodePort
+            description: |
+              Sets the type of the Service. Can be either `ClusterIP`, `LoadBalancer`, or `NodePort`.
+
+              See also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/).
+
+          clusterIP:
+            type: string
+            default: ""
+            description: |
+              Sets a custom [Service ClusterIP][k8s-service-clusterip]. This value can be set as either an IP address, or a literal string "None". Only applicable when `server.service.type` is set to ClusterIP. When set to "None", Kubernetes will create a Headless Service, skipping the Kubernetes proxying mechanism. In such case, `server.service.http.port` and `server.service.https.port` are ignored, and `server.http.port` and `server.tls.port` are used instead.
+
+              See also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/).
+
+          loadBalancerIP:
+            type: string
+            default: ""
+            x-since:
+              enterprise: v1.4.0
+            description: |
+              Sets a pre-allocated IP address for use in LoadBalancer.
+
+          http:
+            type: object
+            additionalProperties: false
+            description: |
+              Enables or disables the Varnish HTTP service.
+            properties:
+              enabled:
+                type: boolean
+                default: true
+                description: |
+                  Enables HTTP service. Requires `server.http.enabled`.
+
+              port:
+                $ref: "#/definitions/port"
+                default: 80
+                description: |
+                  Sets the port to expose HTTP service.
+
+              nodePort:
+                x-type-label: number
+                anyOf:
+                  - $ref: "#/definitions/port"
+                  - type: "null"
+                x-values-example: 30080
+                description: |
+                  Sets the port to expose HTTP service directly on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).
+
+                  See also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/).
+
+          https:
+            type: object
+            additionalProperties: false
+            description: |
+              Enables or disables the Varnish HTTPS service.
+            properties:
+              enabled:
+                type: boolean
+                default: false
+                description: |
+                  Enables HTTPS service. Requires `server.tls.enabled`.
+
+              port:
+                $ref: "#/definitions/port"
+                default: 443
+                description: |
+                  Sets the port to expose HTTPS service.
+
+              nodePort:
+                x-type-label: number
+                anyOf:
+                  - $ref: "#/definitions/port"
+                  - type: "null"
+                x-values-example: 30443
+                description: |
+                  Sets the port to expose HTTPS service directly on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).
+
+                  See also [accessing Varnish via NodePort](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/#nodeport).
+
+          extraServices:
+            type: array
+            default: []
+            description: |
+              An array of extra services to expose via the Service. Each extra service adds a port named `extra-<name>` to the Service.
+            x-examples:
+              - description: "For example:"
+                value:
+                  - name: proxy
+                    targetPort: 8088
+                    port: 8088
+                    nodePort: 30888
+            items:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  description: |
+                    Sets the name of the extra service. Required.
+                targetPort:
+                  $ref: "#/definitions/port"
+                  description: |
+                    Sets the port in the Pod to forward requests to. It must also be defined in `server.extraListens`. Required.
+                port:
+                  $ref: "#/definitions/port"
+                  description: |
+                    Sets the port to expose this extra service. Required unless the Service is headless (`server.service.clusterIP` set to "None"), in which case `targetPort` is used instead.
+                nodePort:
+                  $ref: "#/definitions/port"
+                  description: |
+                    Sets the port to expose this extra service on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).
+
+          internalTrafficPolicy:
+            type: string
+            enum: ["", Cluster, Local]
+            x-type-label: string
+            x-default:
+              cache: Cluster
+              enterprise: ""
+            x-since:
+              enterprise: v1.9.0
+            description: |
+              Sets the internal traffic policy for this service. InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. Can be set to `Local` or `Cluster`. If unset, the Kubernetes default (`Cluster`) is used.
+
+          externalTrafficPolicy:
+            type: string
+            enum: ["", Cluster, Local]
+            x-type-label: string
+            default: Cluster
+            description: |
+              Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). Can be set to `Local` or `Cluster`.
+
+      ingress:
+        type: object
+        additionalProperties: false
+        description: |
+          An object for configuring [Ingress][k8s-ingress].
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              Enables the [Ingress][k8s-ingress] for {product}. Requires `server.service.http.enabled` and `server.service.http.port`.
+
+          labels:
+            $ref: "#/definitions/objectOrTemplate"
+            default: {}
+            description: |
+              Applies extra labels to the Ingress. The value can be set as either an object or a template string.
+
+          annotations:
+            $ref: "#/definitions/objectOrTemplate"
+            default: {}
+            description: |
+              Applies extra annotations to the Ingress. The value can be set as either an object or a template string.
+
+          ingressClassName:
+            type: string
+            default: ""
+            description: |
+              Sets the [Ingress Class][k8s-ingress-class] for selecting Ingress controller to use.
+
+          pathType:
+            type: string
+            enum: [Prefix, Exact, ImplementationSpecific]
+            x-type-label: string
+            default: Prefix
+            description: |
+              Sets the [Ingress Path Type][k8s-ingress-path-type] for the {product} endpoint. The value can be either `Prefix`, `Exact`, or `ImplementationSpecific`. The value to use here depends on the Ingress controller.
+
+          hosts:
+            type: array
+            default: []
+            description: |
+              Sets the hostnames for the Ingress. These hostnames are used for routing traffic.
+            x-examples:
+              - description: "For example:"
+                value:
+                  - host: chart-example.local
+                    paths: []
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                host:
+                  type: string
+                  description: |
+                    Sets the hostname to route traffic for.
+                paths:
+                  type: [array, "null"]
+                  items:
+                    type: string
+                  description: |
+                    Sets the paths to route to {product} for this host, as an array of strings. Defaults to `/` when empty.
+
+          tls:
+            type: array
+            items:
+              $ref: "#/definitions/k8sObject"
+            default: []
+            description: |
+              An array of objects that conforms to [Ingress TLS][k8s-ingress-tls].
+            x-examples:
+              - description: "For example:"
+                value:
+                  - secretName: chart-example-tls
+                    hosts:
+                      - chart-example.local
+
       podAnnotations:
         $ref: "#/definitions/objectOrTemplate"
         default: {}
@@ -1277,6 +1629,66 @@ properties:
               ```
         description: |
           This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all {product} Pods are always run in a different node. To disable this behavior, set to empty string (""). The value can be set as either an object or a template string.
+
+      networkPolicy:
+        type: object
+        additionalProperties: false
+        description: |
+          An object for configuring the [NetworkPolicy][k8s-networkpolicy] of the {product} Pods.
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              Enables the NetworkPolicy.
+
+          allowIngress:
+            type: boolean
+            default: true
+            description: |
+              Allows all connections from any source. Set to false when using `server.networkPolicy.extraIngress`.
+
+          allowEgress:
+            type: boolean
+            default: true
+            description: |
+              Allows all connections to any destination. Set to false when using `server.networkPolicy.extraEgress`.
+
+          extraIngress:
+            type: array
+            items:
+              $ref: "#/definitions/k8sObject"
+            default: []
+            description: |
+              An array of ingress rules that conforms to the Kubernetes [NetworkPolicyIngressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowIngress` is false.
+            x-examples:
+              - description: "For example:"
+                value:
+                  - from:
+                      - podSelector:
+                          matchLabels:
+                            component: apache
+                    ports:
+                      - port: 8080
+                        protocol: TCP
+
+          extraEgress:
+            type: array
+            items:
+              $ref: "#/definitions/k8sObject"
+            default: []
+            description: |
+              An array of egress rules that conforms to the Kubernetes [NetworkPolicyEgressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowEgress` is false.
+            x-examples:
+              - description: "For example:"
+                value:
+                  - to:
+                      - podSelector:
+                          matchLabels:
+                            component: apache
+                    ports:
+                      - port: 80
+                        protocol: TCP
 
       initAgent:
         x-flavor: enterprise

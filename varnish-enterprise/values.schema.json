@@ -968,6 +968,349 @@
             }
           }
         },
+        "autoscaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "An object for configuring [HorizontalPodAutoscaling][k8s-hpa].\n",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Enterprise Pod. `server.replicas` is ignored if autoscaling is enabled.\n"
+            },
+            "minReplicas": {
+              "$ref": "#/definitions/intOrDash",
+              "description": "Sets the minimum number of replicas to always keep running. When set to \"-\", the value of `server.replicas` is used.\n",
+              "default": "-"
+            },
+            "maxReplicas": {
+              "type": "integer",
+              "default": 100,
+              "description": "Sets the maximum number of replicas to run at most.\n"
+            },
+            "behavior": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": "",
+              "description": "Sets the [HorizontalPodAutoscaling][k8s-hpa] behavior. The value can be set as either an object or a template string.\n",
+              "examples": [
+                {
+                  "scaleDown": {
+                    "stabilizationWindowSeconds": 120,
+                    "policies": [
+                      {
+                        "type": "Percent",
+                        "value": 50,
+                        "periodSeconds": 60
+                      }
+                    ]
+                  },
+                  "scaleUp": {
+                    "policies": [
+                      {
+                        "type": "Percent",
+                        "value": 100,
+                        "periodSeconds": 60
+                      },
+                      {
+                        "type": "Pods",
+                        "value": 4,
+                        "periodSeconds": 60
+                      }
+                    ],
+                    "selectPolicy": "Max"
+                  }
+                }
+              ]
+            },
+            "metrics": {
+              "$ref": "#/definitions/arrayOrTemplate",
+              "default": "",
+              "description": "Sets the [HorizontalPodAutoscaling][k8s-hpa] metrics. The value can be set as either an array or a template string.\n",
+              "examples": [
+                "- type: Resource\n  resource:\n    name: cpu\n    targetAverageUtilization: 80\n"
+              ]
+            }
+          }
+        },
+        "pdb": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "An object for configuring [PodDisruptionBudget][k8s-pdb]. See also [Specifying a Disruption Budget for your Application](https://kubernetes.io/docs/tasks/run-application/configure-pdb/).\n",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enables PodDisruptionBudget.\n"
+            },
+            "minAvailable": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^([0-9]+%?)?$"
+                }
+              ],
+              "default": "",
+              "description": "Sets the number or percentage of pods that must be available after the eviction. Required if `server.pdb.enabled` is true and `server.pdb.maxUnavailable` is not set.\n"
+            },
+            "maxUnavailable": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^([0-9]+%?)?$"
+                }
+              ],
+              "default": "",
+              "description": "Sets the number or percentage of pods that can be unavailable after the eviction. Required if `server.pdb.enabled` is true and `server.pdb.minAvailable` is not set.\n"
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "An object for configuring [Service][k8s-service].\n",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enables the [Service][k8s-service] for Varnish Enterprise.\n"
+            },
+            "labels": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "Applies extra labels to the Service. The value can be set as either an object or a template string.\n"
+            },
+            "annotations": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "Applies extra annotations to the Service. The value can be set as either an object or a template string.\n"
+            },
+            "type": {
+              "type": "string",
+              "default": "NodePort",
+              "description": "Sets the type of the Service. Can be either `ClusterIP`, `LoadBalancer`, or `NodePort`.\n\nSee also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/).\n"
+            },
+            "clusterIP": {
+              "type": "string",
+              "default": "",
+              "description": "Sets a custom [Service ClusterIP][k8s-service-clusterip]. This value can be set as either an IP address, or a literal string \"None\". Only applicable when `server.service.type` is set to ClusterIP. When set to \"None\", Kubernetes will create a Headless Service, skipping the Kubernetes proxying mechanism. In such case, `server.service.http.port` and `server.service.https.port` are ignored, and `server.http.port` and `server.tls.port` are used instead.\n\nSee also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/).\n"
+            },
+            "loadBalancerIP": {
+              "type": "string",
+              "default": "",
+              "description": "Sets a pre-allocated IP address for use in LoadBalancer.\n"
+            },
+            "http": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Enables or disables the Varnish HTTP service.\n",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enables HTTP service. Requires `server.http.enabled`.\n"
+                },
+                "port": {
+                  "$ref": "#/definitions/port",
+                  "default": 80,
+                  "description": "Sets the port to expose HTTP service.\n"
+                },
+                "nodePort": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/port"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Sets the port to expose HTTP service directly on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).\n\nSee also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/).\n"
+                }
+              }
+            },
+            "https": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Enables or disables the Varnish HTTPS service.\n",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enables HTTPS service. Requires `server.tls.enabled`.\n"
+                },
+                "port": {
+                  "$ref": "#/definitions/port",
+                  "default": 443,
+                  "description": "Sets the port to expose HTTPS service.\n"
+                },
+                "nodePort": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/port"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Sets the port to expose HTTPS service directly on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).\n\nSee also [accessing Varnish via NodePort](https://docs.varnish-software.com/varnish-helm/guides/accessing-varnish-enterprise/#nodeport).\n"
+                }
+              }
+            },
+            "extraServices": {
+              "type": "array",
+              "default": [],
+              "description": "An array of extra services to expose via the Service. Each extra service adds a port named `extra-<name>` to the Service.\n",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Sets the name of the extra service. Required.\n"
+                  },
+                  "targetPort": {
+                    "$ref": "#/definitions/port",
+                    "description": "Sets the port in the Pod to forward requests to. It must also be defined in `server.extraListens`. Required.\n"
+                  },
+                  "port": {
+                    "$ref": "#/definitions/port",
+                    "description": "Sets the port to expose this extra service. Required unless the Service is headless (`server.service.clusterIP` set to \"None\"), in which case `targetPort` is used instead.\n"
+                  },
+                  "nodePort": {
+                    "$ref": "#/definitions/port",
+                    "description": "Sets the port to expose this extra service on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).\n"
+                  }
+                }
+              },
+              "examples": [
+                [
+                  {
+                    "name": "proxy",
+                    "targetPort": 8088,
+                    "port": 8088,
+                    "nodePort": 30888
+                  }
+                ]
+              ]
+            },
+            "internalTrafficPolicy": {
+              "type": "string",
+              "enum": [
+                "",
+                "Cluster",
+                "Local"
+              ],
+              "description": "Sets the internal traffic policy for this service. InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. Can be set to `Local` or `Cluster`. If unset, the Kubernetes default (`Cluster`) is used.\n",
+              "default": ""
+            },
+            "externalTrafficPolicy": {
+              "type": "string",
+              "enum": [
+                "",
+                "Cluster",
+                "Local"
+              ],
+              "default": "Cluster",
+              "description": "Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's \"externally-facing\" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). Can be set to `Local` or `Cluster`.\n"
+            }
+          }
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "An object for configuring [Ingress][k8s-ingress].\n",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enables the [Ingress][k8s-ingress] for Varnish Enterprise. Requires `server.service.http.enabled` and `server.service.http.port`.\n"
+            },
+            "labels": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "Applies extra labels to the Ingress. The value can be set as either an object or a template string.\n"
+            },
+            "annotations": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "Applies extra annotations to the Ingress. The value can be set as either an object or a template string.\n"
+            },
+            "ingressClassName": {
+              "type": "string",
+              "default": "",
+              "description": "Sets the [Ingress Class][k8s-ingress-class] for selecting Ingress controller to use.\n"
+            },
+            "pathType": {
+              "type": "string",
+              "enum": [
+                "Prefix",
+                "Exact",
+                "ImplementationSpecific"
+              ],
+              "default": "Prefix",
+              "description": "Sets the [Ingress Path Type][k8s-ingress-path-type] for the Varnish Enterprise endpoint. The value can be either `Prefix`, `Exact`, or `ImplementationSpecific`. The value to use here depends on the Ingress controller.\n"
+            },
+            "hosts": {
+              "type": "array",
+              "default": [],
+              "description": "Sets the hostnames for the Ingress. These hostnames are used for routing traffic.\n",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "description": "Sets the hostname to route traffic for.\n"
+                  },
+                  "paths": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Sets the paths to route to Varnish Enterprise for this host, as an array of strings. Defaults to `/` when empty.\n"
+                  }
+                }
+              },
+              "examples": [
+                [
+                  {
+                    "host": "chart-example.local",
+                    "paths": []
+                  }
+                ]
+              ]
+            },
+            "tls": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/k8sObject"
+              },
+              "default": [],
+              "description": "An array of objects that conforms to [Ingress TLS][k8s-ingress-tls].\n",
+              "examples": [
+                [
+                  {
+                    "secretName": "chart-example-tls",
+                    "hosts": [
+                      "chart-example.local"
+                    ]
+                  }
+                ]
+              ]
+            }
+          }
+        },
         "podAnnotations": {
           "$ref": "#/definitions/objectOrTemplate",
           "default": {},
@@ -1186,6 +1529,86 @@
           "$ref": "#/definitions/objectOrTemplate",
           "default": "podAntiAffinity:\n  requiredDuringSchedulingIgnoredDuringExecution:\n    - labelSelector:\n        matchLabels:\n          app.kubernetes.io/name: {{ include \"varnish-common.name\" . }}\n          app.kubernetes.io/instance: {{ .Release.Name }}\n      topologyKey: kubernetes.io/hostname\n",
           "description": "This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Enterprise Pods are always run in a different node. To disable this behavior, set to empty string (\"\"). The value can be set as either an object or a template string.\n"
+        },
+        "networkPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "An object for configuring the [NetworkPolicy][k8s-networkpolicy] of the Varnish Enterprise Pods.\n",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enables the NetworkPolicy.\n"
+            },
+            "allowIngress": {
+              "type": "boolean",
+              "default": true,
+              "description": "Allows all connections from any source. Set to false when using `server.networkPolicy.extraIngress`.\n"
+            },
+            "allowEgress": {
+              "type": "boolean",
+              "default": true,
+              "description": "Allows all connections to any destination. Set to false when using `server.networkPolicy.extraEgress`.\n"
+            },
+            "extraIngress": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/k8sObject"
+              },
+              "default": [],
+              "description": "An array of ingress rules that conforms to the Kubernetes [NetworkPolicyIngressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowIngress` is false.\n",
+              "examples": [
+                [
+                  {
+                    "from": [
+                      {
+                        "podSelector": {
+                          "matchLabels": {
+                            "component": "apache"
+                          }
+                        }
+                      }
+                    ],
+                    "ports": [
+                      {
+                        "port": 8080,
+                        "protocol": "TCP"
+                      }
+                    ]
+                  }
+                ]
+              ]
+            },
+            "extraEgress": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/k8sObject"
+              },
+              "default": [],
+              "description": "An array of egress rules that conforms to the Kubernetes [NetworkPolicyEgressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowEgress` is false.\n",
+              "examples": [
+                [
+                  {
+                    "to": [
+                      {
+                        "podSelector": {
+                          "matchLabels": {
+                            "component": "apache"
+                          }
+                        }
+                      }
+                    ],
+                    "ports": [
+                      {
+                        "port": 80,
+                        "protocol": "TCP"
+                      }
+                    ]
+                  }
+                ]
+              ]
+            }
+          }
         },
         "initAgent": {},
         "agent": {}

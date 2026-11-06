@@ -159,3 +159,30 @@ EOT
 @test "Schema: rejects a numeric probe" {
   schema_rejects "at '/server/livenessProbe'" --set server.livenessProbe=5
 }
+
+@test "Schema: rejects unknown server.service keys" {
+  schema_rejects "additional properties 'tpye' not allowed" --set server.service.tpye=NodePort
+}
+
+@test "Schema: rejects object ingress paths" {
+  schema_rejects "at '/server/ingress/hosts/0/paths/0'" --set server.ingress.hosts[0].host=a --set server.ingress.hosts[0].paths[0].path=/
+}
+
+@test "Schema: autoscaling.minReplicas accepts '-' and integers only" {
+  schema_accepts --set server.autoscaling.minReplicas=-
+  schema_rejects "at '/server/autoscaling/minReplicas'" --set server.autoscaling.minReplicas=auto
+}
+
+@test "Schema: pdb accepts integers and percentages" {
+  schema_accepts --set server.pdb.enabled=true --set server.pdb.minAvailable=50%
+}
+
+@test "Schema: accepts a template-string autoscaling.behavior" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  cat > "${values}" <<'EOT'
+server:
+  autoscaling:
+    behavior: "scaleDown: {}"
+EOT
+  schema_accepts -f "${values}"
+}
