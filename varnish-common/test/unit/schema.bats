@@ -68,3 +68,23 @@ EOT
   [ "$status" -eq 0 ]
   [[ "$output" == *"kind: Deployment"* ]]
 }
+
+@test "Schema: rejects unknown serviceAccount keys" {
+  schema_rejects "additional properties 'crate' not allowed" --set serviceAccount.crate=false
+}
+
+@test "Schema: rejects a non-boolean serviceAccount.create" {
+  schema_rejects "at '/serviceAccount/create'" --set serviceAccount.create=yes
+}
+
+@test "Schema: rejects unknown extraManifests item keys" {
+  schema_rejects "at '/extraManifests/0'" --set extraManifests[0].name=a --set extraManifests[0].dat=x
+}
+
+@test "Schema: global accepts unknown keys from parent charts" {
+  schema_accepts --set global.foo.bar=1
+}
+
+@test "Schema: rejects a string global.imagePullSecrets" {
+  schema_rejects "at '/global/imagePullSecrets'" --set global.imagePullSecrets=foo
+}
