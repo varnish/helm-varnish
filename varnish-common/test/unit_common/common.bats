@@ -6675,3 +6675,65 @@ EOF
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"BAZ","value":"bax"}' ]
 }
+
+@test "${kind}/extraEnvs: can be configured for varnishncsa as a templated string" {
+    cd "$(chart_dir)"
+
+    local extraEnvs="
+- name: RELEASE_NAME
+  value: {{ .Release.Name }}
+- name: RELEASE_NAMESPACE
+  value: {{ .Release.Namespace }}"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.varnishncsa.extraEnvs=${extraEnvs}" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .env[]? | select(.name == "RELEASE_NAME")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"RELEASE_NAME","value":"release-name"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .env[]? | select(.name == "RELEASE_NAMESPACE")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"RELEASE_NAMESPACE","value":"default"}' ]
+}
+
+@test "${kind}/extraEnvs: can be configured for varnishncsa as a list" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.extraEnvs[0].name=FOO' \
+        --set 'server.varnishncsa.extraEnvs[0].value=bar' \
+        --set 'server.varnishncsa.extraEnvs[1].name=FROM_SECRET' \
+        --set 'server.varnishncsa.extraEnvs[1].valueFrom.secretKeyRef.name=my-secret' \
+        --set 'server.varnishncsa.extraEnvs[1].valueFrom.secretKeyRef.key=my-key' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .env[]? | select(.name == "FOO")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .env[]? | select(.name == "FROM_SECRET")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FROM_SECRET","valueFrom":{"secretKeyRef":{"key":"my-key","name":"my-secret"}}}' ]
+}
