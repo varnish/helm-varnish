@@ -186,6 +186,9 @@ server:
     # port forwarding with kubectl more challenging.
     # Type: boolean
     podIP: true
+    # Sets the port to expose HTTP traffic directly on the node the Pod runs on, as the container's
+    # [hostPort](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers).
+    #hostPort: 8080
 
   tls:
     # Configures Varnish to enable native TLS
@@ -204,9 +207,13 @@ server:
     # This port is used by HTTPS service as a targetPort.
     port: 6443
 
+    # Sets the port to expose HTTPS traffic directly on the node the Pod runs on, as the container's
+    # [hostPort](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers).
+    #hostPort: 8443
+
     # Configures the address on which Varnish will listen for HTTPS traffic. Only used when
     # neither `server.tls.config` nor `server.tls.configFile` is set.
-    # Type: template string
+    # Type: string
     address: "0.0.0.0"
 
     # The TLS configuration (passed to varnishd with -A). It is recommended
@@ -249,6 +256,8 @@ server:
   #       port        The port to listens as. Required unless path is set.
   #
   #       address     The IP address to listens as
+  #
+  #       hostPort    The port to expose this listen directly on the node the Pod runs on
   #
   #     UNIX socket:
   #
@@ -449,7 +458,7 @@ server:
   #
   # If the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated
   # in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.
-  # Type: object or template string
+  # Type: object (filename to template string)
   # Example:
   #   vclConfigs:
   #     main.vcl: |
@@ -970,6 +979,39 @@ server:
     extraArgs:
       - -c
 
+    # Sets additional environment variables for the varnishncsa container.
+    #
+    # Can be set as an array of objects, an object, or a template string.
+    # Type: object or array or template string
+    # Example:
+    #   extraEnvs:
+    #     MY_ENV_VAR: value
+    #     MY_OTHER_ENV_VAR: other_value
+    #
+    # Example:
+    #   extraEnvs:
+    #     - name: MY_ENV_VAR
+    #       value: value
+    #     - name: MY_OTHER_ENV_VAR
+    #       valueFrom:
+    #         configMapKeyRef:
+    #           name: my-config-map
+    #           key: my-key
+    #
+    # Example:
+    #   extraEnvs: |
+    #     - name: RELEASE_NAMESPACE
+    #       value: {{ .Release.Namespace }}
+    extraEnvs: {}
+
+    # An object that conforms to the Kubernetes [startupProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
+    # of a Container. The probe is disabled when empty. The probe command is set by the chart.
+    # Example:
+    #   startupProbe:
+    #     periodSeconds: 5
+    #     failureThreshold: 10
+    startupProbe: {}
+
     # Configures a probe for checking if a Pod is ready to receive a connection.
     readinessProbe:
       # Sets the initial delays in seconds until the first probe is performed.
@@ -1016,6 +1058,17 @@ server:
     #         cpu: 100m
     #         memory: 128Mi
     resources: {}
+
+    # An array of objects that conforms to the Kubernetes [volumeMounts](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
+    # definition of a Container. This configuration is used to mount extra volumes defined in
+    # `server.extraVolumes` into the varnishncsa container. The value can be set as either
+    # an array of objects or a template string.
+    # Type: array or template string
+    # Example:
+    #   extraVolumeMounts: |
+    #     - name: {{ .Release.Name }}-logs
+    #       mountPath: /var/log/varnish
+    extraVolumeMounts: []
 
   # Configures the Varnish OTEL sidecar.
   otel:
