@@ -47,7 +47,7 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
         'server.baseUrl=http://example.com'; do
         run helm template --set "${value}" --namespace default .
         [ "$status" -ne 0 ]
-        [[ "$output" == *"want null"* || "$output" == *"Expected: null"* ]]
+        [[ "$output" == *"want null"* ]]
     done
 }
 

@@ -1,0 +1,19 @@
+---
+name: ""
+global:
+  shared: s
+  entOnly: e
+a:
+  b: b
+  ent: true
+  mode: x
+  dir: /enterprise
+  securityContext:
+    runAsUser: 1000
+    runAsNonRoot: true
+  script: |
+    line one
+    line two
+  old: ""
+  list:
+    - name: one
