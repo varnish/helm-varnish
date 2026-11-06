@@ -186,3 +186,19 @@ server:
 EOT
   schema_accepts -f "${values}"
 }
+
+@test "Schema: rejects unknown varnishncsa keys" {
+  schema_rejects "additional properties 'extraArg' not allowed" --set server.varnishncsa.extraArg=x
+}
+
+@test "Schema: varnishncsa image accepts '-'" {
+  schema_accepts --set server.varnishncsa.image.tag=-
+}
+
+@test "Schema: accepts a list varnishncsa.extraEnvs" {
+  schema_accepts --set server.varnishncsa.extraEnvs[0].name=A --set server.varnishncsa.extraEnvs[0].value=b
+}
+
+@test "Schema: rejects unknown otel keys" {
+  schema_rejects "additional properties 'envs' not allowed" --set server.otel.envs.A=b
+}

@@ -1662,6 +1662,313 @@ server:
             protocol: TCP
 ```
 
+**server.varnishncsa**
+
+- Type: object
+
+An object for configuring [varnishncsa][varnishncsa].
+
+**server.varnishncsa.enabled**
+
+- Type: boolean
+- Default: `true`
+
+Enables HTTP request logging via [varnishncsa][varnishncsa].
+
+**server.varnishncsa.image**
+
+- Type: object
+
+Sets the image and tag to use to deploy the varnishncsa sidecar. Setting a field to "-" inherits it from `server.image`.
+
+**server.varnishncsa.image.repository**
+
+- Default: `-`
+
+Sets the repository for Varnish Enterprise image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Enterprise server. Set this to "-" to inherit the value of `server.image.repository`.
+
+**server.varnishncsa.image.pullPolicy**
+
+- Default: `-`
+
+Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Enterprise image for use with varnishncsa. This can be one of Always, Never, or IfNotPresent. Set this to "-" to inherit the value of `server.image.pullPolicy`.
+
+**server.varnishncsa.image.tag**
+
+- Default: `-`
+
+Sets the tag for the Varnish Enterprise image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Enterprise server. Set this to "-" to inherit the value of `server.image.tag`.
+
+**server.varnishncsa.securityContext**
+
+- Type: object or template string
+
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
+
+This securityContext will be set on the varnishncsa container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+
+For example:
+
+```yaml
+server:
+  varnishncsa:
+    securityContext:
+      runAsUser: 1000
+```
+
+**server.varnishncsa.extraArgs**
+
+- Type: string or array of strings
+- Default: `["-c"]`
+
+Sets the extra arguments to varnishncsa.
+
+**server.varnishncsa.extraEnvs**
+
+- Type: array of objects, object, or template string
+
+Sets additional environment variables for the varnishncsa container. Can be set as an object, an array of objects, or a template string.
+
+For example, as an object:
+
+```yaml
+server:
+  varnishncsa:
+    extraEnvs:
+      MY_ENV_VAR: value
+      MY_OTHER_ENV_VAR: other_value
+```
+
+As an array of objects:
+
+```yaml
+server:
+  varnishncsa:
+    extraEnvs:
+      - name: MY_ENV_VAR
+        value: value
+      - name: MY_OTHER_ENV_VAR
+        valueFrom:
+          configMapKeyRef:
+            name: my-config-map
+            key: my-key
+```
+
+As a template string:
+
+```yaml
+server:
+  varnishncsa:
+    extraEnvs: |
+      - name: RELEASE_NAMESPACE
+        value: {{ .Release.Namespace }}
+```
+
+**server.varnishncsa.startupProbe**
+
+- Type: object
+
+An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container. The probe is disabled when empty. The probe command is set by the chart.
+
+For example:
+
+```yaml
+server:
+  varnishncsa:
+    startupProbe:
+      periodSeconds: 5
+      failureThreshold: 10
+```
+
+**server.varnishncsa.readinessProbe**
+
+- Type: object
+
+An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container.
+
+**server.varnishncsa.readinessProbe.initialDelaySeconds**
+
+- Type: number
+- Default: `5`
+
+Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is ready to handle the logs.
+
+**server.varnishncsa.readinessProbe.periodSeconds**
+
+- Type: number
+- Default: `10`
+
+Sets the delay between each probe to determine if the varnishncsa Pod is ready to handle the logs after the initial probe.
+
+**server.varnishncsa.readinessProbe.timeoutSeconds**
+
+- Type: number
+- Default: `1`
+
+Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
+
+**server.varnishncsa.readinessProbe.successThreshold**
+
+- Type: number
+- Default: `1`
+
+Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered ready to handle the logs.
+
+**server.varnishncsa.readinessProbe.failureThreshold**
+
+- Type: number
+- Default: `3`
+
+Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.
+
+**server.varnishncsa.livenessProbe**
+
+- Type: object
+
+An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container.
+
+**server.varnishncsa.livenessProbe.initialDelaySeconds**
+
+- Type: number
+- Default: `30`
+
+Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is still ready to handle the logs.
+
+**server.varnishncsa.livenessProbe.periodSeconds**
+
+- Type: number
+- Default: `10`
+
+Sets the delay between each probe to determine if the varnishncsa Pod is still ready to handle the logs after the initial probe.
+
+**server.varnishncsa.livenessProbe.timeoutSeconds**
+
+- Type: number
+- Default: `5`
+
+Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
+
+**server.varnishncsa.livenessProbe.successThreshold**
+
+- Type: number
+- Default: `1`
+
+Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered still ready to handle the logs.
+
+**server.varnishncsa.livenessProbe.failureThreshold**
+
+- Type: number
+- Default: `3`
+
+Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.
+
+**server.varnishncsa.resources**
+
+- Type: object or template string
+
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the varnishncsa container.
+
+For example:
+
+```yaml
+server:
+  varnishncsa:
+    resources:
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+```
+
+**server.varnishncsa.extraVolumeMounts**
+
+- Type: array or template string
+
+An array of objects that conforms to the Kubernetes [volumeMounts][k8s-pod-v1-containers] definition of a Container. This configuration is used to mount extra volumes defined in `server.extraVolumes` into the varnishncsa container. The value can be set as either an array of objects or a template string.
+
+For example:
+
+```yaml
+server:
+  varnishncsa:
+    extraVolumeMounts: |
+      - name: {{ .Release.Name }}-logs
+        mountPath: /var/log/varnish
+```
+
+**server.otel**
+
+- Type: object
+
+An object for configuring the Varnish OTEL sidecar.
+
+**server.otel.enabled**
+
+- Type: boolean
+- Default: `false`
+- Availability: v1.7.0
+
+Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in the official `varnish` image since 9.0.3.
+
+**server.otel.image**
+
+- Type: object
+
+Sets the image and tag to use to deploy the Varnish OTEL sidecar. Setting a field to "-" inherits it from `server.image`.
+
+**server.otel.image.repository**
+
+- Default: `-`
+- Availability: v1.7.0
+
+Sets the image repository of the OTEL sidecar. The image must be the same Varnish version as the server. When set to "-", `server.image.repository` is used.
+
+**server.otel.image.pullPolicy**
+
+- Default: `-`
+- Availability: v1.7.0
+
+Sets the [imagePullPolicy][k8s-pod-v1-containers] of the OTEL sidecar. When set to "-", `server.image.pullPolicy` is used.
+
+**server.otel.image.tag**
+
+- Default: `-`
+- Availability: v1.7.0
+
+Sets the image tag of the OTEL sidecar. When set to "-", `server.image.tag` is used.
+
+**server.otel.securityContext**
+
+- Type: object or template string
+- Availability: v1.7.0
+
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container. This securityContext will be set on the OTEL container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+
+**server.otel.resources**
+
+- Type: object or template string
+- Availability: v1.7.0
+
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the OTEL container.
+
+**server.otel.env**
+
+- Type: array of objects, object, or template string
+- Availability: v1.7.0
+
+Sets environment variables of the OTEL container, typically to configure the OpenTelemetry exporters. See also the [OpenTelemetry environment variables specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/). Can be set as an object, an array of objects, or a template string.
+
+For example:
+
+```yaml
+server:
+  otel:
+    env:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+```
+
 ### extraManifests
 
 **extraManifests**
@@ -1720,3 +2027,4 @@ The full content of the manifest.
 [k8s-volume-claim-templates]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#volume-claim-templates
 [varnish-cmdfile]: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
 [varnishd]: https://varnish-cache.org/docs/6.0/reference/varnishd.html
+[varnishncsa]: https://varnish-cache.org/docs/6.0/reference/varnishncsa.html

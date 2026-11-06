@@ -1610,6 +1610,248 @@
             }
           }
         },
+        "varnishncsa": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "An object for configuring [varnishncsa][varnishncsa].\n",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enables HTTP request logging via [varnishncsa][varnishncsa].\n"
+            },
+            "image": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/sidecarImage"
+                }
+              ],
+              "description": "Sets the image and tag to use to deploy the varnishncsa sidecar. Setting a field to \"-\" inherits it from `server.image`.\n",
+              "properties": {
+                "repository": {
+                  "default": "-",
+                  "description": "Sets the repository for Varnish Cache image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Cache server. Set this to \"-\" to inherit the value of `server.image.repository`.\n"
+                },
+                "pullPolicy": {
+                  "default": "-",
+                  "description": "Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image for use with varnishncsa. This can be one of Always, Never, or IfNotPresent. Set this to \"-\" to inherit the value of `server.image.pullPolicy`.\n"
+                },
+                "tag": {
+                  "default": "-",
+                  "description": "Sets the tag for the Varnish Cache image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Cache server. Set this to \"-\" to inherit the value of `server.image.tag`.\n"
+                }
+              }
+            },
+            "securityContext": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.\n\nThis securityContext will be set on the varnishncsa container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.\n",
+              "examples": [
+                {
+                  "runAsUser": 1000
+                }
+              ]
+            },
+            "extraArgs": {
+              "$ref": "#/definitions/extraArgs",
+              "default": [
+                "-c"
+              ],
+              "description": "Sets the extra arguments to varnishncsa.\n"
+            },
+            "extraEnvs": {
+              "$ref": "#/definitions/env",
+              "default": {},
+              "description": "Sets additional environment variables for the varnishncsa container. Can be set as an object, an array of objects, or a template string.\n",
+              "examples": [
+                {
+                  "MY_ENV_VAR": "value",
+                  "MY_OTHER_ENV_VAR": "other_value"
+                },
+                [
+                  {
+                    "name": "MY_ENV_VAR",
+                    "value": "value"
+                  },
+                  {
+                    "name": "MY_OTHER_ENV_VAR",
+                    "valueFrom": {
+                      "configMapKeyRef": {
+                        "name": "my-config-map",
+                        "key": "my-key"
+                      }
+                    }
+                  }
+                ],
+                "- name: RELEASE_NAMESPACE\n  value: {{ .Release.Namespace }}\n"
+              ]
+            },
+            "startupProbe": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/probe"
+                }
+              ],
+              "default": {},
+              "description": "An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container. The probe is disabled when empty. The probe command is set by the chart.\n",
+              "examples": [
+                {
+                  "periodSeconds": 5,
+                  "failureThreshold": 10
+                }
+              ]
+            },
+            "readinessProbe": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/probe"
+                }
+              ],
+              "description": "An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container.\n",
+              "properties": {
+                "initialDelaySeconds": {
+                  "type": "integer",
+                  "default": 5,
+                  "description": "Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is ready to handle the logs.\n"
+                },
+                "periodSeconds": {
+                  "type": "integer",
+                  "default": 10,
+                  "description": "Sets the delay between each probe to determine if the varnishncsa Pod is ready to handle the logs after the initial probe.\n"
+                },
+                "timeoutSeconds": {
+                  "type": "integer",
+                  "default": 1,
+                  "description": "Sets the timeout for the probe to wait for a response from the varnishncsa Pod.\n"
+                },
+                "successThreshold": {
+                  "type": "integer",
+                  "default": 1,
+                  "description": "Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered ready to handle the logs.\n"
+                },
+                "failureThreshold": {
+                  "type": "integer",
+                  "default": 3,
+                  "description": "Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.\n"
+                }
+              }
+            },
+            "livenessProbe": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/probe"
+                }
+              ],
+              "description": "An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container.\n",
+              "properties": {
+                "initialDelaySeconds": {
+                  "type": "integer",
+                  "default": 30,
+                  "description": "Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is still ready to handle the logs.\n"
+                },
+                "periodSeconds": {
+                  "type": "integer",
+                  "default": 10,
+                  "description": "Sets the delay between each probe to determine if the varnishncsa Pod is still ready to handle the logs after the initial probe.\n"
+                },
+                "timeoutSeconds": {
+                  "type": "integer",
+                  "default": 5,
+                  "description": "Sets the timeout for the probe to wait for a response from the varnishncsa Pod.\n"
+                },
+                "successThreshold": {
+                  "type": "integer",
+                  "default": 1,
+                  "description": "Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered still ready to handle the logs.\n"
+                },
+                "failureThreshold": {
+                  "type": "integer",
+                  "default": 3,
+                  "description": "Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.\n"
+                }
+              }
+            },
+            "resources": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the varnishncsa container.\n",
+              "examples": [
+                {
+                  "limits": {
+                    "cpu": "100m",
+                    "memory": "128Mi"
+                  },
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "128Mi"
+                  }
+                }
+              ]
+            },
+            "extraVolumeMounts": {
+              "$ref": "#/definitions/arrayOrTemplate",
+              "default": [],
+              "description": "An array of objects that conforms to the Kubernetes [volumeMounts][k8s-pod-v1-containers] definition of a Container. This configuration is used to mount extra volumes defined in `server.extraVolumes` into the varnishncsa container. The value can be set as either an array of objects or a template string.\n",
+              "examples": [
+                "- name: {{ .Release.Name }}-logs\n  mountPath: /var/log/varnish\n"
+              ]
+            }
+          }
+        },
+        "otel": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "An object for configuring the Varnish OTEL sidecar.\n",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in the official `varnish` image since 9.0.3.\n"
+            },
+            "image": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/sidecarImage"
+                }
+              ],
+              "description": "Sets the image and tag to use to deploy the Varnish OTEL sidecar. Setting a field to \"-\" inherits it from `server.image`.\n",
+              "properties": {
+                "repository": {
+                  "default": "-",
+                  "description": "Sets the image repository of the OTEL sidecar. The image must be the same Varnish version as the server. When set to \"-\", `server.image.repository` is used.\n"
+                },
+                "pullPolicy": {
+                  "default": "-",
+                  "description": "Sets the [imagePullPolicy][k8s-pod-v1-containers] of the OTEL sidecar. When set to \"-\", `server.image.pullPolicy` is used.\n"
+                },
+                "tag": {
+                  "default": "-",
+                  "description": "Sets the image tag of the OTEL sidecar. When set to \"-\", `server.image.tag` is used.\n"
+                }
+              }
+            },
+            "securityContext": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container. This securityContext will be set on the OTEL container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.\n"
+            },
+            "resources": {
+              "$ref": "#/definitions/objectOrTemplate",
+              "default": {},
+              "description": "An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the OTEL container.\n"
+            },
+            "env": {
+              "$ref": "#/definitions/env",
+              "default": null,
+              "description": "Sets environment variables of the OTEL container, typically to configure the OpenTelemetry exporters. See also the [OpenTelemetry environment variables specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/). Can be set as an object, an array of objects, or a template string.\n",
+              "examples": [
+                {
+                  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4318"
+                }
+              ]
+            }
+          }
+        },
         "initAgent": {
           "type": "null",
           "description": "Varnish Enterprise only."
