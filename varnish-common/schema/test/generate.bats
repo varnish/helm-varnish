@@ -95,9 +95,9 @@ enterprise_docs() {
   [ "$status" -eq 0 ]
 
   grep -qF 'The b key of Varnish Cache.' "$(cache_docs)"
-  ! grep -qF '**a.ent**' "$(cache_docs)"
-  ! grep -qF '**global.entOnly**' "$(cache_docs)"
-  ! grep -qF '`y`' "$(cache_docs)"
+  run ! grep -qF '**a.ent**' "$(cache_docs)"
+  run ! grep -qF '**global.entOnly**' "$(cache_docs)"
+  run ! grep -qF '`y`' "$(cache_docs)"
 
   grep -qF 'The b key of Varnish Enterprise.' "$(enterprise_docs)"
   grep -qF '**a.ent**' "$(enterprise_docs)"
@@ -109,8 +109,8 @@ enterprise_docs() {
   grep -qzF -e $'- Type: string\n- Default: `b`\n- Availability: v1.2.0\n\nThe b key' "$(cache_docs)"
   grep -qzF -e $'- Availability: v1.1.0\n\nThe b key' "$(enterprise_docs)"
   grep -qF '[k8s-pod]: https://kubernetes.io/docs/concepts/workloads/pods/' "$(enterprise_docs)"
-  ! grep -qF 'unused-link' "$(enterprise_docs)"
-  ! grep -qF '**enabled**' "$(cache_docs)"
+  run ! grep -qF 'unused-link' "$(enterprise_docs)"
+  run ! grep -qF '**enabled**' "$(cache_docs)"
 }
 
 @test "generate: --check detects drift" {
