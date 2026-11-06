@@ -65,7 +65,7 @@ load _helpers
         --set 'cluster.enabled=true' \
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -o=json -I=0 -r '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
     echo "${actual}" | grep 'include "cluster_auto_dns.vcl";'
     echo "${actual}" | grep 'include "/etc/varnish/default.vcl";'
@@ -117,7 +117,7 @@ load _helpers
         --set 'cluster.enabled=true' \
         --namespace default \
         --show-only templates/service.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -o=json -I=0 -r 'select(.metadata.name == "release-name-varnish-enterprise-peers").spec.ports' | tee -a /dev/stderr)
     [ "${actual}" = '[{"name":"http","port":6081,"targetPort":6081}]' ]
 }
@@ -128,7 +128,7 @@ load _helpers
         --set 'cluster.enabled=true' \
         --namespace default \
         --show-only templates/secret.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -o=json -I=0 -r '.data.token' | tee -a /dev/stderr)
     [ "${actual}" != 'null' ]
 }
@@ -154,7 +154,7 @@ load _helpers
         --set 'server.vclConfigPath=/etc/varnish/non-default.vcl' \
         --namespace default \
         --show-only templates/configmap-vcl.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -o=json -I=0 -r '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
     echo "${actual}" | grep 'include "/etc/varnish/non-default.vcl";'
 }
@@ -280,7 +280,7 @@ load _helpers
         echo "${args}" >&2
         run helm template --set 'cluster.enabled=true' ${args} --namespace default --show-only templates/deployment.yaml .
         [ "${status}" -ne 0 ]
-        [[ "${output}" == *"cluster."* ]]
+        [[ "${output}" == *"at '/cluster/"* ]]
     done
 }
 

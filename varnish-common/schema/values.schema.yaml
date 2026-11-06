@@ -148,6 +148,25 @@ properties:
             value:
               - name: registry-quay-k7c2f4m2d5
 
+      initContainer:
+        x-flavor: enterprise
+        type: object
+        additionalProperties: false
+        description: |
+          Overrides the default busybox initContainer image.
+        properties:
+          image:
+            type: string
+            default: busybox
+            description: |
+              The image to use for the initContainer.
+
+          tag:
+            type: [string, integer, number]
+            default: "1.36"
+            description: |
+              The tag to use for the initContainer image.
+
       podSecurityContext:
         $ref: "#/definitions/k8sObject"
         x-default:
@@ -247,6 +266,69 @@ properties:
                 cpu: 100m
                 memory: 128Mi
 
+      natsServer:
+        x-flavor: enterprise
+        type: object
+        additionalProperties: false
+        description: |
+          An object configuring Varnish Controller Agent access to NATS.
+        properties:
+          externalAddress:
+            type: string
+            default: ""
+            description: |
+              An FQDN to the NATS server. The value is ignored if `global.natsServer.internal.enabled` is set to true. Required when `server.agent.enabled` is set to true and `global.natsServer.internal.enabled` is set to false.
+
+          internal:
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                type: boolean
+                default: true
+                description: |
+                  Configures Varnish Agent to use the internal NATS server.
+
+              namespace:
+                type: string
+                default: ""
+                description: |
+                  Discovers the internal NATS server within the given namespace. By default, the current namespace is used.
+
+              releaseName:
+                type: string
+                default: ""
+                description: |
+                  Overrides the full name of the internal NATS server. Required if `nameOverride` or `fullnameOverride` is used in the Varnish Controller Helm Chart. By default, "varnish-controller" is used.
+
+              passwordFrom:
+                type: object
+                additionalProperties: false
+                x-since:
+                  enterprise: v1.3.0
+                description: |
+                  Sets internal NATS password from an external secret. Internal NATS must be configured separately. See [Varnish Controller Helm Chart documentation](https://docs.varnish-software.com/varnish-helm/varnish-controller/configurations/) for more information.
+
+                  Note: if internal Varnish Controller is deployed on another namespace than the one Varnish Enterprise is deployed to, the `varnish-controller-credentials` secret needs to be manually copied from the Varnish Controller namespace.
+                properties:
+                  name:
+                    type: string
+                    default: varnish-controller-credentials
+                    description: |
+                      The name of the secret holding the internal NATS password.
+
+                  key:
+                    type: string
+                    default: nats-varnish-password
+                    description: |
+                      The key of the secret holding the internal NATS password.
+
+              clusterDomain:
+                type: string
+                default: cluster.local
+                description: |
+                  Overrides the Kubernetes cluster domain. Required if Kubernetes cluster is configured to use different cluster domain than the default. By default, "cluster.local" is used. In most cases, this value should not be changed.
+
   enabled:
     type: boolean
     x-docs-skip: true
@@ -308,6 +390,10 @@ properties:
 
       licenseSecret:
         x-flavor: enterprise
+        type: [string, "null"]
+        default: null
+        description: |
+          Sets the secret for using a varnish-enterprise.lic file. See [Varnish Enterprise installation](https://docs.varnish-software.com/varnish-helm/varnish-enterprise/installation/).
 
       annotations:
         $ref: "#/definitions/objectOrTemplate"
@@ -691,8 +777,250 @@ properties:
 
       mse:
         x-flavor: enterprise
+        type: object
+        additionalProperties: false
+        description: |
+          An object for configuring the Massive Storage Engine (MSE).
+        properties:
+          enabled:
+            $ref: "#/definitions/boolOrDash"
+            default: "-"
+            x-since:
+              enterprise: v1.6.1
+            description: |
+              Enables Massive Storage Engine. Only one of `server.mse.enabled` or `server.mse4.enabled` must be enabled.
+
+              When set to a string "-", `server.mse.enabled` will be set to an opposite value of `server.mse4.enabled` (i.e. automatically disabling MSE when MSE4 is enabled, and vice versa).
+
+          memoryTarget:
+            type: string
+            default: ""
+            description: |
+              Sets the amount of memory to use for MSE. The value can be set as either a percentage (e.g., "80%"), or bytes ("512m"). If cgroups resource limits are used (i.e., `server.resources`), the percentage is calculated from the resource limit that is assigned to the container.
+
+          config:
+            type: string
+            x-type-label: template string
+            default: ""
+            description: |
+              An MSE configuration. By default, the value is unset and MSE is run in a [memory-only mode](https://docs.varnish-software.com/varnish-enterprise/features/mse_4/#getting-started-with-ephemeral-caching). See also the examples in [MSE Quick Start](https://docs.varnish-software.com/varnish-enterprise/features/mse_4/#getting-started-with-persisted-caching-in-mse4) for more information on how to configure MSE.
+
+              If `server.mse.persistence.enabled` is true, it is recommended to reference to MSE path using `{{ .Values.server.mse.persistence.mountPath }}` template string in the configuration.
+            x-examples:
+              - description: "For example:"
+                value: |
+                  env: {
+                    id = "env";
+                    memcache_size = "auto";
+                    books = ( {
+                      id = "book1";
+                      directory = "{{ .Values.server.mse.persistence.mountPath }}/book1";
+                      database_size = "1G";
+                      stores = ( {
+                        id = "store";
+                        filename = "{{ .Values.server.mse.persistence.mountPath }}/store1.dat";
+                        size = "9G";
+                      } );
+                    } );
+                  };
+
+          configFile:
+            type: string
+            default: ""
+            description: |
+              Use the content of the given file path as MSE configuration. The file will be parsed as templated string. Will override `server.mse.config` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
+            x-examples:
+              - description: "For example:"
+                value: files/mse.cfg
+
+          persistence:
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                type: boolean
+                default: false
+                description: |
+                  Enables MSE persistence mode using [PersistentVolumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). This configuration is only available when `server.kind` is set to StatefulSet. See the [using StatefulSet](https://docs.varnish-software.com/varnish-helm/varnish-enterprise/deployments/statefulset/) documentation for more information.
+
+              bookSize:
+                x-type-label: string or number
+                anyOf:
+                  - $ref: "#/definitions/sizeOrPercent"
+                  - type: integer
+                    minimum: 0
+                default: 1%
+                description: |
+                  Database size relative to `server.mse.persistence.storageSize`, for auto-configuring MSE. Can be set as a percentage or a value.
+
+                  `server.mse.persistence.bookSize` and `server.mse.persistence.storeSize` must add up to 100% or `server.mse.persistence.storageSize`. Only applicable if `server.mse.config` is empty.
+
+              storeSize:
+                x-type-label: string or number
+                anyOf:
+                  - $ref: "#/definitions/sizeOrPercent"
+                  - type: integer
+                    minimum: 0
+                default: 91%
+                x-since:
+                  enterprise: v1.3.0
+                description: |
+                  Sets the store size for MSE store. Can be set as a percentage (e.g. `1%`) or a literal size (e.g. `10Gi`). When the value is set as a percentage, the value will be relative to `server.mse.persistence.storageSize`.
+
+              mountPath:
+                type: string
+                default: /var/lib/mse
+                description: |
+                  Sets the mount path for the PersistentVolumeClaim for MSE.
+
+              labels:
+                $ref: "#/definitions/objectOrTemplate"
+                default: {}
+                description: |
+                  Sets the extra labels for the PersistentVolumeClaim for MSE. Can be set as an object or a template string.
+
+              annotations:
+                $ref: "#/definitions/objectOrTemplate"
+                default: {}
+                description: |
+                  Sets the extra annotations for the PersistentVolumeClaim for MSE. Can be set as an object or a template string.
+
+              accessModes:
+                type: [array, "null"]
+                items:
+                  type: string
+                x-type-label: array of strings
+                default: [ReadWriteOnce]
+                description: |
+                  Sets the storage access modes for the PersistentVolumeClaim for MSE.
+
+              storageClassName:
+                type: string
+                default: ""
+                description: |
+                  Sets the storage class for the PersistentVolumeClaim for MSE.
+
+              storageSize:
+                $ref: "#/definitions/sizeString"
+                default: 10Gi
+                description: |
+                  Sets the storage size for the PersistentVolumeClaim for MSE.
+
       mse4:
         x-flavor: enterprise
+        type: object
+        additionalProperties: false
+        description: |
+          An object for configuring the Massive Storage Engine 4 (MSE4).
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            x-since:
+              enterprise: v1.6.1
+            description: |
+              Enables Massive Storage Engine 4. Only one of `server.mse.enabled` or `server.mse4.enabled` must be enabled.
+
+          memoryTarget:
+            type: string
+            default: ""
+            x-since:
+              enterprise: v1.6.1
+            description: |
+              Sets the amount of memory to use for MSE4. The value can be set as either a percentage (e.g., "80%"), or bytes ("512m"). If cgroups resource limits are used (i.e., `server.resources`), the percentage is calculated from the resource limit that is assigned to the container.
+
+          config:
+            type: string
+            x-type-label: template string
+            default: ""
+            x-since:
+              enterprise: v1.6.1
+            description: |
+              An MSE4 configuration. By default, the value is unset and MSE4 is run in a memory-only mode.
+
+              If `server.mse4.persistence.enabled` is true, it is recommended to reference to MSE path using `{{ .Values.server.mse4.persistence.mountPath }}` template string in the configuration.
+
+          configFile:
+            type: string
+            default: ""
+            description: |
+              Use the content of the given file path as MSE4 configuration. The file will be parsed as templated string. Will override `server.mse4.config` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
+            x-examples:
+              - description: "For example:"
+                value: files/mse4.cfg
+
+          persistence:
+            type: object
+            additionalProperties: false
+            properties:
+              enabled:
+                type: boolean
+                default: false
+                description: |
+                  Enables MSE4 persistence; only applicable if `server.kind` is `StatefulSet`. Note that the backing storage must be "ext4".
+
+              bookSize:
+                x-type-label: string or number
+                anyOf:
+                  - $ref: "#/definitions/sizeOrPercent"
+                  - type: integer
+                    minimum: 0
+                default: 1%
+                description: |
+                  Database size relative to `server.mse4.persistence.storageSize`, for auto-configuring MSE4. Can be set as a percentage or a value.
+
+                  `server.mse4.persistence.bookSize` and `server.mse4.persistence.storeSize` must add up to 100% or `server.mse4.persistence.storageSize`. Only applicable if `server.mse4.config` is empty.
+
+              storeSize:
+                x-type-label: string or number
+                anyOf:
+                  - $ref: "#/definitions/sizeOrPercent"
+                  - type: integer
+                    minimum: 0
+                default: 91%
+                description: |
+                  Store size relative to `server.mse4.persistence.storageSize`, for auto-configuring MSE4. Can be set as a percentage or a value.
+
+                  `server.mse4.persistence.bookSize` and `server.mse4.persistence.storeSize` must add up to 100% or `server.mse4.persistence.storageSize`. Only applicable if `server.mse4.config` is empty.
+
+              mountPath:
+                type: string
+                default: /var/lib/mse4
+                description: |
+                  Sets the mount path for the PersistentVolumeClaim for MSE4.
+
+              labels:
+                $ref: "#/definitions/objectOrTemplate"
+                default: {}
+                description: |
+                  Sets the extra labels for the PersistentVolumeClaim for MSE4. Can be set as an object or a template string.
+
+              annotations:
+                $ref: "#/definitions/objectOrTemplate"
+                default: {}
+                description: |
+                  Sets the extra annotations for the PersistentVolumeClaim for MSE4. Can be set as an object or a template string.
+
+              accessModes:
+                type: [array, "null"]
+                items:
+                  type: string
+                x-type-label: array of strings
+                default: [ReadWriteOnce]
+                description: |
+                  Sets the storage access modes for the PersistentVolumeClaim for MSE4.
+
+              storageClassName:
+                type: string
+                default: ""
+                description: |
+                  Sets the storage class for the PersistentVolumeClaim for MSE4.
+
+              storageSize:
+                $ref: "#/definitions/sizeString"
+                default: 10Gi
+                description: |
+                  Sets the storage size for the PersistentVolumeClaim for MSE4.
 
       secret:
         type: string
@@ -903,6 +1231,12 @@ properties:
 
       baseUrl:
         x-flavor: enterprise
+        type: string
+        default: ""
+        x-since:
+          enterprise: v1.4.0
+        description: |
+          Sets a base URL for Varnish Controller and Varnish Controller Router when performing a HTTP-based routing. If unset, the URL will infer from a Pod IP and `server.http.port`.
 
       terminationGracePeriodSeconds:
         type: integer
@@ -1995,5 +2329,72 @@ properties:
             The full content of the manifest.
 
   cluster:
+    x-docs-section: Cluster configurations
     x-flavor: enterprise
     type: object
+    additionalProperties: false
+    description: |
+      An object for configuring clustering of the Varnish Enterprise Pods.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        x-since:
+          enterprise: 1.6.5
+        description: |
+          Enables clustering and allows pods to shard requests between each others by:
+          - creating a headless service, even if `server.service.clusterIP != None`
+          - creating a secret token for pod to authorize peer-to-peer communication
+          - injecting a VCL preamble to your configuration
+
+      headlessServiceName:
+        type: string
+        default: ""
+        x-since:
+          enterprise: 1.6.5
+        description: |
+          Configures the headless service used by pods to discover each others. If empty, the name defaults to `$VARNISH_SERVICE-peers` and the service is automatically created.
+
+      secretName:
+        type: string
+        default: ""
+        x-since:
+          enterprise: 1.6.5
+        description: |
+          Configures the [token](https://docs.varnish-software.com/varnish-enterprise/features/cluster/#token) used by nodes to authorize peer-to-peer communication. If empty, a `$VARNISH_SERVICE-cluster-secret` secret is automatically created.
+
+      trace:
+        type: boolean
+        default: false
+        x-since:
+          enterprise: 1.6.5
+        description: |
+          Activates [traces](https://docs.varnish-software.com/varnish-enterprise/features/cluster#traces).
+
+      primaries:
+        x-type-label: number
+        anyOf:
+          - type: integer
+            minimum: 1
+          - type: string
+            pattern: "^([0-9]*[1-9][0-9]*)?$"
+          - type: "null"
+        default: null
+        x-since:
+          enterprise: v1.9.0
+        description: |
+          Sets the number of [primaries](https://docs.varnish-software.com/varnish-enterprise/features/cluster/#primaries) for each object. Must be a strictly positive integer. If unset, the Varnish Enterprise default is used.
+
+      fallback:
+        x-type-label: number
+        anyOf:
+          - type: integer
+            minimum: 0
+          - type: string
+            pattern: "^[0-9]*$"
+          - type: "null"
+        default: null
+        x-since:
+          enterprise: v1.9.0
+        description: |
+          Sets the [fallback](https://docs.varnish-software.com/varnish-enterprise/features/cluster/#fallback) level. Must be a positive integer (zero included). If unset, the Varnish Enterprise default is used.
