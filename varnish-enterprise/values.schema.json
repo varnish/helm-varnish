@@ -192,13 +192,116 @@
       "description": "Overrides the full name of the chart (with the release name). This setting allows overriding both the release name and the workload name altogether. For example, setting `fullnameOverride` to \"hello\" would produce a workload named \"hello\".\n"
     },
     "global": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "imagePullSecrets": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "default": [],
+          "description": "An array of objects that conforms to the Kubernetes [imagePullSecrets][k8s-pod-v1-containers] definition. When set, each item in an array must consist of an object with a key `name` referencing the Kubernetes secret.\n",
+          "examples": [
+            [
+              {
+                "name": "registry-quay-k7c2f4m2d5"
+              }
+            ]
+          ]
+        },
+        "podSecurityContext": {
+          "$ref": "#/definitions/k8sObject",
+          "description": "An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-pods] definition of a Pod.\n\nThis securityContext will be set on all Pods within this chart. For setting securityContext on all containers, see `global.securityContext`.\n",
+          "default": {
+            "fsGroup": 999
+          },
+          "examples": [
+            {
+              "fsGroup": 1000
+            }
+          ]
+        },
+        "securityContext": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "description": "An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.\n\nThis securityContext will be set on all containers within this chart. For setting securityContext on the Pod itself, see `global.podSecurityContext`.\n",
+          "default": {
+            "runAsUser": 999,
+            "runAsNonRoot": true
+          },
+          "examples": [
+            {
+              "runAsUser": 1000,
+              "runAsNonRoot": true
+            }
+          ]
+        },
+        "annotations": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "default": {},
+          "description": "Applies extra annotations to all workloads. The value can be set as either an object or a template string. Workload annotations can be used for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the workload itself.\n\nTo apply annotations on a Pod, use `global.podAnnotations`. To apply annotations on a specific workload, use `server.annotations`.\n"
+        },
+        "podAnnotations": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "default": {},
+          "description": "Applies extra annotations to all Pods. The value can be set as either an object or a template string. Pod annotations can be used for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to a Pod itself.\n\nTo apply annotations on a workload, use `global.annotations`. To apply annotations on a specific Pod, use `server.podAnnotations`.\n"
+        },
+        "labels": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "default": {},
+          "description": "Applies extra labels to all workloads. The value can be set as either an object or a template string. Workload labels can be used for applying additional metadata or for integrating with external tooling. The labels specified here will be applied to the workload itself.\n\nTo apply labels on a Pod, use `global.podLabels`. To apply labels on a specific workload, use `server.labels`.\n"
+        },
+        "podLabels": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "default": {},
+          "description": "Applies extra labels to all Pods. The value can be set as either an object or a template string. Pod labels can be used for applying additional metadata or for integrating with external tooling. Labels specified here will be applied to a Pod itself.\n\nTo apply labels on a workload, use `global.labels`. To apply labels on a specific Pod, use `server.podLabels`.\n"
+        },
+        "resources": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "default": {},
+          "description": "An object that conforms to the Kubernetes resources definition of a Container. This configuration will apply resource constraints to all containers. To specify resources on a single container, use `server.resources`, `server.varnishncsa.resources`, and `server.otel.resources`.\n",
+          "examples": [
+            {
+              "limits": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              }
+            }
+          ]
+        }
+      }
     },
     "enabled": {
       "type": "boolean"
     },
     "serviceAccount": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create a Kubernetes service account to use with the workload.\n"
+        },
+        "labels": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "default": {},
+          "description": "Applies extra labels to the service account. The value can be set as either an object or a template string.\n"
+        },
+        "annotations": {
+          "$ref": "#/definitions/objectOrTemplate",
+          "default": {},
+          "description": "Applies extra annotations to the service account. The value can be set as either an object or a template string.\n"
+        },
+        "name": {
+          "type": "string",
+          "default": "",
+          "description": "Overrides the name of the service account. By default, the full name of the chart is used when `serviceAccount.create` is `true`, and `default` otherwise.\n"
+        }
+      }
     },
     "server": {
       "type": "object",
@@ -215,6 +318,40 @@
       "type": [
         "array",
         "null"
+      ],
+      "default": [],
+      "description": "An array of objects to attach Kubernetes manifests to the workload.\n",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the manifest. Only used if `extraManifests[].checksum` is `true`.\n"
+          },
+          "checksum": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether to attach the manifest's checksum to that of the workload in order to force an automatic rollout when the manifest is updated.\n"
+          },
+          "data": {
+            "type": [
+              "object",
+              "string"
+            ],
+            "description": "The full content of the manifest.\n"
+          }
+        }
+      },
+      "examples": [
+        [
+          {
+            "name": "clusterrole",
+            "data": "apiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRole\nmetadata:\n  name: {{ .Release.Name }}-clusterrole\n# ...\n"
+          }
+        ]
       ]
     },
     "cluster": {

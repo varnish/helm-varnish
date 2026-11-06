@@ -5,6 +5,10 @@ $schema: http://json-schema.org/draft-07/schema#
 type: object
 additionalProperties: false
 
+x-links:
+  k8s-pod-v1-containers: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers
+  k8s-pod-v1-pods: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
+
 definitions:
   objectOrTemplate:
     x-type-label: object or template string
@@ -112,7 +116,118 @@ properties:
       Overrides the full name of the chart (with the release name). This setting allows overriding both the release name and the workload name altogether. For example, setting `fullnameOverride` to "hello" would produce a workload named "hello".
 
   global:
+    x-docs-section: Global configurations
     type: object
+    properties:
+      imagePullSecrets:
+        type: [array, "null"]
+        x-type-label: array of objects
+        default: []
+        description: |
+          An array of objects that conforms to the Kubernetes [imagePullSecrets][k8s-pod-v1-containers] definition. When set, each item in an array must consist of an object with a key `name` referencing the Kubernetes secret.
+        x-examples:
+          - description: "For example:"
+            value:
+              - name: registry-quay-k7c2f4m2d5
+
+      podSecurityContext:
+        $ref: "#/definitions/k8sObject"
+        x-default:
+          cache:
+            fsGroup: 1000
+          enterprise:
+            fsGroup: 999
+        x-default-comments:
+          fsGroup: The fsGroup to use for the pod security context.
+        description: |
+          An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-pods] definition of a Pod.
+
+          This securityContext will be set on all Pods within this chart. For setting securityContext on all containers, see `global.securityContext`.
+        x-examples:
+          - description: "For example:"
+            value:
+              fsGroup: 1000
+
+      securityContext:
+        $ref: "#/definitions/objectOrTemplate"
+        x-default:
+          cache:
+            runAsUser: 1000
+            runAsNonRoot: true
+          enterprise:
+            runAsUser: 999
+            runAsNonRoot: true
+        x-default-comments:
+          runAsUser: >-
+            The user ID to run the container as. varnish-otel fails to start with a user
+            that does not exist in the image.
+          runAsNonRoot: Whether to run the container as a non-root user.
+        description: |
+          An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
+
+          This securityContext will be set on all containers within this chart. For setting securityContext on the Pod itself, see `global.podSecurityContext`.
+        x-examples:
+          - description: "For example:"
+            value:
+              runAsUser: 1000
+              runAsNonRoot: true
+
+      annotations:
+        $ref: "#/definitions/objectOrTemplate"
+        default: {}
+        x-since:
+          enterprise: v1.5.0
+        description: |
+          Applies extra annotations to all workloads. The value can be set as either an object or a template string. Workload annotations can be used for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the workload itself.
+
+          To apply annotations on a Pod, use `global.podAnnotations`. To apply annotations on a specific workload, use `server.annotations`.
+
+      podAnnotations:
+        $ref: "#/definitions/objectOrTemplate"
+        default: {}
+        x-since:
+          enterprise: v1.5.0
+        description: |
+          Applies extra annotations to all Pods. The value can be set as either an object or a template string. Pod annotations can be used for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to a Pod itself.
+
+          To apply annotations on a workload, use `global.annotations`. To apply annotations on a specific Pod, use `server.podAnnotations`.
+
+      labels:
+        $ref: "#/definitions/objectOrTemplate"
+        default: {}
+        x-since:
+          enterprise: v1.5.0
+        description: |
+          Applies extra labels to all workloads. The value can be set as either an object or a template string. Workload labels can be used for applying additional metadata or for integrating with external tooling. The labels specified here will be applied to the workload itself.
+
+          To apply labels on a Pod, use `global.podLabels`. To apply labels on a specific workload, use `server.labels`.
+
+      podLabels:
+        $ref: "#/definitions/objectOrTemplate"
+        default: {}
+        x-since:
+          enterprise: v1.5.0
+        description: |
+          Applies extra labels to all Pods. The value can be set as either an object or a template string. Pod labels can be used for applying additional metadata or for integrating with external tooling. Labels specified here will be applied to a Pod itself.
+
+          To apply labels on a workload, use `global.labels`. To apply labels on a specific Pod, use `server.podLabels`.
+
+      resources:
+        $ref: "#/definitions/objectOrTemplate"
+        default: {}
+        x-since:
+          enterprise: v1.5.0
+        description: |
+          An object that conforms to the Kubernetes resources definition of a Container. This configuration will apply resource constraints to all containers. To specify resources on a single container, use `server.resources`, `server.varnishncsa.resources`, and `server.otel.resources`.
+        x-examples:
+          - description: "For example:"
+            value:
+              limits:
+                cpu: 100m
+                memory: 128Mi
+              requests:
+                cpu: 100m
+                memory: 128Mi
 
   enabled:
     type: boolean
@@ -120,7 +235,33 @@ properties:
     x-values-skip: true
 
   serviceAccount:
+    x-docs-section: Service Account configurations
     type: object
+    additionalProperties: false
+    properties:
+      create:
+        type: boolean
+        default: true
+        description: |
+          Create a Kubernetes service account to use with the workload.
+
+      labels:
+        $ref: "#/definitions/objectOrTemplate"
+        default: {}
+        description: |
+          Applies extra labels to the service account. The value can be set as either an object or a template string.
+
+      annotations:
+        $ref: "#/definitions/objectOrTemplate"
+        default: {}
+        description: |
+          Applies extra annotations to the service account. The value can be set as either an object or a template string.
+
+      name:
+        type: string
+        default: ""
+        description: |
+          Overrides the name of the service account. By default, the full name of the chart is used when `serviceAccount.create` is `true`, and `default` otherwise.
 
   server:
     type: object
@@ -139,7 +280,38 @@ properties:
         x-flavor: enterprise
 
   extraManifests:
+    x-docs-section: extraManifests
     type: [array, "null"]
+    default: []
+    description: |
+      An array of objects to attach Kubernetes manifests to the workload.
+    x-examples:
+      - description: "For example:"
+        value:
+          - name: clusterrole
+            data: |
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: {{ .Release.Name }}-clusterrole
+              # ...
+    items:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: |
+            The name of the manifest. Only used if `extraManifests[].checksum` is `true`.
+        checksum:
+          type: [boolean, "null"]
+          description: |
+            Whether to attach the manifest's checksum to that of the workload in order to force an automatic rollout when the manifest is updated.
+        data:
+          type: [object, string]
+          x-type-label: object or template string
+          description: |
+            The full content of the manifest.
 
   cluster:
     x-flavor: enterprise
