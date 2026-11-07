@@ -381,9 +381,22 @@ def nest(path, value):
 # --- values.yaml ---------------------------------------------------------------
 
 
+LINKS = {}
+
+
+def inline_links(text):
+    """values.yaml has no link definitions, so reference links become inline ones."""
+    return re.sub(
+        r"\[([^\]]+)\]\[([^\]]+)\]",
+        lambda m: f"[{m.group(1)}]({LINKS[m.group(2)]})" if m.group(2) in LINKS else m.group(0),
+        text,
+    )
+
+
 def wrap(text, indent):
     """Comment lines for a markdown text: paragraphs are rewrapped to fit WIDTH,
     except code blocks and lists, which are kept as they are."""
+    text = inline_links(text)
     pad = " " * indent
     lines = []
     for paragraph in text.strip("\n").split("\n\n"):
@@ -493,6 +506,8 @@ def description_text(node, flavor):
 
 def render_values(source, flavor):
     definitions = source.get("definitions", {})
+    LINKS.clear()
+    LINKS.update(source.get("x-links", {}))
     lines = ["---", f"# {GENERATED}", ""]
     lines += values_mapping(source, 0, definitions, flavor)
     return "\n".join(lines) + "\n"

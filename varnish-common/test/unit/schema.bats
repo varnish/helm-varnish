@@ -210,3 +210,24 @@ EOT
 @test "Schema: server.vcls cannot be nulled" {
   schema_rejects "missing property 'vcls'" --set server.vcls=null
 }
+
+@test "Schema: values.yaml is generated" {
+  run head -n 2 "$(chart_dir)/values.yaml"
+  [ "${lines[0]}" = "---" ]
+  [[ "${lines[1]}" == "# Generated from varnish-common/schema/values.schema.yaml by generate.py. Do not edit." ]]
+}
+
+@test "Schema: uncommented examples pass the schema" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  # Uncomment every `#key:` line, and the commented lines indented deeper that follow it.
+  awk '
+    function indent(l) { match(l, /^ */); return RLENGTH }
+    {
+      if (match($0, /^ *#[A-Za-z][A-Za-z0-9]*:/)) {
+        n = indent($0); active = 1; sub(/#/, ""); print; next
+      }
+      if (active && match($0, /^ *#/) && indent($0) > n) { sub(/#/, ""); print; next }
+      active = 0; print
+    }' "$(chart_dir)/values.yaml" > "${values}"
+  schema_accepts -f "${values}"
+}

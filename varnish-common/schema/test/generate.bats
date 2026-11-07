@@ -183,6 +183,9 @@ enterprise_docs() {
   # The long description is wrapped within 90 columns
   [ -z "$(awk 'length > 90' "${values}")" ]
   grep -qxF '# A second paragraph.' "${values}"
+  # Reference links become inline ones, as values.yaml has no link definitions
+  grep -qF '[Pod](https://kubernetes.io/docs/concepts/workloads/pods/)' "${values}"
+  ! grep -qF '][' "${values}"
   grep -qzF $'# Overrides the name of the chart.' "${values}"
 
   # Type, Availability and Example, in that order, each example after its description

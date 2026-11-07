@@ -1927,6 +1927,7 @@ This configuration is used to fine-grain control the scheduling of the Pod. By d
 **server.networkPolicy**
 
 - Type: object
+- Availability: v1.9.0
 
 An object for configuring the [NetworkPolicy][k8s-networkpolicy] of the Varnish Enterprise Pods.
 
@@ -2852,6 +2853,7 @@ server:
 **extraManifests**
 
 - Type: array of objects
+- Availability: v1.2.1
 
 An array of objects to attach Kubernetes manifests to the workload.
 

@@ -4,6 +4,7 @@
 $schema: http://json-schema.org/draft-07/schema#
 type: object
 additionalProperties: false
+x-generate-values: true
 
 x-links:
   k8s-daemonset-updatestrategy: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
@@ -1970,6 +1971,8 @@ properties:
       networkPolicy:
         type: object
         additionalProperties: false
+        x-since:
+          enterprise: v1.9.0
         description: |
           An object for configuring the [NetworkPolicy][k8s-networkpolicy] of the {product} Pods.
         properties:
@@ -2751,6 +2754,8 @@ properties:
 
   extraManifests:
     x-docs-section: extraManifests
+    x-since:
+      enterprise: v1.2.1
     type: [array, "null"]
     default: []
     description: |
