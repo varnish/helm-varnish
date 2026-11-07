@@ -23,7 +23,7 @@ load _helpers
         --set 'server.mse.persistence.storageSize=10Gi' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.data."mse.conf"' | tee -a /dev/stderr)
 
     local expectedMseConfig='env: {
@@ -57,7 +57,7 @@ load _helpers
         --set 'server.mse.persistence.storeSize=70Gi' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.data."mse.conf"' | tee -a /dev/stderr)
 
     local expectedMseConfig='env: {
@@ -91,7 +91,7 @@ load _helpers
         --set 'server.mse.persistence.storeSize=75161927680' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.data."mse.conf"' | tee -a /dev/stderr)
 
     local expectedMseConfig='env: {
@@ -125,7 +125,7 @@ load _helpers
         --set 'server.mse.persistence.storeSize=85%' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.data."mse.conf"' | tee -a /dev/stderr)
 
     local expectedMseConfig='env: {
@@ -159,7 +159,7 @@ load _helpers
         --set 'server.mse.persistence.storeSize=90Gi' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.data."mse.conf"' | tee -a /dev/stderr)
 
     local expectedMseConfig='env: {
@@ -194,7 +194,7 @@ load _helpers
         --set 'server.mse.config=env:{}' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") | tee -a /dev/stderr |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r '.data."mse.conf"' | tee -a /dev/stderr)
 
     [ "${actual}" == "env:{}" ]
@@ -203,7 +203,7 @@ load _helpers
 @test "ConfigMap/mse: cannot be enabled when bookSize and storeSize exceed storageSize" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=StatefulSet' \
         --set 'server.mse.persistence.enabled=true' \
         --set 'server.mse.persistence.storageSize=80Gi' \
@@ -211,16 +211,16 @@ load _helpers
         --set 'server.mse.persistence.storeSize=70Gi' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.mse.persistence.bookSize' and 'server.mse.persistence.storeSize' cannot exceed 'server.mse.persistence.storageSize'"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.mse.persistence.bookSize' and 'server.mse.persistence.storeSize' cannot exceed 'server.mse.persistence.storageSize'"* ]]
 }
 
 @test "ConfigMap/mse: cannot be enabled when bookSize and storeSize as percentage exceed storageSize" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=StatefulSet' \
         --set 'server.mse.persistence.enabled=true' \
         --set 'server.mse.persistence.storageSize=80Gi' \
@@ -228,16 +228,16 @@ load _helpers
         --set 'server.mse.persistence.storeSize=90%' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.mse.persistence.bookSize' and 'server.mse.persistence.storeSize' cannot exceed 'server.mse.persistence.storageSize'"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.mse.persistence.bookSize' and 'server.mse.persistence.storeSize' cannot exceed 'server.mse.persistence.storageSize'"* ]]
 }
 
 @test "ConfigMap/mse: cannot be enabled when mixed bookSize and storeSize as percentage and number exceed storageSize" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=StatefulSet' \
         --set 'server.mse.persistence.enabled=true' \
         --set 'server.mse.persistence.storageSize=100Gi' \
@@ -245,8 +245,8 @@ load _helpers
         --set 'server.mse.persistence.storeSize=90Gi' \
         --namespace default \
         --show-only templates/configmap-mse.yaml \
-        . || echo "---") 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.mse.persistence.bookSize' and 'server.mse.persistence.storeSize' cannot exceed 'server.mse.persistence.storageSize'"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.mse.persistence.bookSize' and 'server.mse.persistence.storeSize' cannot exceed 'server.mse.persistence.storageSize'"* ]]
 }
