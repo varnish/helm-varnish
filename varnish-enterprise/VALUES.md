@@ -2,6 +2,13 @@
 
 # Varnish Enterprise Helm chart values
 
+Values are validated against values.schema.json when you run helm install,
+upgrade, template or lint. Unknown keys and values of the wrong type are
+rejected, and the error names the offending path, for example
+`at '/server': additional properties 'foo' not allowed`. Pass
+`--skip-schema-validation` to skip this check; the checks done by the chart
+templates still apply.
+
 ## Configurations
 
 ### Chart configurations

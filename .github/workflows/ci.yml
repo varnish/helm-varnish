@@ -34,6 +34,14 @@ jobs:
             echo "::error::varnish-cache ($CACHE_VERSION) and varnish-enterprise ($ENTERPRISE_VERSION) must have the same version"
             exit 1
           fi
+      - name: "Check generated schema, values.yaml and docs"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends bats
+          if ! varnish-common/schema/generate.py --check || ! bats varnish-common/schema/test; then
+            echo "::error::generated files are stale or the generator is broken: run varnish-common/schema/generate.py and commit the result"
+            exit 1
+          fi
       - name: "List the charts to publish"
         id: publish
         # varnish-cache and varnish-enterprise are always published together.
@@ -93,6 +101,9 @@ jobs:
               helm repo add dep$i "$p"
             done
             helm dependency build
+      - name: "Lint"
+        if: ${{ contains(fromJSON('["varnish-cache","varnish-enterprise"]'), matrix.chart) }}
+        run: helm lint ${{ matrix.chart }}
       - name: "Unit tests"
         run: |
           if [ -x ${{ matrix.chart }}/test/unit/run.sh ]; then

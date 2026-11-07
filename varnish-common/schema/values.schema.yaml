@@ -5,6 +5,13 @@ $schema: http://json-schema.org/draft-07/schema#
 type: object
 additionalProperties: false
 x-generate-values: true
+description: |-
+  Values are validated against values.schema.json when you run helm install,
+  upgrade, template or lint. Unknown keys and values of the wrong type are
+  rejected, and the error names the offending path, for example
+  `at '/server': additional properties 'foo' not allowed`. Pass
+  `--skip-schema-validation` to skip this check; the checks done by the chart
+  templates still apply.
 
 x-links:
   k8s-daemonset-updatestrategy: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/

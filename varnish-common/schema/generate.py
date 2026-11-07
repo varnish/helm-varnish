@@ -621,9 +621,10 @@ def render_readme(current, docs):
     return f"{current[:begin]}{BEGIN_MARKER}\n<!-- {GENERATED} -->\n\n{docs}\n\n{current[end:]}"
 
 
-def render_values_md(docs):
+def render_values_md(docs, source):
     title = f"# {FLAVORS['enterprise']['product']} Helm chart values"
-    return f"<!-- {GENERATED} -->\n\n{title}\n\n## Configurations\n\n{docs}\n"
+    intro = f"{source['description']}\n\n" if "description" in source else ""
+    return f"<!-- {GENERATED} -->\n\n{title}\n\n{intro}## Configurations\n\n{docs}\n"
 
 
 # --- Outputs -------------------------------------------------------------------
@@ -638,7 +639,7 @@ def outputs(root, source):
             result[f"{info['chart']}/values.yaml"] = render_values(source, flavor)
     readme = root / "varnish-cache/README.md"
     result["varnish-cache/README.md"] = render_readme(readme.read_text(), render_docs(source, "cache"))
-    result["varnish-enterprise/VALUES.md"] = render_values_md(render_docs(source, "enterprise"))
+    result["varnish-enterprise/VALUES.md"] = render_values_md(render_docs(source, "enterprise"), source)
     return result
 
 
