@@ -305,6 +305,11 @@
     },
     "server": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vclConfigs",
+        "vcls"
+      ],
       "properties": {
         "replicas": {
           "$ref": "#/definitions/nonNegInt",

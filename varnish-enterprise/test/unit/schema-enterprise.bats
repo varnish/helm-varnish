@@ -7,7 +7,6 @@ load _helpers
 }
 
 @test "Schema: rejects the removed server.agent.licenseSecret" {
-  skip "closed in Task 9"
   schema_rejects "additional properties 'licenseSecret' not allowed" --set server.agent.licenseSecret=x
 }
 
@@ -26,4 +25,19 @@ load _helpers
 
 @test "Schema: accepts digit-string cluster.primaries" {
   schema_accepts --set cluster.enabled=true --set-string cluster.primaries=2
+}
+
+@test "Schema: rejects unknown agent keys" {
+  schema_rejects "additional properties 'enable' not allowed" --set server.agent.enable=true
+}
+
+@test "Schema: rejects a numeric agent latitude" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  cat > "${values}" <<'EOT'
+server:
+  agent:
+    location:
+      latitude: 37.35
+EOT
+  schema_rejects "at '/server/agent/location/latitude'" -f "${values}"
 }

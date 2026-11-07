@@ -2300,6 +2300,553 @@ server:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
 ```
 
+**server.initAgent**
+
+- Type: object
+
+Configures the init container for Varnish Controller Agent.
+
+**server.initAgent.enabled**
+
+- Type: boolean
+- Default: `true`
+- Availability: v1.6.0
+
+Configures whether to use init container to initialize Varnish Controller Agent state directory symbolic link. This is to allow Varnish Enterprise Pod to have a static path for accessing Varnish Controller Agent state files. When `server.initAgent.enabled` is `false`, the Varnish Controller Agent state directory will be discovered using a dynamic environment variable based on Pod name.
+
+Before v1.6.0, the state directory symbolic link is created at `/etc/varnish/agent`.
+
+From v1.6.0, the state directory symbolic link is created at `/etc/varnish/shared/agent`.
+
+From v1.8.0, the default will be changed to `false`.
+
+**server.initAgent.securityContext**
+
+- Type: object or template string
+- Availability: v1.5.0
+
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
+
+This securityContext will be set on the Varnish Controller Agent's init container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+
+**server.initAgent.extraVolumeMounts**
+
+- Type: array or template string
+
+Declares the extra volumes to mount with Varnish Controller Agent init container. Can be set as either a YAML list or a template string.
+
+For example:
+
+```yaml
+server:
+  initAgent:
+    extraVolumeMounts: |
+      - name: {{ .Release.Name }}-extra
+        mountPath: /etc/varnish/extra
+```
+
+**server.initAgent.resources**
+
+- Type: object or template string
+
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Controller Agent init container.
+
+For example:
+
+```yaml
+server:
+  initAgent:
+    resources:
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+```
+
+**server.agent**
+
+- Type: object
+
+Configures Varnish Controller Agent sidecar for integration with Varnish Controller.
+
+**server.agent.enabled**
+
+- Type: boolean
+- Default: `false`
+
+Enables the Varnish Controller Agent for integration with Varnish Controller.
+
+If Varnish Controller is deployed in a different namespace than Varnish Enterprise, also set `global.natsServer.internal.namespace`.
+
+If Varnish Controller is deployed outside the Kubernetes cluster, or is using an external NATS server not provided by Varnish Controller Helm Chart, set `global.natsServer.internal.enabled` to `false` and configures `global.natsServer.externalAddress`.
+
+**server.agent.image**
+
+- Type: object
+
+Sets the image and tag to use to deploy Varnish Controller Agent sidecar. The image should be the same version as varnish-controller.
+
+**server.agent.image.repository**
+
+- Default: `quay.io/varnish-software/varnish-controller-agent`
+
+Sets the repository for Varnish Controller Agent image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+
+**server.agent.image.pullPolicy**
+
+- Default: `IfNotPresent`
+
+Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Controller image. This can be one of Always, Never, or IfNotPresent.
+
+**server.agent.image.tag**
+
+- Default: `7.5.1-6.0.16r13`
+
+Sets the tag for the Varnish Controller image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+
+**server.agent.securityContext**
+
+- Type: object or template string
+
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
+
+This securityContext will be set on the Varnish Controller container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+
+**server.agent.logLevel**
+
+- Type: string
+- Default: `debug`
+
+Sets the log level for the Varnish Controller Agent. The value can be one of `debug`, `info`, `warning`, `error`, or `quiet`.
+
+**server.agent.privateToken**
+
+- Type: string
+- Availability: v1.5.0
+
+Sets a Varnish Controller private token.
+
+**server.agent.extraEnvs**
+
+- Type: array of objects, object, or template string
+
+Sets the extra environment variables for Varnish Controller Agent. Can be set as either an object, an array of objects, or a template string.
+
+For example, as an object:
+
+```yaml
+server:
+  agent:
+    extraEnvs:
+      MY_ENV_VAR: value
+      MY_OTHER_ENV_VAR: other_value
+```
+
+As an array of objects:
+
+```yaml
+server:
+  agent:
+    extraEnvs:
+      - name: MY_ENV_VAR
+        value: value
+      - name: MY_OTHER_ENV_VAR
+        valueFrom:
+          configMapKeyRef:
+            name: my-config-map
+            key: my-key
+```
+
+As a template string:
+
+```yaml
+server:
+  agent:
+    extraEnvs: |
+      - name: RELEASE_NAMESPACE
+        value: {{ .Release.Namespace }}
+```
+
+**server.agent.extraArgs**
+
+- Type: array of strings
+
+Sets the extra configuration args for Varnish Controller Agent.
+
+**server.agent.tags**
+
+- Type: array of strings
+
+Sets the tags for the Varnish Controller Agent.
+
+For example:
+
+```yaml
+server:
+  agent:
+    tags:
+      - tag1
+      - tag2
+```
+
+**server.agent.location**
+
+- Type: object
+
+Sets the location for this Varnish Controller Agent instance for use within Varnish Controller Router.
+
+The location object can contain `latitude` and `longitude` keys to specify the geographic location of the server.
+
+For example:
+
+```yaml
+server:
+  agent:
+    location:
+      longitude: "-121.955238"
+      latitude: "37.354107"
+```
+
+**server.agent.location.latitude**
+
+- Type: string
+
+The latitude of the server, as a string.
+
+**server.agent.location.longitude**
+
+- Type: string
+
+The longitude of the server, as a string.
+
+**server.agent.resources**
+
+- Type: object or template string
+
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Controller Agent container.
+
+For example:
+
+```yaml
+server:
+  agent:
+    resources:
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+```
+
+**server.agent.extraVolumeMounts**
+
+- Type: array or template string
+
+Declares the extra volumes to mount with Varnish Controller Agent container. Can be set as either a YAML list or a template string.
+
+For example:
+
+```yaml
+server:
+  agent:
+    extraVolumeMounts: |
+      - name: {{ .Release.Name }}-extra
+        mountPath: /etc/varnish/extra
+```
+
+**server.agent.useReleaseName**
+
+- Type: boolean
+- Default: `false`
+- Availability: v1.4.0
+
+When `server.replicas` is set to 1, use Helm Chart release name as Varnish Enterprise server name.
+
+**server.agent.persistence**
+
+- Type: object
+
+Configures persistence for Varnish Controller Agent state using PersistentVolumes. This configuration is only available when `server.kind` is set to StatefulSet. See the [Integration with Varnish Controller Agent](https://docs.varnish-software.com/varnish-helm/guides/setting-up-varnish-controller-agent/) documentation for more information.
+
+**server.agent.persistence.enabled**
+
+- Type: boolean
+- Default: `false`
+
+Enables Varnish Controller Agent state persistency using PersistentVolumes.
+
+**server.agent.persistence.enableWithVolumeName**
+
+- Type: string
+
+Enables Varnish Controller Agent state persistency using a custom volume mounts. This configuration overrides `server.agent.persistence.enabled`.
+
+**server.agent.persistence.labels**
+
+- Type: object or template string
+
+Sets the extra labels for the PersistentVolumeClaim for Varnish Controller Agent. Can be set as an object or a template string.
+
+**server.agent.persistence.annotations**
+
+- Type: object or template string
+
+Sets the extra annotations for the PersistentVolumeClaim for Varnish Controller Agent. Can be set as an object or a template string.
+
+**server.agent.persistence.accessModes**
+
+- Type: array of strings
+- Default: `["ReadWriteOnce"]`
+
+Sets the storage access modes for the PersistentVolumeClaim for Varnish Controller Agent.
+
+**server.agent.persistence.storageClassName**
+
+- Type: string
+
+Sets the storage class for the PersistentVolumeClaim for Varnish Controller Agent.
+
+**server.agent.persistence.storageSize**
+
+- Type: string
+- Default: `512Mi`
+
+Sets the storage size for the PersistentVolumeClaim for Varnish Controller Agent.
+
+**server.agent.autoRemove**
+
+- Type: object
+
+Enables auto-removal of Varnish Enterprise instance with Varnish Controller upon pod rollout (e.g. during a redeployment).
+
+**server.agent.autoRemove.method**
+
+- Type: string, one of `none` or `vcli`
+- Default: `none`
+- Availability: v1.6.0
+
+Enable automatic de-registering of Varnish Controller Agent during Pod rollout. The value can be one of `none` (disabled), or `vcli` (use VCLI to perform de-registration).
+
+**server.agent.autoRemove.vcli**
+
+- Type: object
+
+Configures "vcli" auto-removal method.
+
+**server.agent.autoRemove.vcli.image**
+
+- Type: object
+
+Sets the image and tag to use to deploy Varnish Controller VCLI sidecar. The image should be the same version as varnish-controller.
+
+**server.agent.autoRemove.vcli.image.repository**
+
+- Default: `quay.io/varnish-software/varnish-controller-cli`
+
+Sets the repository for the Varnish Controller VCLI image.
+
+**server.agent.autoRemove.vcli.image.pullPolicy**
+
+- Default: `IfNotPresent`
+
+Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Controller VCLI image.
+
+**server.agent.autoRemove.vcli.image.tag**
+
+- Default: `7.5.1`
+
+Sets the tag for the Varnish Controller VCLI image.
+
+**server.agent.autoRemove.vcli.securityContext**
+
+- Type: object or template string
+
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
+
+This securityContext will be set on the Varnish Controller VCLI container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+
+**server.agent.autoRemove.vcli.externalAddress**
+
+- Type: string
+
+Configures Varnish Controller Agent to use external Varnish Controller endpoint. Ignored if `server.agent.autoRemove.vcli.internal.enabled` is set to `true`.
+
+**server.agent.autoRemove.vcli.username**
+
+- Type: string
+- Default: `admin`
+
+Configures the username to connect to Varnish Controller API.
+
+**server.agent.autoRemove.vcli.password**
+
+- Type: string
+
+Configures NATS password as a string.
+
+**server.agent.autoRemove.vcli.passwordFrom**
+
+- Type: object
+
+Configures NATS password from a Kubernetes secret. By default, it uses an auto-generated password from a "varnish-controller-credentials" secret.
+
+**server.agent.autoRemove.vcli.passwordFrom.name**
+
+- Type: string
+- Default: `varnish-controller-credentials`
+
+The name of the secret holding the password.
+
+**server.agent.autoRemove.vcli.passwordFrom.key**
+
+- Type: string
+- Default: `varnish-admin-password`
+
+The key of the secret holding the password.
+
+**server.agent.autoRemove.vcli.insecure**
+
+- Type: boolean
+- Default: `false`
+
+Configures Varnish Controller CLI container to skip verifying the certificate when communicating via HTTPS. This should be set to true if Varnish Controller is running with a self-signed certificates.
+
+**server.agent.autoRemove.vcli.internal**
+
+- Type: object
+
+Configures internal settings for Varnish Controller CLI container.
+
+**server.agent.autoRemove.vcli.internal.enabled**
+
+- Type: boolean
+- Default: `true`
+
+Configures Varnish Controller CLI container to use an internal Varnish Controller endpoint.
+
+**server.agent.autoRemove.vcli.internal.namespace**
+
+- Type: string
+
+Configures the namespace Varnish Controller is deployed to. If left blank, the current namespace is used.
+
+**server.agent.autoRemove.vcli.internal.releaseName**
+
+- Type: string
+
+Configures the release name Varnish Controller is deployed to. Use "varnish-controller" if left blank.
+
+**server.agent.autoRemove.vcli.internal.port**
+
+- Type: number
+- Default: `8080`
+
+Configures the port of the Varnish Controller APIGW.
+
+**server.agent.autoRemove.vcli.internal.https**
+
+- Type: boolean
+- Default: `false`
+
+Configures Varnish Controller CLI container to use HTTPS instead of HTTP to communicate with the in-cluster Varnish Controller instance.
+
+**server.agent.autoRemove.vcli.internal.clusterDomain**
+
+- Type: string
+- Default: `cluster.local`
+
+Configures the NATS internal cluster domain name. Only change if NATS is deployed on a separate cluster.
+
+**server.agent.autoRemove.vcli.resources**
+
+- Type: object or template string
+
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Controller VCLI container.
+
+For example:
+
+```yaml
+server:
+  agent:
+    autoRemove:
+      vcli:
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+```
+
+**server.agent.autoRemove.vcli.extraEnvs**
+
+- Type: array of objects, object, or template string
+
+Sets the extra environment variables for Varnish Controller VCLI. Can be set as either an object, an array of objects, or a template string.
+
+For example, as an object:
+
+```yaml
+server:
+  agent:
+    autoRemove:
+      vcli:
+        extraEnvs:
+          MY_ENV_VAR: value
+          MY_OTHER_ENV_VAR: other_value
+```
+
+As an array of objects:
+
+```yaml
+server:
+  agent:
+    autoRemove:
+      vcli:
+        extraEnvs:
+          - name: MY_ENV_VAR
+            value: value
+          - name: MY_OTHER_ENV_VAR
+            valueFrom:
+              configMapKeyRef:
+                name: my-config-map
+                key: my-key
+```
+
+As a template string:
+
+```yaml
+server:
+  agent:
+    autoRemove:
+      vcli:
+        extraEnvs: |
+          - name: MY_ENV_VAR
+            value: value
+```
+
+**server.agent.autoRemove.vcli.extraVolumeMounts**
+
+- Type: array or template string
+
+Declares the extra volumes to mount with Varnish Controller VCLI. Can be set as either a YAML list or a template string.
+
+For example:
+
+```yaml
+server:
+  agent:
+    autoRemove:
+      vcli:
+        extraVolumeMounts: |
+          - name: {{ .Release.Name }}-local-mse
+            mountPath: /var/lib/mse
+```
+
 ### extraManifests
 
 **extraManifests**

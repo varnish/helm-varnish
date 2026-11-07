@@ -202,3 +202,11 @@ EOT
 @test "Schema: rejects unknown otel keys" {
   schema_rejects "additional properties 'envs' not allowed" --set server.otel.envs.A=b
 }
+
+@test "Schema: rejects unknown server keys" {
+  schema_rejects "additional properties 'replicsa' not allowed" --set server.replicsa=2
+}
+
+@test "Schema: server.vcls cannot be nulled" {
+  schema_rejects "missing property 'vcls'" --set server.vcls=null
+}
