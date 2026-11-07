@@ -3,7 +3,7 @@
 `values.schema.yaml` describes every value of the varnish-cache and varnish-enterprise charts. `generate.py` turns it into:
 
 - `varnish-cache/values.schema.json` and `varnish-enterprise/values.schema.json`, which Helm uses to reject typos, wrong types and Enterprise-only keys on Varnish Cache before rendering;
-- `varnish-cache/values.yaml` and `varnish-enterprise/values.yaml`, once the source root has `x-generate-values: true`;
+- `varnish-cache/values.yaml` and `varnish-enterprise/values.yaml`;
 - the values reference: the block between `<!-- BEGIN GENERATED VALUES -->` and `<!-- END GENERATED VALUES -->` in `varnish-cache/README.md`, and `varnish-enterprise/VALUES.md`.
 
 Don't edit the generated files: change `values.schema.yaml`, then run the generator.
@@ -13,11 +13,7 @@ Don't edit the generated files: change `values.schema.yaml`, then run the genera
 ```sh
 varnish-common/schema/generate.py                       # write the generated files
 varnish-common/schema/generate.py --check               # exit 1 if any generated file is stale (CI)
-varnish-common/schema/generate.py --compare-values      # compare the source defaults with values.yaml
-varnish-common/schema/generate.py --compare-values server.http  # ... under a dotted path only
 ```
-
-`--compare-values` lists, for both charts, the keys whose source default differs from the committed `values.yaml`, the `values.yaml` keys the source doesn't declare (or declares without a default), and the source defaults missing from `values.yaml`. It exits 1 if there is any.
 
 The generator needs Python 3 (standard library only) and [yq](https://github.com/mikefarah/yq) v4. Its tests are in `test/`: `bats varnish-common/schema/test`.
 
@@ -44,7 +40,6 @@ The `x-` keywords:
 | `x-docs-section: <title>` | property node | The docs start a `###` heading with this title before this node. |
 | `x-docs-skip: true` | any node | No docs entry for the node or its children. |
 | `x-links: {<ref>: <url>}` | root only | Reference-style link definitions, appended to each generated docs block when the block uses them. |
-| `x-generate-values: true` | root only | Also generate both charts' values.yaml. |
 
 Any other `x-` keyword, or one in the wrong place, is an error.
 

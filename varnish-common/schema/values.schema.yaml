@@ -1,10 +1,9 @@
 # The values of the varnish-cache and varnish-enterprise charts: a draft-07 JSON
 # Schema with x- keywords. generate.py turns it into each chart's
-# values.schema.json and values docs. See README.md next to this file.
+# values.schema.json, values.yaml and values docs. See README.md next to this file.
 $schema: http://json-schema.org/draft-07/schema#
 type: object
 additionalProperties: false
-x-generate-values: true
 description: |-
   Values are validated against values.schema.json when you run helm install,
   upgrade, template or lint. Unknown keys and values of the wrong type are

@@ -6,18 +6,14 @@ JSON Schema written in YAML with a few x- keywords (see README.md next to this
 file). From it, for each flavor (varnish-cache, varnish-enterprise):
 
 - values.schema.json: the source filtered for the flavor, x- keywords stripped;
-- values.yaml: the defaults, commented from the descriptions (only when the
-  source root has x-generate-values: true);
+- values.yaml: the defaults, commented from the descriptions;
 - the values reference: the marked block of varnish-cache/README.md, and the
   whole of varnish-enterprise/VALUES.md.
 
-Usage: generate.py [--check] [--compare-values [PATH]] [--root DIR]
+Usage: generate.py [--check] [--root DIR]
 
-  --check                 write nothing, exit 1 if any output is stale
-  --compare-values [PATH] write nothing, list where the source defaults and the
-                          committed values.yaml files disagree (under PATH, a
-                          dotted path), exit 1 if there is any
-  --root DIR              repository root (default: this file's repository)
+  --check     write nothing, exit 1 if any output is stale
+  --root DIR  repository root (default: this file's repository)
 
 Python 3 standard library only; mikefarah yq v4 reads the YAML.
 """
@@ -57,7 +53,7 @@ NODE_KEYWORDS = {
     "x-docs-skip",
 }
 PROPERTY_KEYWORDS = {"x-flavor", "x-docs-section"}
-ROOT_KEYWORDS = {"x-links", "x-generate-values"}
+ROOT_KEYWORDS = {"x-links"}
 
 # Keywords whose value is a schema, a list of schemas or a map of schemas.
 SCHEMA_KEYWORDS = {"items", "additionalProperties", "propertyNames", "not"}
@@ -635,8 +631,7 @@ def outputs(root, source):
     result = {}
     for flavor, info in FLAVORS.items():
         result[f"{info['chart']}/values.schema.json"] = render_schema(source, flavor)
-        if source.get("x-generate-values"):
-            result[f"{info['chart']}/values.yaml"] = render_values(source, flavor)
+        result[f"{info['chart']}/values.yaml"] = render_values(source, flavor)
     readme = root / "varnish-cache/README.md"
     result["varnish-cache/README.md"] = render_readme(readme.read_text(), render_docs(source, "cache"))
     result["varnish-enterprise/VALUES.md"] = render_values_md(render_docs(source, "enterprise"), source)
@@ -658,74 +653,12 @@ def verify_values(source, files):
             raise SourceError(f"{path}: the generated YAML does not parse back to the source defaults")
 
 
-# --- --compare-values ------------------------------------------------------------
-
-
-def compare_values(root, source, scope):
-    definitions = source.get("definitions", {})
-    problems = []
-
-    def in_scope(path):
-        return not scope or path == scope or path.startswith(scope + ".") or scope.startswith(path + ".")
-
-    def report(chart, path, message):
-        if not scope or path == scope or path.startswith(scope + "."):
-            problems.append(f"{chart}/values.yaml: {path}: {message}")
-
-    def walk(node, values, prefix, chart, flavor):
-        """node: source node with properties; values: the values.yaml mapping."""
-        declared = children(node, definitions, flavor)
-        for name, child in declared.items():
-            path = f"{prefix}{name}"
-            if child.get("x-values-skip") or not in_scope(path):
-                continue
-            present = isinstance(values, dict) and name in values
-            own = flavor_default(child, flavor)
-            if own is not NO_VALUE:
-                if not present:
-                    report(chart, path, "missing from values.yaml")
-                elif values[name] != own:
-                    report(
-                        chart,
-                        path,
-                        f"source default {json.dumps(own)} != values.yaml {json.dumps(values[name])}",
-                    )
-            elif present:
-                if not children(child, definitions, flavor):
-                    report(chart, path, "has no default in the source")
-                elif isinstance(values[name], dict):
-                    walk(child, values[name], f"{path}.", chart, flavor)
-                else:
-                    built = defaults_for(child, definitions, flavor)
-                    built = None if built is NO_VALUE else built
-                    report(
-                        chart,
-                        path,
-                        f"source default {json.dumps(built)} != values.yaml {json.dumps(values[name])}",
-                    )
-            elif defaults_for(child, definitions, flavor) is not NO_VALUE:
-                report(chart, path, "missing from values.yaml")
-        if isinstance(values, dict):
-            for name in values:
-                path = f"{prefix}{name}"
-                if name not in declared and in_scope(path):
-                    report(chart, path, "not in the source")
-
-    for flavor, info in FLAVORS.items():
-        values = load_yaml(root / info["chart"] / "values.yaml") or {}
-        walk(source, values, "", info["chart"], flavor)
-    return problems
-
-
 # --- Main --------------------------------------------------------------------------
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--check", action="store_true", help="exit 1 if any output is stale")
-    parser.add_argument(
-        "--compare-values", nargs="?", const="", metavar="PATH", help="compare the source defaults with values.yaml"
-    )
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2], help="repository root")
     args = parser.parse_args()
     root = args.root
@@ -733,11 +666,6 @@ def main():
     try:
         source = load_yaml(root / SOURCE)
         validate(source, "values.schema.yaml", "root")
-        if args.compare_values is not None:
-            problems = compare_values(root, source, args.compare_values)
-            for problem in problems:
-                print(problem)
-            return 1 if problems else 0
         files = outputs(root, source)
         verify_values(source, files)
     except SourceError as error:
