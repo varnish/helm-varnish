@@ -639,8 +639,6 @@ def verify_values(source, files):
     definitions = source.get("definitions", {})
     for flavor, info in FLAVORS.items():
         path = f"{info['chart']}/values.yaml"
-        if path not in files:
-            continue
         result = subprocess.run(["yq", "-o", "json", "."], input=files[path], capture_output=True, text=True)
         if result.returncode != 0:
             raise SourceError(f"{path}: the generated YAML does not parse: {result.stderr.strip()}")
