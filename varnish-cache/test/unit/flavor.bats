@@ -84,6 +84,6 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
     [ -n "${docs}" ]
     for key in '**cluster' '**server.mse' '**server.agent' '**server.initAgent' '**server.licenseSecret' '**server.baseUrl' 'shutdown_delay' 'natsServer'; do
         echo "${key}" >&2
-        ! grep -qF -- "${key}" <<<"${docs}"
+        run ! grep -qF -- "${key}" <<<"${docs}"
     done
 }
