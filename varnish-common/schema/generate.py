@@ -377,22 +377,19 @@ def nest(path, value):
 # --- values.yaml ---------------------------------------------------------------
 
 
-LINKS = {}
-
-
-def inline_links(text):
+def inline_links(text, links):
     """values.yaml has no link definitions, so reference links become inline ones."""
     return re.sub(
         r"\[([^\]]+)\]\[([^\]]+)\]",
-        lambda m: f"[{m.group(1)}]({LINKS[m.group(2)]})" if m.group(2) in LINKS else m.group(0),
+        lambda m: f"[{m.group(1)}]({links[m.group(2)]})" if m.group(2) in links else m.group(0),
         text,
     )
 
 
-def wrap(text, indent):
+def wrap(text, indent, links):
     """Comment lines for a markdown text: paragraphs are rewrapped to fit WIDTH,
     except code blocks and lists, which are kept as they are."""
-    text = inline_links(text)
+    text = inline_links(text, links)
     pad = " " * indent
     lines = []
     for paragraph in text.strip("\n").split("\n\n"):
@@ -469,13 +466,13 @@ def json_type(value):
     return {str: "string", list: "array", dict: "object"}[type(value)]
 
 
-def comment_lines(node, name, indent, definitions, flavor):
+def comment_lines(node, name, indent, definitions, flavor, links):
     """The comment block above a key in values.yaml."""
     pad = " " * indent
     lines = []
     text = description_text(node, flavor)
     if text:
-        lines += wrap(text, indent)
+        lines += wrap(text, indent, links)
     label = type_text(node, definitions, flavor)
     if label and text:
         lines.append(f"{pad}# Type: {label}")
@@ -485,7 +482,7 @@ def comment_lines(node, name, indent, definitions, flavor):
     examples = node.get("x-examples", [])
     for example in examples:
         if len(examples) > 1:
-            lines += wrap(substitute(example["description"], flavor), indent)
+            lines += wrap(substitute(example["description"], flavor), indent, links)
         lines.append(f"{pad}# Example:")
         lines += [f"{pad}#   {line}".rstrip() for line in emit_value(name, example["value"], 0, True)]
     return lines
@@ -502,14 +499,13 @@ def description_text(node, flavor):
 
 def render_values(source, flavor):
     definitions = source.get("definitions", {})
-    LINKS.clear()
-    LINKS.update(source.get("x-links", {}))
+    links = source.get("x-links", {})
     lines = ["---", f"# {GENERATED}", ""]
-    lines += values_mapping(source, 0, definitions, flavor)
+    lines += values_mapping(source, 0, definitions, flavor, links)
     return "\n".join(lines) + "\n"
 
 
-def values_mapping(node, indent, definitions, flavor):
+def values_mapping(node, indent, definitions, flavor, links):
     """Lines for the children of a schema node with properties."""
     lines = []
     previous_commented = False
@@ -519,7 +515,7 @@ def values_mapping(node, indent, definitions, flavor):
         value = defaults_for(child, definitions, flavor)
         if value is NO_VALUE and "x-values-example" not in child:
             continue
-        before = comment_lines(child, name, indent, definitions, flavor)
+        before = comment_lines(child, name, indent, definitions, flavor, links)
         if lines and (before or previous_commented):
             lines.append("")
         lines += before
@@ -529,13 +525,13 @@ def values_mapping(node, indent, definitions, flavor):
             lines += [f"{pad}#{line[indent:]}" for line in emit_value(name, child["x-values-example"], indent, True)]
         elif flavor_default(child, flavor) is NO_VALUE:
             lines.append(f"{pad}{key_text(name)}:")
-            lines += values_mapping(child, indent + 2, definitions, flavor)
+            lines += values_mapping(child, indent + 2, definitions, flavor, links)
         else:
             notes = child.get("x-default-comments", {})
 
             def comments(key, context, notes=notes, indent=indent):
                 text = notes.get(".".join(context + [key]))
-                return wrap(substitute(text, flavor), indent + 2 * (len(context) + 1)) if text else []
+                return wrap(substitute(text, flavor), indent + 2 * (len(context) + 1), links) if text else []
 
             lines += emit_value(name, value, indent, False, comments, [])
         # A blank line after a commented or multi-line key
