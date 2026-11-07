@@ -2208,6 +2208,10 @@
               "default": false,
               "description": "Enables the Varnish Controller Agent for integration with Varnish Controller.\n\nIf Varnish Controller is deployed in a different namespace than Varnish Enterprise, also set `global.natsServer.internal.namespace`.\n\nIf Varnish Controller is deployed outside the Kubernetes cluster, or is using an external NATS server not provided by Varnish Controller Helm Chart, set `global.natsServer.internal.enabled` to `false` and configures `global.natsServer.externalAddress`.\n"
             },
+            "licenseSecret": {
+              "type": "null",
+              "description": "Removed: use `server.licenseSecret`. Only null is accepted, so that values files written for older chart versions still work.\n"
+            },
             "image": {
               "allOf": [
                 {

@@ -2375,6 +2375,12 @@ properties:
 
               If Varnish Controller is deployed outside the Kubernetes cluster, or is using an external NATS server not provided by Varnish Controller Helm Chart, set `global.natsServer.internal.enabled` to `false` and configures `global.natsServer.externalAddress`.
 
+          licenseSecret:
+            type: "null"
+            x-docs-skip: true
+            description: |
+              Removed: use `server.licenseSecret`. Only null is accepted, so that values files written for older chart versions still work.
+
           image:
             allOf:
               - $ref: "#/definitions/image"
