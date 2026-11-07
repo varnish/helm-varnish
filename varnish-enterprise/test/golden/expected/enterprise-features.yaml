@@ -501,6 +501,8 @@ spec:
           app.kubernetes.io/instance: golden
           app.kubernetes.io/version: "APP_VERSION"
           app.kubernetes.io/managed-by: Helm
+        annotations:
+          golden/agent-pvc: "true"
       spec:
         accessModes:
           - ReadWriteOnce
