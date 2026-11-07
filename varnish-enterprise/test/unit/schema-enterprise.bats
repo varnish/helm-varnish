@@ -33,6 +33,20 @@ load _helpers
   schema_accepts --set cluster.enabled=true --set-string cluster.primaries=2
 }
 
+@test "Schema: rejects invalid cluster values" {
+  for args in \
+    "--set cluster.primaries=0" \
+    "--set cluster.primaries=-1" \
+    "--set cluster.primaries=abc" \
+    "--set-json cluster.primaries=2.5" \
+    "--set cluster.fallback=-1" \
+    "--set cluster.fallback=abc" \
+    "--set cluster.trace=yes"; do
+    echo "${args}" >&2
+    schema_rejects "at '/cluster/" --set cluster.enabled=true ${args}
+  done
+}
+
 @test "Schema: rejects unknown agent keys" {
   schema_rejects "additional properties 'enable' not allowed" --set server.agent.enable=true
 }

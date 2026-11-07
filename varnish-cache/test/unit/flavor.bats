@@ -71,11 +71,16 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
     cd "$(chart_dir)"
 
     run helm template \
+        --skip-schema-validation \
         --set 'server.delayedShutdown.method=shutdown_delay' \
         --namespace default \
         .
     [ "$status" -ne 0 ]
-    [[ "$output" == *"at '/server/delayedShutdown/method'"* ]]
+    [[ "$output" == *"'shutdown_delay' requires Varnish Enterprise"* ]]
+}
+
+@test "Flavor: schema rejects shutdown_delay" {
+    schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=shutdown_delay
 }
 
 @test "Flavor: docs do not mention Enterprise-only keys" {

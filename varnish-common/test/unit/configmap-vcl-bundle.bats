@@ -418,12 +418,13 @@ vcl.use router-0" ]
 @test "vcl-bundle: error when route has no vclContent" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
+        --skip-schema-validation \
         --namespace default \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --show-only templates/configmap-vcl.yaml \
         .
     [ "$status" -ne 0 ]
-    [[ "$stderr" == *"at '/server/vcls/routes/0'"* ]]
+    [[ "$stderr" == *"must set vclContent"* ]]
 }
 
 # ── Cluster ───────────────────────────────────────────────────────────────────
@@ -738,15 +739,14 @@ vcl.use router-0" ]
 @test "vcl-bundle: error when include filename contains invalid characters" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
+        --skip-schema-validation \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.includes.sub!helpers\\.vcl=sub common_recv {}" \
         --show-only templates/configmap-vcl.yaml \
         .
     [ "$status" -ne 0 ]
-    # Helm 4 reports a wrong location for propertyNames errors, so match the
-    # error itself.
-    [[ "$stderr" == *"invalid propertyName 'sub!helpers.vcl'"* ]]
+    [[ "$stderr" == *"contains invalid characters"* ]]
 }
 
 @test "vcl-bundle: include with subdirectory path mounts under vcls/" {

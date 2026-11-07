@@ -278,9 +278,9 @@ load _helpers
         "--set cluster.fallback=abc" \
         "--set cluster.trace=yes"; do
         echo "${args}" >&2
-        run helm template --set 'cluster.enabled=true' ${args} --namespace default --show-only templates/deployment.yaml .
+        run helm template --skip-schema-validation --set 'cluster.enabled=true' ${args} --namespace default --show-only templates/deployment.yaml .
         [ "${status}" -ne 0 ]
-        [[ "${output}" == *"at '/cluster/"* ]]
+        [[ "${output}" == *"cluster."* ]]
     done
 }
 

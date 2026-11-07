@@ -135,6 +135,12 @@ EOT
   schema_rejects "additional properties 'route' not allowed" --set server.vcls.route=x
 }
 
+@test "Schema: rejects invalid include filenames" {
+  # Helm 4 reports a wrong location for propertyNames errors, so match the
+  # error itself.
+  schema_rejects "invalid propertyName 'sub!helpers.vcl'" --set "server.vcls.routes[0].vclContent=vcl 4.1;" --set "server.vcls.includes.sub!helpers\\.vcl=x"
+}
+
 @test "Schema: rejects a list server.labels" {
   schema_rejects "at '/server/labels'" --set server.labels[0]=a
 }
