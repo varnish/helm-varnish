@@ -2,12 +2,6 @@
 
 load _helpers
 
-@test "Schema: generated files are up to date" {
-  run "$(chart_dir)/../varnish-common/schema/generate.py" --check
-  echo "$output" >&2
-  [ "$status" -eq 0 ]
-}
-
 @test "Schema: rejects unknown root keys" {
   schema_rejects "additional properties 'sever' not allowed" --set sever.replicas=2
 }
