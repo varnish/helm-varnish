@@ -478,6 +478,12 @@ Configures the address on which Varnish will listen for HTTP traffic. Ignored wh
 
 Configures Varnish to listen for HTTP traffic on the Pod IP address instead of `server.http.address`. Note that this makes port forwarding with kubectl harder.
 
+**server.http.hostPort**
+
+- Type: number
+
+Sets the port to expose HTTP traffic directly on the node the Pod runs on, as the container's [hostPort][k8s-pod-v1-containers].
+
 **server.tls.enabled**
 
 - Type: boolean
@@ -491,6 +497,12 @@ Configures Varnish to listen for HTTPS traffic using native TLS. When enabled, `
 - Default: `6443`
 
 Configures the TCP port on which Varnish will listen for HTTPS traffic. This port is used for Varnish to bind to within a container. To change the port exposed via service to other applications, see `server.service.https.port`.
+
+**server.tls.hostPort**
+
+- Type: number
+
+Sets the port to expose HTTPS traffic directly on the node the Pod runs on, as the container's [hostPort][k8s-pod-v1-containers].
 
 **server.tls.address**
 
@@ -587,6 +599,12 @@ The port to listens to. Only applicable for TCP listens.
 - Type: string
 
 The address to listens to. Only applicable for TCP listens.
+
+**server.extraListens[].hostPort**
+
+- Type: number
+
+The port to expose this listen directly on the node the Pod runs on, as the container's [hostPort][k8s-pod-v1-containers]. Only applicable for TCP listens.
 
 **server.extraListens[].path**
 
@@ -747,7 +765,7 @@ server:
 
 **server.vclConfigs**
 
-- Type: object of template string
+- Type: object of template strings
 
 Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`. For example, given the following configuration:
 
@@ -1281,6 +1299,12 @@ This securityContext will be set on the varnishncsa container. For setting secur
 
 Sets the extra arguments to varnishncsa.
 
+**server.varnishncsa.extraEnvs**
+
+- Type: object, array of objects, or template string
+
+Sets additional environment variables for the varnishncsa container. Can be set as an object, an array of objects, or a template string.
+
 **server.varnishncsa.startupProbe**
 
 - Type: object
@@ -1374,6 +1398,12 @@ Sets the number of times when a consecutive failure response is considered a fai
 - Type: object
 
 An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the varnishncsa container.
+
+**server.varnishncsa.extraVolumeMounts**
+
+- Type: array of objects or template string
+
+An array of objects that conforms to the Kubernetes [volumeMounts][k8s-pod-v1-containers] definition of a Container. This configuration is used to mount extra volumes defined in `server.extraVolumes` into the varnishncsa container. The value can be set as either an array of objects or a template string.
 
 **server.otel.enabled**
 

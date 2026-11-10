@@ -183,6 +183,10 @@ server:
   # Type: object or template string
   labels: {}
 
+  # Sets the secret for using a varnish-enterprise.lic file.
+  # See https://docs.varnish-software.com/varnish-helm/varnish-enterprise/installation/
+  licenseSecret:
+
   # Applies extra annotations to a workload. The value can be set as either an object or a template string.
   # workload annotations can be used to for applying additional metadata or for integrating with external
   # tooling. The annotations specified here will be applied to the workload itself. To apply labels on the
@@ -243,6 +247,9 @@ server:
     # Availability: v1.7.4
     # Type: boolean
     podIP: false
+    # Sets the port to expose HTTP traffic directly on the node the Pod runs on, as the container's
+    # [hostPort](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers).
+    #hostPort: 8080
 
   tls:
     # Configures Varnish to enable [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/)
@@ -261,9 +268,13 @@ server:
     # This port is used by HTTPS service as a targetPort.
     port: 6443
 
+    # Sets the port to expose HTTPS traffic directly on the node the Pod runs on, as the container's
+    # [hostPort](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers).
+    #hostPort: 8443
+
     # Configures the address on which Varnish will listen for HTTPS traffic. Only used when
     # neither `server.tls.config` nor `server.tls.configFile` is set.
-    # Type: template string
+    # Type: string
     address: "0.0.0.0"
 
     # The TLS configuration. See also [In-Process TLS](https://docs.varnish-software.com/varnish-enterprise/features/core-ssl/) for configuration options. It is recommended
@@ -306,6 +317,8 @@ server:
   #       port        The port to listens as. Required unless path is set.
   #
   #       address     The IP address to listens as
+  #
+  #       hostPort    The port to expose this listen directly on the node the Pod runs on
   #
   #     UNIX socket:
   #
@@ -683,7 +696,7 @@ server:
   # If the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated
   # in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.
   # Availability: v1.2.0
-  # Type: object or template string
+  # Type: object (filename to template string)
   # Example:
   #   vclConfigs:
   #     main.vcl: |
@@ -1240,6 +1253,39 @@ server:
     extraArgs:
       - -c
 
+    # Sets additional environment variables for the varnishncsa container.
+    #
+    # Can be set as an array of objects, an object, or a template string.
+    # Type: object or array or template string
+    # Example:
+    #   extraEnvs:
+    #     MY_ENV_VAR: value
+    #     MY_OTHER_ENV_VAR: other_value
+    #
+    # Example:
+    #   extraEnvs:
+    #     - name: MY_ENV_VAR
+    #       value: value
+    #     - name: MY_OTHER_ENV_VAR
+    #       valueFrom:
+    #         configMapKeyRef:
+    #           name: my-config-map
+    #           key: my-key
+    #
+    # Example:
+    #   extraEnvs: |
+    #     - name: RELEASE_NAMESPACE
+    #       value: {{ .Release.Namespace }}
+    extraEnvs: {}
+
+    # An object that conforms to the Kubernetes [startupProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
+    # of a Container. The probe is disabled when empty. The probe command is set by the chart.
+    # Example:
+    #   startupProbe:
+    #     periodSeconds: 5
+    #     failureThreshold: 10
+    startupProbe: {}
+
     # Configures a probe for checking if a Pod is ready to receive a connection.
     readinessProbe:
       # Sets the initial delays in seconds until the first probe is performed.
@@ -1286,6 +1332,17 @@ server:
     #         cpu: 100m
     #         memory: 128Mi
     resources: {}
+
+    # An array of objects that conforms to the Kubernetes [volumeMounts](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
+    # definition of a Container. This configuration is used to mount extra volumes defined in
+    # `server.extraVolumes` into the varnishncsa container. The value can be set as either
+    # an array of objects or a template string.
+    # Type: array or template string
+    # Example:
+    #   extraVolumeMounts: |
+    #     - name: {{ .Release.Name }}-logs
+    #       mountPath: /var/log/varnish
+    extraVolumeMounts: []
 
   # Configures the Varnish OTEL sidecar.
   otel:
@@ -1435,10 +1492,6 @@ server:
     # Availability: v1.5.0
     privateToken: ""
 
-    # Sets the secret for using a varnish-enterprise.lic file.
-    # See https://docs.varnish-software.com/varnish-helm/varnish-enterprise/installation/
-    licenseSecret:
-
     # Sets the extra environment variables for Varnish Controller Agent.
     # Can be set as either an object, a list, or a templated string.
     # Type: object or array or template string
@@ -1561,8 +1614,16 @@ server:
           pullPolicy: IfNotPresent
           tag: "7.5.1"
 
+        # An object that conforms to the Kubernetes [securityContext](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers) definition
+        # of a Container.
+        #
+        # This securityContext will be set on the Varnish Controller VCLI container. For setting
+        # securityContext on the Pod itself, see `global.podSecurityContext`. For setting
+        # securityContext to all containers, see `global.securityContext`.
+        securityContext: {}
+
         # Configures Varnish Controller Agent to use external Varnish Controller endpoint.
-        # Ignored if `server.vcli.internal.enabled` is set to `true`.
+        # Ignored if `server.agent.autoRemove.vcli.internal.enabled` is set to `true`.
         externalAddress: ""
 
         # Configures the username to connect to Varnish Controller API.
@@ -1608,6 +1669,19 @@ server:
           # Configures the NATS internal cluster domain name. Only change if NATS is deployed
           # on a separate cluster.
           clusterDomain: "cluster.local"
+
+        # An object that conforms to the Kubernetes [resources](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
+        # definition of a Container. This configuration can be used to limit resources consumed
+        # by the Varnish Controller VCLI container.
+        # Example:
+        #     resources:
+        #       limits:
+        #         cpu: 100m
+        #         memory: 128Mi
+        #       requests:
+        #         cpu: 100m
+        #         memory: 128Mi
+        resources: {}
 
         # Sets the extra environment variables for Varnish Controller VCLI.
         # Type: object or array or template string
