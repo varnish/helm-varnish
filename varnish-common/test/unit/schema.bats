@@ -246,3 +246,13 @@ EOT
   printf 'server:\n  minThreads: 1.5\n' > "${values}"
   schema_rejects "at '/server/minThreads'" -f "${values}"
 }
+
+@test "Schema: extraServices targetPort accepts a port name" {
+  schema_accepts --set 'server.extraListens[0].name=proxy' --set 'server.extraListens[0].port=8088' \
+    --set 'server.service.extraServices[0].name=proxy' --set 'server.service.extraServices[0].targetPort=extra-proxy' \
+    --set 'server.service.extraServices[0].port=8088'
+  schema_accepts --set 'server.service.extraServices[0].name=proxy' --set 'server.service.extraServices[0].targetPort=8088' \
+    --set 'server.service.extraServices[0].port=8088'
+  schema_rejects "at '/server/service/extraServices/0/targetPort'" \
+    --set 'server.service.extraServices[0].name=proxy' --set 'server.service.extraServices[0].targetPort=Extra_Proxy'
+}

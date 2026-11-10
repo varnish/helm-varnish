@@ -60,6 +60,13 @@ definitions:
         maximum: 65535
       - type: string
         pattern: "^[0-9]+$"
+  portOrName:
+    x-type-label: number or string
+    anyOf:
+      - $ref: "#/definitions/port"
+      - type: string
+        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        maxLength: 15
   nonNegInt:
     x-type-label: number
     anyOf:
@@ -1606,9 +1613,9 @@ properties:
                   description: |
                     Sets the name of the extra service. Required.
                 targetPort:
-                  $ref: "#/definitions/port"
+                  $ref: "#/definitions/portOrName"
                   description: |
-                    Sets the port in the Pod to forward requests to. It must also be defined in `server.extraListens`. Required.
+                    Sets the port in the Pod to forward requests to, as a number or as a port name such as `extra-<name>` for `server.extraListens`. It must also be defined in `server.extraListens`. Required.
                 port:
                   $ref: "#/definitions/port"
                   description: |

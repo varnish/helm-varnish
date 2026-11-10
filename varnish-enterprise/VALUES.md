@@ -1523,9 +1523,9 @@ Sets the name of the extra service. Required.
 
 **server.service.extraServices[].targetPort**
 
-- Type: number
+- Type: number or string
 
-Sets the port in the Pod to forward requests to. It must also be defined in `server.extraListens`. Required.
+Sets the port in the Pod to forward requests to, as a number or as a port name such as `extra-<name>` for `server.extraListens`. It must also be defined in `server.extraListens`. Required.
 
 **server.service.extraServices[].port**
 

@@ -60,6 +60,18 @@
         }
       ]
     },
+    "portOrName": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/port"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 15
+        }
+      ]
+    },
     "nonNegInt": {
       "anyOf": [
         {
@@ -1189,8 +1201,8 @@
                     "description": "Sets the name of the extra service. Required.\n"
                   },
                   "targetPort": {
-                    "$ref": "#/definitions/port",
-                    "description": "Sets the port in the Pod to forward requests to. It must also be defined in `server.extraListens`. Required.\n"
+                    "$ref": "#/definitions/portOrName",
+                    "description": "Sets the port in the Pod to forward requests to, as a number or as a port name such as `extra-<name>` for `server.extraListens`. It must also be defined in `server.extraListens`. Required.\n"
                   },
                   "port": {
                     "$ref": "#/definitions/port",
