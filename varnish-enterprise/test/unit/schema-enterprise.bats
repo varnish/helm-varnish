@@ -61,3 +61,9 @@ server:
 EOT
   schema_rejects "at '/server/agent/location/latitude'" -f "${values}"
 }
+
+@test "Schema: accepts fractional shutdownDelay seconds" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: shutdown_delay\n    shutdownDelay:\n      seconds: 2.5\n' > "${values}"
+  schema_accepts -f "${values}"
+}

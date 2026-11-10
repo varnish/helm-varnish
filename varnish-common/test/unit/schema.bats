@@ -231,3 +231,18 @@ EOT
     }' "$(chart_dir)/values.yaml" > "${values}"
   schema_accepts -f "${values}"
 }
+
+@test "Schema: accepts fractional seconds" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  printf 'server:\n  ttl: 0.5\n  threadTimeout: 1.5\n  delayedHaltSeconds: 2.5\n' > "${values}"
+  schema_accepts -f "${values}"
+  printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: sleep\n    sleep:\n      seconds: 2.5\n' > "${values}"
+  schema_accepts -f "${values}"
+  schema_accepts --set server.delayedHaltSeconds=2.5
+}
+
+@test "Schema: still rejects fractional thread counts" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  printf 'server:\n  minThreads: 1.5\n' > "${values}"
+  schema_rejects "at '/server/minThreads'" -f "${values}"
+}

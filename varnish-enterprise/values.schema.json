@@ -657,6 +657,7 @@
         "ttl": {
           "type": [
             "integer",
+            "number",
             "string"
           ],
           "default": 120,
@@ -681,6 +682,7 @@
         "threadTimeout": {
           "type": [
             "integer",
+            "number",
             "string"
           ],
           "default": 120,
@@ -1161,8 +1163,11 @@
               "type": "integer"
             },
             {
+              "type": "number"
+            },
+            {
               "type": "string",
-              "pattern": "^[0-9]+$"
+              "pattern": "^[0-9]+(\\.[0-9]+)?$"
             },
             {
               "type": "null"
@@ -1194,6 +1199,7 @@
                 "seconds": {
                   "type": [
                     "integer",
+                    "number",
                     "string"
                   ],
                   "default": 90,
@@ -1234,6 +1240,7 @@
                 "seconds": {
                   "type": [
                     "integer",
+                    "number",
                     "string"
                   ],
                   "default": 90,

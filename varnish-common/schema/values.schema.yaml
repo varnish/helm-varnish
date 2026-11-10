@@ -660,7 +660,7 @@ properties:
                 value: {{ .Release.Namespace }}
 
       ttl:
-        type: [integer, string]
+        type: [integer, number, string]
         default: 120
         description: |
           Sets the default Time To Live (in seconds) for a cached object.
@@ -678,7 +678,7 @@ properties:
           Sets the maximum number of worker threads in each pool. See also [varnishd documentation][varnishd].
 
       threadTimeout:
-        type: [integer, string]
+        type: [integer, number, string]
         default: 120
         description: |
           Sets the number of seconds after which idle threads are destroyed.
@@ -1261,8 +1261,9 @@ properties:
         x-type-label: number
         anyOf:
           - type: integer
+          - type: number
           - type: string
-            pattern: "^[0-9]+$"
+            pattern: "^[0-9]+(\\.[0-9]+)?$"
           - type: "null"
         x-values-example: 0
         x-deprecated: use `server.delayedShutdown` instead.
@@ -1301,7 +1302,7 @@ properties:
               Configures the "sleep" delayed shutdown method.
             properties:
               seconds:
-                type: [integer, string]
+                type: [integer, number, string]
                 default: 90
                 x-since:
                   cache: v1.1.0
@@ -1340,7 +1341,7 @@ properties:
               Configures the "shutdown_delay" delayed shutdown method. It is similar to `sleep`, but uses the `shutdown_delay` feature of {product} (6.0.13r2 and newer) to perform the wait in-engine instead of relying on `preStop` and an external command.
             properties:
               seconds:
-                type: [integer, string]
+                type: [integer, number, string]
                 default: 90
                 description: |
                   Sets the number of seconds to delay the shutdown in-engine. Only applicable when `server.delayedShutdown.method` is set to "shutdown_delay".
