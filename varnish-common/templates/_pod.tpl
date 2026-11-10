@@ -702,11 +702,8 @@ Declares the Varnish NCSA container
     - name: VSM_NOPID
       value: "1"
     {{- include "varnish-common.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
-  {{- if and .Values.server.varnishncsa.extraEnvs (not (empty .Values.server.varnishncsa.extraEnvs)) }}
-  {{- range $k, $v := .Values.server.varnishncsa.extraEnvs }}
-    - name: {{ $k | quote }}
-      value: {{ $v | quote }}
-  {{- end }}
+  {{- if .Values.server.varnishncsa.extraEnvs }}
+    {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.varnishncsa.extraEnvs) .) | trim | nindent 4 }}
   {{- end }}
   {{- if and .Values.server.varnishncsa.startupProbe (not (empty .Values.server.varnishncsa.startupProbe)) }}
   startupProbe:
