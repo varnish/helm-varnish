@@ -67,3 +67,10 @@ EOT
   printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: shutdown_delay\n    shutdownDelay:\n      seconds: 2.5\n' > "${values}"
   schema_accepts -f "${values}"
 }
+
+@test "Schema: agent storageSize accepts Kubernetes quantities" {
+  schema_accepts --set server.agent.persistence.storageSize=0.5Gi
+  schema_accepts --set server.agent.persistence.storageSize=1e9
+  schema_accepts --set server.agent.persistence.storageSize=
+  schema_rejects "at '/server/agent/persistence/storageSize'" --set server.agent.persistence.storageSize=lots
+}

@@ -121,6 +121,10 @@
       "type": "string",
       "pattern": "^([0-9]+(K|Ki|M|Mi|G|Gi|T|Ti|P|Pi)?)?$"
     },
+    "k8sQuantity": {
+      "type": "string",
+      "pattern": "^((\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?)?$"
+    },
     "sizeOrPercent": {
       "type": "string",
       "pattern": "^([0-9]+(K|Ki|M|Mi|G|Gi|T|Ti|P|Pi|%)?)?$"
