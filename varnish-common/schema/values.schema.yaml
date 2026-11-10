@@ -1274,7 +1274,7 @@ properties:
           - type: integer
           - type: number
           - type: string
-            pattern: "^[0-9]+(\\.[0-9]+)?$"
+            pattern: "^[0-9]+$"
           - type: "null"
         x-values-example: 0
         x-deprecated: use `server.delayedShutdown` instead.

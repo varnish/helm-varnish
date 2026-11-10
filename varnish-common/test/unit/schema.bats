@@ -238,7 +238,11 @@ EOT
   schema_accepts -f "${values}"
   printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: sleep\n    sleep:\n      seconds: 2.5\n' > "${values}"
   schema_accepts -f "${values}"
-  schema_accepts --set server.delayedHaltSeconds=2.5
+}
+
+@test "Schema: rejects a fractional delayedHaltSeconds string" {
+  # the template adds it to the grace period with toInt64, which turns "120.5" into 0
+  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=120.5
 }
 
 @test "Schema: still rejects fractional thread counts" {
