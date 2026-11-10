@@ -55,6 +55,7 @@ spec:
         labels:
           {{- include "varnish-common.labels" . | nindent 10 }}
           {{- include "varnish-common.agentPvcLabels" . | indent 10 }}
+        {{- include "varnish-common.agentAnnotations" . | indent 8 }}
       spec:
         {{- if not (eq .Values.server.agent.persistence.storageClassName "") }}
         storageClassName: {{ .Values.server.agent.persistence.storageClassName | quote }}
