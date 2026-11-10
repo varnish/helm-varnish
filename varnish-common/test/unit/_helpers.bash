@@ -38,3 +38,27 @@ check_render() {
 teardown() {
   check_render
 }
+
+# Renders the chart, for the schema checks.
+schema_template() {
+  cd "$(chart_dir)"
+  run helm template t . --namespace default "$@"
+  echo "$output" >&2
+}
+
+# schema_rejects <substring> <helm args...>: the values fail the schema, with
+# an error containing <substring>.
+schema_rejects() {
+  local expected="$1"
+  shift
+  schema_template "$@"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"values don't meet the specifications"* ]]
+  [[ "$output" == *"${expected}"* ]]
+}
+
+# schema_accepts <helm args...>: the values pass the schema and render.
+schema_accepts() {
+  schema_template "$@"
+  [ "$status" -eq 0 ]
+}

@@ -26,6 +26,8 @@ server:
     enabled: true
     persistence:
       enabled: true
+      annotations:
+        golden/agent-pvc: "true"
     autoRemove:
       method: vcli
   secret: s3cr3t

@@ -141,11 +141,12 @@ load _helpers
 @test "PodDisruptionBudget: cannot be enabled without minAvailable or maxUnavailable" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.pdb.enabled=true' \
         --namespace default \
         --show-only templates/pdb.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"'server.pdb.minAvailable' or 'server.pdb.maxUnavailable' must be set"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.pdb.minAvailable' or 'server.pdb.maxUnavailable' must be set"* ]]
 }
