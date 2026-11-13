@@ -457,13 +457,6 @@
           "default": {},
           "description": "Configures update strategy for updating Pods when a change is made to the manifest. This configuration is only available when `server.kind` is set to StatefulSet or DaemonSet. For Deployment, see `server.strategy`.\n\n*Note: While both StatefulSet and DaemonSet share the same `updateStrategy` configuration key, its applicable values are different. See [updateStrategy on StatefulSet][k8s-statefulset-updatestrategy] and [updateStrategy on DaemonSet][k8s-daemonset-updatestrategy].*\n"
         },
-        "hostNetworking": {
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "description": "Removed and ignored: use `server.hostNetwork`. The misspelled key was shipped in older values.yaml files, and is still accepted so that they keep working.\n"
-        },
         "hostNetwork": {
           "type": "boolean",
           "default": false,
@@ -2262,11 +2255,8 @@
               "description": "Enables the Varnish Controller Agent for integration with Varnish Controller.\n\nIf Varnish Controller is deployed in a different namespace than Varnish Enterprise, also set `global.natsServer.internal.namespace`.\n\nIf Varnish Controller is deployed outside the Kubernetes cluster, or is using an external NATS server not provided by Varnish Controller Helm Chart, set `global.natsServer.internal.enabled` to `false` and configures `global.natsServer.externalAddress`.\n"
             },
             "licenseSecret": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "description": "Removed and ignored: use `server.licenseSecret`. Still accepted so that values files written for older chart versions keep working.\n"
+              "type": "null",
+              "description": "Removed: use `server.licenseSecret`. Only null is accepted, so that values files written for older chart versions still work.\n"
             },
             "image": {
               "allOf": [

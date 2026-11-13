@@ -444,12 +444,6 @@ properties:
 
           *Note: While both StatefulSet and DaemonSet share the same `updateStrategy` configuration key, its applicable values are different. See [updateStrategy on StatefulSet][k8s-statefulset-updatestrategy] and [updateStrategy on DaemonSet][k8s-daemonset-updatestrategy].*
 
-      hostNetworking:
-        type: [boolean, "null"]
-        x-docs-skip: true
-        description: |
-          Removed and ignored: use `server.hostNetwork`. The misspelled key was shipped in older values.yaml files, and is still accepted so that they keep working.
-
       hostNetwork:
         type: boolean
         default: false
@@ -2401,10 +2395,10 @@ properties:
               If Varnish Controller is deployed outside the Kubernetes cluster, or is using an external NATS server not provided by Varnish Controller Helm Chart, set `global.natsServer.internal.enabled` to `false` and configures `global.natsServer.externalAddress`.
 
           licenseSecret:
-            type: [string, "null"]
+            type: "null"
             x-docs-skip: true
             description: |
-              Removed and ignored: use `server.licenseSecret`. Still accepted so that values files written for older chart versions keep working.
+              Removed: use `server.licenseSecret`. Only null is accepted, so that values files written for older chart versions still work.
 
           image:
             allOf:

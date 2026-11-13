@@ -12,9 +12,8 @@ load _helpers
   schema_accepts -f "${values}"
 }
 
-@test "Schema: accepts and ignores a set server.agent.licenseSecret from older values.yaml" {
-  schema_accepts --set server.agent.licenseSecret=x
-  run ! grep -q 'secretName: x$' <<< "$output"
+@test "Schema: rejects a set server.agent.licenseSecret" {
+  schema_rejects "at '/server/agent/licenseSecret'" --set server.agent.licenseSecret=x
 }
 
 @test "Schema: global.natsServer.internal.enabled accepts the varnish-controller '-'" {

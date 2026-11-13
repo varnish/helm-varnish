@@ -377,13 +377,6 @@
           "default": {},
           "description": "Configures update strategy for updating Pods when a change is made to the manifest. This configuration is only available when `server.kind` is set to StatefulSet or DaemonSet. For Deployment, see `server.strategy`.\n\n*Note: While both StatefulSet and DaemonSet share the same `updateStrategy` configuration key, its applicable values are different. See [updateStrategy on StatefulSet][k8s-statefulset-updatestrategy] and [updateStrategy on DaemonSet][k8s-daemonset-updatestrategy].*\n"
         },
-        "hostNetworking": {
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "description": "Removed and ignored: use `server.hostNetwork`. The misspelled key was shipped in older values.yaml files, and is still accepted so that they keep working.\n"
-        },
         "hostNetwork": {
           "type": "boolean",
           "default": false,

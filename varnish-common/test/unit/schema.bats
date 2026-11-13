@@ -261,9 +261,8 @@ EOT
     --set 'server.service.extraServices[0].name=proxy' --set 'server.service.extraServices[0].targetPort=Extra_Proxy'
 }
 
-@test "Schema: accepts the misspelled server.hostNetworking from older values.yaml" {
-  schema_accepts --set server.hostNetworking=true
-  run ! grep -q 'hostNetwork: true' <<< "$output"
+@test "Schema: rejects the misspelled server.hostNetworking from older values.yaml" {
+  schema_rejects "additional properties 'hostNetworking' not allowed" --set server.hostNetworking=false
 }
 
 @test "Schema: probes can be disabled with false" {
