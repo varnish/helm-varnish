@@ -12,8 +12,25 @@ load _helpers
   schema_accepts -f "${values}"
 }
 
-@test "Schema: rejects a set server.agent.licenseSecret" {
-  schema_rejects "at '/server/agent/licenseSecret'" --set server.agent.licenseSecret=x
+@test "Schema: accepts and ignores a set server.agent.licenseSecret from older values.yaml" {
+  schema_accepts --set server.agent.licenseSecret=x
+  run ! grep -q 'secretName: x$' <<< "$output"
+}
+
+@test "Schema: global.natsServer.internal.enabled accepts the varnish-controller '-'" {
+  schema_accepts --set server.secret=abc --set server.agent.enabled=true --set global.natsServer.internal.enabled=-
+  [[ "$output" == *"varnish-controller-nats.default.svc.cluster.local:4222"* ]]
+  schema_rejects "at '/global/natsServer/internal/enabled'" --set global.natsServer.internal.enabled=yes
+}
+
+@test "Schema: agent credentials and tags accept numbers from --set" {
+  schema_accepts --set server.secret=abc --set server.agent.enabled=true \
+    --set server.agent.privateToken=123456 --set 'server.agent.tags={1,2}' \
+    --set server.agent.autoRemove.method=vcli --set server.agent.autoRemove.vcli.username=1000 \
+    --set server.agent.autoRemove.vcli.password=123456 --set server.agent.autoRemove.vcli.externalAddress=https://c.example
+  [[ "$output" == *'value: "123456"'* ]]
+  [[ "$output" == *'value: "1,2"'* ]]
+  [[ "$output" == *'value: "1000"'* ]]
 }
 
 @test "Schema: rejects a numeric mse storageSize" {

@@ -693,13 +693,13 @@ The path of the UNIX domain socket to listen to. Required unless `server.extraLi
 
 **server.extraListens[].user**
 
-- Type: string
+- Type: string or number
 
 The user owning the UNIX domain socket. Only applicable for UNIX domain sockets.
 
 **server.extraListens[].group**
 
-- Type: string
+- Type: string or number
 
 The group owning the UNIX domain socket. Only applicable for UNIX domain sockets.
 
@@ -1617,7 +1617,7 @@ server:
 
 **server.startupProbe**
 
-- Type: object
+- Type: object or false
 
 An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container.
 
@@ -1686,9 +1686,9 @@ server:
 
 **server.readinessProbe**
 
-- Type: object
+- Type: object or false
 
-An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container.
+An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
 
 For example:
 
@@ -1747,9 +1747,9 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 **server.livenessProbe**
 
-- Type: object
+- Type: object or false
 
-An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container.
+An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
 
 For example:
 
@@ -1847,7 +1847,7 @@ An array of objects that conforms to the Kubernetes [tolerations][k8s-pod-v1-pod
 
 **server.affinity**
 
-- Type: object or template string
+- Type: object, template string or false
 - Default: template string:
     ```yaml
     podAntiAffinity:
@@ -1859,7 +1859,7 @@ An array of objects that conforms to the Kubernetes [tolerations][k8s-pod-v1-pod
           topologyKey: kubernetes.io/hostname
     ```
 
-This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Cache Pods are always run in a different node. To disable this behavior, set to empty string (""). The value can be set as either an object or a template string.
+This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Cache Pods are always run in a different node. To disable this behavior, set to empty string ("") or `false`. The value can be set as either an object or a template string.
 
 **server.networkPolicy**
 
@@ -2034,7 +2034,7 @@ server:
 
 **server.varnishncsa.startupProbe**
 
-- Type: object
+- Type: object or false
 
 An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container. The probe is disabled when empty. The probe command is set by the chart.
 
@@ -2050,9 +2050,9 @@ server:
 
 **server.varnishncsa.readinessProbe**
 
-- Type: object
+- Type: object or false
 
-An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container.
+An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
 
 **server.varnishncsa.readinessProbe.initialDelaySeconds**
 
@@ -2091,9 +2091,9 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 **server.varnishncsa.livenessProbe**
 
-- Type: object
+- Type: object or false
 
-An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container.
+An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
 
 **server.varnishncsa.livenessProbe.initialDelaySeconds**
 

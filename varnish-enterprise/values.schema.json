@@ -117,6 +117,16 @@
         }
       ]
     },
+    "toggleableProbe": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/probe"
+        },
+        {
+          "const": false
+        }
+      ]
+    },
     "sizeString": {
       "type": "string",
       "pattern": "^([0-9]+(K|Ki|M|Mi|G|Gi|T|Ti|P|Pi)?)?$"
@@ -325,9 +335,9 @@
               "additionalProperties": false,
               "properties": {
                 "enabled": {
-                  "type": "boolean",
+                  "$ref": "#/definitions/boolOrDash",
                   "default": true,
-                  "description": "Configures Varnish Agent to use the internal NATS server.\n"
+                  "description": "Configures Varnish Agent to use the internal NATS server. `\"-\"`, the Varnish Controller Helm Chart default for this shared global value, is treated as `true`.\n"
                 },
                 "namespace": {
                   "type": "string",
@@ -446,6 +456,13 @@
           "$ref": "#/definitions/objectOrTemplate",
           "default": {},
           "description": "Configures update strategy for updating Pods when a change is made to the manifest. This configuration is only available when `server.kind` is set to StatefulSet or DaemonSet. For Deployment, see `server.strategy`.\n\n*Note: While both StatefulSet and DaemonSet share the same `updateStrategy` configuration key, its applicable values are different. See [updateStrategy on StatefulSet][k8s-statefulset-updatestrategy] and [updateStrategy on DaemonSet][k8s-daemonset-updatestrategy].*\n"
+        },
+        "hostNetworking": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Removed and ignored: use `server.hostNetwork`. The misspelled key was shipped in older values.yaml files, and is still accepted so that they keep working.\n"
         },
         "hostNetwork": {
           "type": "boolean",
@@ -610,11 +627,17 @@
                 "description": "The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets.\n"
               },
               "user": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "integer"
+                ],
                 "description": "The user owning the UNIX domain socket. Only applicable for UNIX domain sockets.\n"
               },
               "group": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "integer"
+                ],
                 "description": "The group owning the UNIX domain socket. Only applicable for UNIX domain sockets.\n"
               },
               "mode": {
@@ -1674,7 +1697,7 @@
         "startupProbe": {
           "allOf": [
             {
-              "$ref": "#/definitions/probe"
+              "$ref": "#/definitions/toggleableProbe"
             }
           ],
           "default": {},
@@ -1719,10 +1742,10 @@
         "readinessProbe": {
           "allOf": [
             {
-              "$ref": "#/definitions/probe"
+              "$ref": "#/definitions/toggleableProbe"
             }
           ],
-          "description": "An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container.\n",
+          "description": "An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.\n",
           "properties": {
             "httpGet": {
               "$ref": "#/definitions/probe",
@@ -1771,10 +1794,10 @@
         "livenessProbe": {
           "allOf": [
             {
-              "$ref": "#/definitions/probe"
+              "$ref": "#/definitions/toggleableProbe"
             }
           ],
-          "description": "An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container.\n",
+          "description": "An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.\n",
           "properties": {
             "httpGet": {
               "$ref": "#/definitions/probe",
@@ -1853,9 +1876,16 @@
           "description": "An array of objects that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definition of a Pod. This configuration is used to allow the Pod to be scheduled to nodes with specific taints. The value can be set as either an array of objects or a template string.\n"
         },
         "affinity": {
-          "$ref": "#/definitions/objectOrTemplate",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/objectOrTemplate"
+            },
+            {
+              "const": false
+            }
+          ],
           "default": "podAntiAffinity:\n  requiredDuringSchedulingIgnoredDuringExecution:\n    - labelSelector:\n        matchLabels:\n          app.kubernetes.io/name: {{ include \"varnish-common.name\" . }}\n          app.kubernetes.io/instance: {{ .Release.Name }}\n      topologyKey: kubernetes.io/hostname\n",
-          "description": "This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Enterprise Pods are always run in a different node. To disable this behavior, set to empty string (\"\"). The value can be set as either an object or a template string.\n"
+          "description": "This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Enterprise Pods are always run in a different node. To disable this behavior, set to empty string (\"\") or `false`. The value can be set as either an object or a template string.\n"
         },
         "networkPolicy": {
           "type": "object",
@@ -2016,7 +2046,7 @@
             "startupProbe": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/probe"
+                  "$ref": "#/definitions/toggleableProbe"
                 }
               ],
               "default": {},
@@ -2031,10 +2061,10 @@
             "readinessProbe": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/probe"
+                  "$ref": "#/definitions/toggleableProbe"
                 }
               ],
-              "description": "An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container.\n",
+              "description": "An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.\n",
               "properties": {
                 "initialDelaySeconds": {
                   "type": "integer",
@@ -2066,10 +2096,10 @@
             "livenessProbe": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/probe"
+                  "$ref": "#/definitions/toggleableProbe"
                 }
               ],
-              "description": "An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container.\n",
+              "description": "An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.\n",
               "properties": {
                 "initialDelaySeconds": {
                   "type": "integer",
@@ -2232,8 +2262,11 @@
               "description": "Enables the Varnish Controller Agent for integration with Varnish Controller.\n\nIf Varnish Controller is deployed in a different namespace than Varnish Enterprise, also set `global.natsServer.internal.namespace`.\n\nIf Varnish Controller is deployed outside the Kubernetes cluster, or is using an external NATS server not provided by Varnish Controller Helm Chart, set `global.natsServer.internal.enabled` to `false` and configures `global.natsServer.externalAddress`.\n"
             },
             "licenseSecret": {
-              "type": "null",
-              "description": "Removed: use `server.licenseSecret`. Only null is accepted, so that values files written for older chart versions still work.\n"
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Removed and ignored: use `server.licenseSecret`. Still accepted so that values files written for older chart versions keep working.\n"
             },
             "image": {
               "allOf": [
@@ -2268,7 +2301,10 @@
               "description": "Sets the log level for the Varnish Controller Agent. The value can be one of `debug`, `info`, `warning`, `error`, or `quiet`.\n"
             },
             "privateToken": {
-              "type": "string",
+              "type": [
+                "string",
+                "integer"
+              ],
               "default": "",
               "description": "Sets a Varnish Controller private token.\n"
             },
@@ -2321,7 +2357,10 @@
                 "null"
               ],
               "items": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "integer"
+                ]
               },
               "default": [],
               "description": "Sets the tags for the Varnish Controller Agent.\n",
@@ -2489,12 +2528,18 @@
                       "description": "Configures Varnish Controller Agent to use external Varnish Controller endpoint. Ignored if `server.agent.autoRemove.vcli.internal.enabled` is set to `true`.\n"
                     },
                     "username": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "integer"
+                      ],
                       "default": "admin",
                       "description": "Configures the username to connect to Varnish Controller API.\n"
                     },
                     "password": {
-                      "type": "string",
+                      "type": [
+                        "string",
+                        "integer"
+                      ],
                       "default": "",
                       "description": "Configures NATS password as a string.\n"
                     },

@@ -140,8 +140,9 @@ global:
     externalAddress: ""
 
     internal:
-      # Configures Varnish Agent to use the internal NATS server.
-      # Type: boolean
+      # Configures Varnish Agent to use the internal NATS server. `"-"`, the Varnish
+      # Controller Helm Chart default for this shared global value, is treated as `true`.
+      # Type: boolean or "-"
       enabled: true
 
       # Discovers the internal NATS server within the given namespace. By default, the
@@ -1264,7 +1265,7 @@ server:
   # An object that conforms to the Kubernetes
   # [startupProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
   # definition of a Container.
-  # Type: object
+  # Type: object or false
   # Availability: v1.1.0
   # Example:
   #   startupProbe:
@@ -1282,8 +1283,8 @@ server:
 
   # An object that conforms to the Kubernetes
   # [readinessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-  # definition of a Container.
-  # Type: object
+  # definition of a Container. Set to `false` to disable the probe.
+  # Type: object or false
   # Availability: v1.2.0
   # Example:
   #   readinessProbe:
@@ -1321,8 +1322,8 @@ server:
 
   # An object that conforms to the Kubernetes
   # [livenessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-  # definition of a Container.
-  # Type: object
+  # definition of a Container. Set to `false` to disable the probe.
+  # Type: object or false
   # Example:
   #   livenessProbe:
   #     httpGet:
@@ -1392,9 +1393,9 @@ server:
 
   # This configuration is used to fine-grain control the scheduling of the Pod. By
   # default, this is set to ensure all Varnish Enterprise Pods are always run in a
-  # different node. To disable this behavior, set to empty string (""). The value can be
-  # set as either an object or a template string.
-  # Type: object or template string
+  # different node. To disable this behavior, set to empty string ("") or `false`. The
+  # value can be set as either an object or a template string.
+  # Type: object, template string or false
   affinity: |
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -1531,7 +1532,7 @@ server:
     # [startupProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
     # definition of a Container. The probe is disabled when empty. The probe command is
     # set by the chart.
-    # Type: object
+    # Type: object or false
     # Example:
     #   startupProbe:
     #     periodSeconds: 5
@@ -1540,8 +1541,8 @@ server:
 
     # An object that conforms to the Kubernetes
     # [readinessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-    # definition of a Container.
-    # Type: object
+    # definition of a Container. Set to `false` to disable the probe.
+    # Type: object or false
     readinessProbe:
       # Sets the initial delay before the first probe is sent to determine if the
       # varnishncsa Pod is ready to handle the logs.
@@ -1569,8 +1570,8 @@ server:
 
     # An object that conforms to the Kubernetes
     # [livenessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-    # definition of a Container.
-    # Type: object
+    # definition of a Container. Set to `false` to disable the probe.
+    # Type: object or false
     livenessProbe:
       # Sets the initial delay before the first probe is sent to determine if the
       # varnishncsa Pod is still ready to handle the logs.
@@ -1786,7 +1787,7 @@ server:
     logLevel: "debug"
 
     # Sets a Varnish Controller private token.
-    # Type: string
+    # Type: string or number
     # Availability: v1.5.0
     privateToken: ""
 
@@ -1954,11 +1955,11 @@ server:
         externalAddress: ""
 
         # Configures the username to connect to Varnish Controller API.
-        # Type: string
+        # Type: string or number
         username: "admin"
 
         # Configures NATS password as a string.
-        # Type: string
+        # Type: string or number
         password: ""
 
         # Configures NATS password from a Kubernetes secret. By default, it uses an

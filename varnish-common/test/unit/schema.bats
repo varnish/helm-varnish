@@ -260,3 +260,38 @@ EOT
   schema_rejects "at '/server/service/extraServices/0/targetPort'" \
     --set 'server.service.extraServices[0].name=proxy' --set 'server.service.extraServices[0].targetPort=Extra_Proxy'
 }
+
+@test "Schema: accepts the misspelled server.hostNetworking from older values.yaml" {
+  schema_accepts --set server.hostNetworking=true
+  run ! grep -q 'hostNetwork: true' <<< "$output"
+}
+
+@test "Schema: probes can be disabled with false" {
+  schema_accepts --set server.varnishncsa.enabled=false \
+    --set server.readinessProbe=false --set server.livenessProbe=false --set server.startupProbe=false
+  run ! grep -qE '^ *(readiness|liveness|startup)Probe:' <<< "$output"
+}
+
+@test "Schema: rejects a true probe and a false httpGet" {
+  schema_rejects "at '/server/livenessProbe'" --set server.livenessProbe=true
+  schema_rejects "at '/server/livenessProbe/httpGet'" --set server.livenessProbe.httpGet=false
+}
+
+@test "Schema: varnishncsa probes can be disabled with false" {
+  schema_accepts --set server.varnishncsa.enabled=true --set server.varnishncsa.readinessProbe=false --set server.varnishncsa.livenessProbe=false
+  # only the varnish container probes are left
+  [ "$(grep -cE '^ *readinessProbe:' <<< "$output")" -eq 1 ]
+  [ "$(grep -cE '^ *livenessProbe:' <<< "$output")" -eq 1 ]
+}
+
+@test "Schema: affinity can be disabled with false" {
+  schema_accepts --set server.affinity=false
+  run ! grep -q 'affinity:' <<< "$output"
+  schema_rejects "at '/server/affinity'" --set server.affinity=true
+}
+
+@test "Schema: extraListens user and group accept numeric ids" {
+  schema_accepts --set 'server.extraListens[0].name=sock' --set 'server.extraListens[0].path=/tmp/a.sock' \
+    --set 'server.extraListens[0].user=1000' --set 'server.extraListens[0].group=1000' --set 'server.extraListens[0].mode=0700'
+  [[ "$output" == *"sock=/tmp/a.sock,user=1000,group=1000,mode=0700"* ]]
+}
