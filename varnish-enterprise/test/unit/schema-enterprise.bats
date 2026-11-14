@@ -6,14 +6,11 @@ load _helpers
   schema_accepts --set server.delayedShutdown.method=shutdown_delay --set server.terminationGracePeriodSeconds=120
 }
 
-@test "Schema: accepts the null server.agent.licenseSecret from older values.yaml" {
+@test "Schema: rejects server.agent.licenseSecret from older values.yaml, even null" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   printf 'server:\n  agent:\n    licenseSecret:\n' > "${values}"
-  schema_accepts -f "${values}"
-}
-
-@test "Schema: rejects a set server.agent.licenseSecret" {
-  schema_rejects "at '/server/agent/licenseSecret'" --set server.agent.licenseSecret=x
+  schema_rejects "additional properties 'licenseSecret' not allowed" -f "${values}"
+  schema_rejects "additional properties 'licenseSecret' not allowed" --set server.agent.licenseSecret=x
 }
 
 @test "Schema: global.natsServer.internal.enabled accepts the varnish-controller '-'" {
