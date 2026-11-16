@@ -3,6 +3,7 @@
   "$comment": "Generated from varnish-common/schema/values.schema.yaml by generate.py. Do not edit.",
   "type": "object",
   "additionalProperties": false,
+  "description": "Values are validated against values.schema.json when you run helm install,\nupgrade, template or lint. Unknown keys and values of the wrong type are\nrejected, and the error names the offending path, for example\n`at '/server': additional properties 'foo' not allowed`. Pass\n`--skip-schema-validation` to skip this check; the checks done by the chart\ntemplates still apply.",
   "definitions": {
     "objectOrTemplate": {
       "type": [

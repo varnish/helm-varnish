@@ -177,6 +177,10 @@ server:
       subPath: home.vcl
 ```
 
+#### Values validation
+
+Values are validated against `values.schema.json` when you run `helm install`, `upgrade`, `template` or `lint`. Unknown keys and values of the wrong type are rejected, and the error names the offending path, for example `at '/server': additional properties 'foo' not allowed`. Pass `--skip-schema-validation` to skip this check; the checks done by the chart templates still apply.
+
 #### Using as a subchart
 
 `varnish-cache` and `varnish-enterprise` share their named templates (`varnish-common.*`), and Helm keeps only one definition per template name. When both are dependencies of the same parent chart, depend on the same version of both: the two charts are always released together from the same sources, with the same version.
