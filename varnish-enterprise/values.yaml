@@ -34,7 +34,7 @@ global:
     image: "busybox"
 
     # The tag to use for the initContainer image.
-    # Type: string or number
+    # Type: string
     tag: "1.36"
 
   # An object that conforms to the Kubernetes
@@ -982,7 +982,7 @@ server:
     # application version as in the Varnish Enterprise Helm Chart. If the tag is set to
     # non-exact versions (such as "latest"), make sure to set `server.image.pullPolicy` to
     # "Always" to make sure the image is always updated.
-    # Type: string or number
+    # Type: string
     tag: ""
 
   # An object for configuring

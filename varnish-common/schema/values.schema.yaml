@@ -121,7 +121,7 @@ definitions:
       repository:
         type: string
       tag:
-        type: [string, integer, number]
+        type: string
       pullPolicy:
         $ref: "#/definitions/pullPolicy"
   sidecarImage:
@@ -134,9 +134,7 @@ definitions:
           - type: string
           - const: "-"
       tag:
-        anyOf:
-          - type: [string, integer, number]
-          - const: "-"
+        type: string
       pullPolicy:
         anyOf:
           - $ref: "#/definitions/pullPolicy"
@@ -193,7 +191,7 @@ properties:
               The image to use for the initContainer.
 
           tag:
-            type: [string, integer, number]
+            type: string
             default: "1.36"
             description: |
               The tag to use for the initContainer image.
@@ -1396,7 +1394,7 @@ properties:
               Sets the [imagePullPolicy][k8s-pod-v1-containers] for the {product} image. This can be one of Always, Never, or IfNotPresent.
 
           tag:
-            type: [string, integer, number]
+            type: string
             default: ""
             x-default-text: _same as appVersion_
             description: |

@@ -96,23 +96,46 @@ EOT
   schema_rejects "additional properties 'prot' not allowed" --set server.http.prot=1
 }
 
-@test "Schema: accepts numeric and string image tags" {
-  # --set makes 7 an integer, which the image helper must compare as a string
-  schema_accepts --set server.image.tag=7
-  [[ "$output" == *'image: "'*':7"'* ]]
+@test "Schema: rejects numeric image tags" {
+  # YAML turns 8.0 into 8 and 1.10 into 1.1 before the chart sees them, and
+  # --set turns 7 into an integer
+  schema_rejects "at '/server/image/tag'" --set server.image.tag=7
+  schema_rejects "at '/server/varnishncsa/image/tag'" --set server.varnishncsa.image.tag=7
 
-  schema_accepts --set server.image.tag=7.6
-  [[ "$output" == *'image: "'*':7.6"'* ]]
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  printf 'server:\n  image:\n    tag: 8.0\n' > "${values}"
+  schema_rejects "at '/server/image/tag'" -f "${values}"
+  printf 'server:\n  image:\n    tag: 7.6\n' > "${values}"
+  schema_rejects "at '/server/image/tag'" -f "${values}"
 }
 
-@test "Schema: numeric image tags render without scientific notation" {
+@test "Schema: rejects a numeric global.initContainer.tag" {
+  skip_unless_enterprise
+  schema_rejects "at '/global/initContainer/tag'" --set global.initContainer.tag=1
+}
+
+@test "Schema: accepts string image tags that look like numbers" {
+  # --set only converts integers and booleans, so 7.6 stays a string
+  schema_accepts --set server.image.tag=7.6
+  [[ "$output" == *'image: "'*':7.6"'* ]]
+
+  schema_accepts --set-string server.image.tag=7
+  [[ "$output" == *'image: "'*':7"'* ]]
+
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  printf 'server:\n  image:\n    tag: "8.0"\n' > "${values}"
+  schema_accepts -f "${values}"
+  [[ "$output" == *'image: "'*':8.0"'* ]]
+}
+
+@test "Templates: numeric image tags render without scientific notation when the schema is skipped" {
   # numbers from values files and --set-json reach the templates as float64
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   printf 'server:\n  image:\n    tag: 20241129\n' > "${values}"
-  schema_accepts -f "${values}"
+  schema_accepts --skip-schema-validation -f "${values}"
   [[ "$output" == *'image: "'*':20241129"'* ]]
 
-  schema_accepts --set-json server.image.tag=20241129.5
+  schema_accepts --skip-schema-validation --set-json server.image.tag=20241129.5
   [[ "$output" == *'image: "'*':20241129.5"'* ]]
   [[ "$output" != *'e+07'* ]]
 }

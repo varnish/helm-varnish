@@ -161,11 +161,7 @@
           "type": "string"
         },
         "tag": {
-          "type": [
-            "string",
-            "integer",
-            "number"
-          ]
+          "type": "string"
         },
         "pullPolicy": {
           "$ref": "#/definitions/pullPolicy"
@@ -187,18 +183,7 @@
           ]
         },
         "tag": {
-          "anyOf": [
-            {
-              "type": [
-                "string",
-                "integer",
-                "number"
-              ]
-            },
-            {
-              "const": "-"
-            }
-          ]
+          "type": "string"
         },
         "pullPolicy": {
           "anyOf": [
@@ -1026,11 +1011,7 @@
               "description": "Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image. This can be one of Always, Never, or IfNotPresent.\n"
             },
             "tag": {
-              "type": [
-                "string",
-                "integer",
-                "number"
-              ],
+              "type": "string",
               "default": "",
               "description": "Sets the tag for the Varnish Cache image. By default, this is set to the same application version as in the Varnish Cache Helm Chart. If the tag is set to non-exact versions (such as \"latest\"), make sure to set `server.image.pullPolicy` to \"Always\" to make sure the image is always updated.\n"
             }

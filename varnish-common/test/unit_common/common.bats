@@ -6364,12 +6364,13 @@ release-namespace: to-be-override
     [ "${actual}" == "localhost/${chart}-ncsa:ncsa-latest" ]
 }
 
-@test "${kind}/varnishncsa/image: numeric tag 0 is kept" {
+@test "${kind}/varnishncsa/image: numeric tag 0 is kept when the schema is skipped" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set "server.image.repository=localhost/${chart}" \
+        --skip-schema-validation \
         --set "server.image.tag=0" \
         --namespace default \
         --show-only ${template} \

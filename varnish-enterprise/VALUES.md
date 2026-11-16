@@ -60,7 +60,7 @@ The image to use for the initContainer.
 
 **global.initContainer.tag**
 
-- Type: string or number
+- Type: string
 - Default: `1.36`
 
 The tag to use for the initContainer image.
@@ -1284,7 +1284,7 @@ Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Enterprise ima
 
 **server.image.tag**
 
-- Type: string or number
+- Type: string
 - Default: _same as appVersion_
 
 Sets the tag for the Varnish Enterprise image. By default, this is set to the same application version as in the Varnish Enterprise Helm Chart. If the tag is set to non-exact versions (such as "latest"), make sure to set `server.image.pullPolicy` to "Always" to make sure the image is always updated.

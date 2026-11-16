@@ -1220,7 +1220,7 @@ Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image. T
 
 **server.image.tag**
 
-- Type: string or number
+- Type: string
 - Default: _same as appVersion_
 
 Sets the tag for the Varnish Cache image. By default, this is set to the same application version as in the Varnish Cache Helm Chart. If the tag is set to non-exact versions (such as "latest"), make sure to set `server.image.pullPolicy` to "Always" to make sure the image is always updated.

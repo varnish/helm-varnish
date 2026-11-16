@@ -686,7 +686,7 @@ server:
     # application version as in the Varnish Cache Helm Chart. If the tag is set to
     # non-exact versions (such as "latest"), make sure to set `server.image.pullPolicy` to
     # "Always" to make sure the image is always updated.
-    # Type: string or number
+    # Type: string
     tag: ""
 
   # An object for configuring

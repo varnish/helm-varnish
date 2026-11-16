@@ -121,7 +121,7 @@ rollingUpdate:
     [ "${actual}" == "ubuntu:24.04" ]
 }
 
-@test "Deployment/agent: initContainer keeps a numeric tag 0" {
+@test "Deployment/agent: initContainer keeps a numeric tag 0 when the schema is skipped" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
@@ -129,6 +129,7 @@ rollingUpdate:
         --set 'server.kind=Deployment' \
         --set 'server.agent.enabled=true' \
         --set 'server.secret=hello-varnish' \
+        --skip-schema-validation \
         --set 'global.initContainer.tag=0' \
         --namespace default \
         --show-only templates/deployment.yaml \
@@ -138,7 +139,7 @@ rollingUpdate:
     [ "${actual}" == "busybox:0" ]
 }
 
-@test "Deployment/agent: initContainer numeric tag renders without scientific notation" {
+@test "Deployment/agent: initContainer numeric tag renders without scientific notation when the schema is skipped" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
@@ -146,6 +147,7 @@ rollingUpdate:
         --set 'server.kind=Deployment' \
         --set 'server.agent.enabled=true' \
         --set 'server.secret=hello-varnish' \
+        --skip-schema-validation \
         --set-json 'global.initContainer.tag=20241129' \
         --namespace default \
         --show-only templates/deployment.yaml \
