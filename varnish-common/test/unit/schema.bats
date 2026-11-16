@@ -117,6 +117,15 @@ EOT
   [[ "$output" != *'e+07'* ]]
 }
 
+@test "Schema: rejects out-of-range string ports" {
+  schema_rejects "at '/server/http/port'" --set-string server.http.port=65536
+  schema_rejects "at '/server/http/port'" --set-string server.http.port=99999
+}
+
+@test "Schema: accepts in-range string ports" {
+  schema_accepts --set-string server.http.port=65535
+  schema_accepts --set-string server.http.port=0
+}
 
 @test "Schema: accepts null on keys without a default" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
