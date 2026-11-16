@@ -82,3 +82,13 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
 @test "Flavor: schema rejects shutdown_delay" {
     schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=shutdown_delay
 }
+
+@test "Flavor: docs do not mention Enterprise-only keys" {
+    cd "$(chart_dir)"
+    local docs=$(sed -n '/<!-- BEGIN GENERATED VALUES -->/,/<!-- END GENERATED VALUES -->/p' README.md)
+    [ -n "${docs}" ]
+    for key in '**cluster' '**server.mse' '**server.agent' '**server.initAgent' '**server.licenseSecret' '**server.baseUrl' 'shutdown_delay' 'natsServer'; do
+        echo "${key}" >&2
+        run ! grep -qF -- "${key}" <<<"${docs}"
+    done
+}
