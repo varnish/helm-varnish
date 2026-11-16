@@ -165,3 +165,53 @@ EOT
 @test "Schema: rejects unknown server.vcls keys" {
   schema_rejects "additional properties 'route' not allowed" --set server.vcls.route=x
 }
+
+@test "Schema: rejects a list server.labels" {
+  schema_rejects "at '/server/labels'" --set server.labels[0]=a
+}
+
+@test "Schema: accepts template-string labels" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  cat > "${values}" <<'EOT'
+server:
+  labels: "foo: {{ .Release.Name }}"
+EOT
+  schema_accepts -f "${values}"
+}
+
+@test "Schema: accepts arbitrary keys in passthrough objects" {
+  schema_accepts --set server.resources.ignore-this=1 --set server.securityContext.foo=bar
+}
+
+@test "Schema: probes can be disabled with false" {
+  schema_accepts --set server.varnishncsa.enabled=false \
+    --set server.readinessProbe=false --set server.livenessProbe=false --set server.startupProbe=false
+  run ! grep -qE '^ *(readiness|liveness|startup)Probe:' <<< "$output"
+}
+
+@test "Schema: rejects a true probe and a false httpGet" {
+  schema_rejects "at '/server/livenessProbe'" --set server.livenessProbe=true
+  schema_rejects "at '/server/livenessProbe/httpGet'" --set server.livenessProbe.httpGet=false
+}
+
+@test "Schema: affinity can be disabled with false" {
+  schema_accepts --set server.affinity=false
+  run ! grep -q 'affinity:' <<< "$output"
+  schema_rejects "at '/server/affinity'" --set server.affinity=true
+}
+
+@test "Schema: topologySpreadConstraints accepts a list or a template string, rejects an object" {
+  schema_accepts --set 'server.topologySpreadConstraints[0].maxSkew=1' \
+    --set 'server.topologySpreadConstraints[0].topologyKey=topology.kubernetes.io/zone' \
+    --set 'server.topologySpreadConstraints[0].whenUnsatisfiable=DoNotSchedule'
+  schema_accepts --set 'server.topologySpreadConstraints=- maxSkew: 1'
+  schema_rejects "at '/server/topologySpreadConstraints'" --set server.topologySpreadConstraints.maxSkew=1
+}
+
+@test "Schema: accepts an empty-string probe" {
+  schema_accepts --set server.livenessProbe=
+}
+
+@test "Schema: rejects a numeric probe" {
+  schema_rejects "at '/server/livenessProbe'" --set server.livenessProbe=5
+}
