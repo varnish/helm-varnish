@@ -28,16 +28,16 @@ chart=$(chart_name)
 @test "StatefulSet/strategy: cannot be enabled" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=StatefulSet' \
         --set 'server.strategy.type=RollingUpdate' \
         --set 'server.strategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.strategy' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.strategy' cannot be enabled"* ]]
 }
 
 @test "StatefulSet/updateStrategy: can be disabled" {

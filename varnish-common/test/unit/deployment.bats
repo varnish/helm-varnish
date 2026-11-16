@@ -77,16 +77,16 @@ rollingUpdate:
 @test "Deployment/updateStrategy: cannot be enabled" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=Deployment' \
         --set 'server.updateStrategy.type=RollingUpdate' \
         --set 'server.updateStrategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.updateStrategy' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.updateStrategy' cannot be enabled"* ]]
 }
 
 @test "Deployment/mse/persistence: cannot be enabled" {
@@ -125,17 +125,17 @@ rollingUpdate:
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=Deployment" \
         --set 'server.agent.enabled=true' \
         --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
 }
 
 @test "Deployment/agent/persistence: can be enabled with volume name" {
@@ -163,15 +163,15 @@ rollingUpdate:
 @test "Deployment/extraVolumeClaimTemplates: cannot be enabled" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=Deployment' \
         --set "server.extraVolumeClaimTemplates[0].metadata.name=hello-pv" \
         --set "server.extraVolumeClaimTemplates[0].spec.accessModes[0]=ReadWriteOnce" \
         --set "server.extraVolumeClaimTemplates[0].spec.resources.requests.storage=10Gi" \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.extraVolumeClaimTemplates' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.extraVolumeClaimTemplates' cannot be enabled"* ]]
 }
