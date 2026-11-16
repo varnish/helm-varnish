@@ -11,6 +11,7 @@ x-links:
   k8s-pod-v1-containers: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers
   k8s-pod-v1-pods: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
   k8s-statefulset-updatestrategy: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
+  varnish-cmdfile: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
   varnishd: https://varnish-cache.org/docs/6.0/reference/varnishd.html
 
 definitions:
@@ -594,6 +595,214 @@ properties:
         x-flavor: enterprise
       mse4:
         x-flavor: enterprise
+
+      secret:
+        type: string
+        default: ""
+        description: |
+          Sets the Varnish secret for accessing the varnishd admin interface. Either this value or `server.secretFrom` can be set. If unset, Varnish will generate one on every Pod start.
+
+      secretFrom:
+        type: [object, "null"]
+        additionalProperties: false
+        default: {}
+        x-since:
+          enterprise: v1.3.0
+        description: |
+          Sets the Varnish secret from an external Kubernetes secret for accessing the varnishd admin interface. Either this value or `server.secret` can be set.
+        x-examples:
+          - description: "For example:"
+            value:
+              name: secret-name
+              key: varnish-secret
+        properties:
+          name:
+            type: string
+            description: |
+              The name of the Kubernetes secret. Required when `server.secretFrom` is set.
+          key:
+            type: string
+            description: |
+              The key of the Kubernetes secret holding the Varnish secret. Required when `server.secretFrom` is set.
+
+      secretFile:
+        type: string
+        default: ""
+        description: |
+          Use the content of the given file path as Varnish secret. The file will be parsed as templated string. Will override `server.secret` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
+        x-examples:
+          - description: "For example:"
+            value: files/secret
+
+      vclConfigPath:
+        type: string
+        default: /etc/varnish/default.vcl
+        x-since:
+          enterprise: v1.2.0
+        description: |
+          A path to the main VCL configuration. This configuration affects the location where `server.vclConfig` will be saved to, as well as the `VARNISH_VCL_CONF` environment variable in the {product} container.
+
+      vclConfig:
+        type: string
+        x-type-label: template string
+        default: ""
+        description: |
+          A VCL configuration for {product}.
+        x-examples:
+          - description: "For example:"
+            value: |
+              vcl 4.1;
+
+              backend default {
+                .host = "www.example.com";
+                .port = "80";
+              }
+
+              sub vcl_backend_fetch {
+                set bereq.http.Host = "www.example.com";
+              }
+
+      vclConfigFile:
+        type: string
+        default: ""
+        description: |
+          Use the content of the given file path as VCL configuration. The file will be parsed as templated string. Will override `server.vclConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
+        x-examples:
+          - description: "For example:"
+            value: files/default.vcl
+
+      vclConfigs:
+        type: object
+        x-type-label: object of template strings
+        additionalProperties:
+          type: string
+        default: {}
+        x-since:
+          enterprise: v1.2.0
+        description: |
+          Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`.
+
+          If the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.
+        x-examples:
+          - description: "For example, with `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following configuration saves the file as `/etc/varnish/extra.vcl`:"
+            value:
+              extra.vcl: |
+                vcl 4.1;
+
+                backend default {
+                  .host = "127.0.0.1";
+                  .port = "8090";
+                }
+          - description: "With `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following is effectively the same as setting `server.vclConfig`, which must then be unset:"
+            value:
+              default.vcl: |
+                vcl 4.1;
+
+                backend default {
+                  .host = "127.0.0.1";
+                  .port = "8090";
+                }
+
+      vcls:
+        type: object
+        additionalProperties: false
+        x-since:
+          enterprise: v1.8.0
+        description: |
+          Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields. `server.cmdfileConfig` and `server.cmdfileConfigFile` must not be set when `server.vcls.routes` is non-empty.
+        properties:
+          routes:
+            type: [array, "null"]
+            x-type-label: array of objects
+            default: []
+            description: |
+              Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig`, `server.vclConfigFile`, `server.vclConfigs` and `server.cmdfileConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
+            x-examples:
+              - description: "For example:"
+                value:
+                  - name: foo-site
+                    hostnames:
+                      - foo.com
+                      - www.foo.com
+                    vclContent: |
+                      vcl 4.1;
+                      backend default { .host = "foo-backend"; }
+                  - vclContent: |
+                      vcl 4.1;
+                      backend default none;
+                      sub vcl_recv { return (synth(404)); }
+            items:
+              type: object
+              additionalProperties: false
+              required: [vclContent]
+              properties:
+                name:
+                  type: [string, "null"]
+                  description: |
+                    The name of the route, used as a VCL label, so it must start with a letter. Defaults to the first hostname, prefixed with `route_` if it does not start with a letter, or to `any` for a route without hostnames.
+                hostnames:
+                  type: [array, "null"]
+                  x-type-label: array of strings
+                  items:
+                    type: string
+                  description: |
+                    The hostnames to match for this route. A route without hostnames is a catch-all and must be the last one.
+                vclContent:
+                  type: string
+                  x-type-label: template string
+                  description: |
+                    The VCL of the route. Required.
+
+          includes:
+            type: object
+            x-type-label: object of template strings
+            propertyNames:
+              pattern: "^[-._a-zA-Z0-9/]+$"
+            additionalProperties:
+              type: string
+            default: {}
+            description: |
+              Shared VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs. Each key is a filename and each value a template string. Requires `server.vcls.routes`. Route VCLs include them with a relative path (`include "./helpers.vcl";`), as plain filenames are looked up in `vcl_path` instead.
+            x-examples:
+              - description: "For example, a route VCL can use the following with `include \"./helpers.vcl\";` and `call common_recv;`:"
+                value:
+                  helpers.vcl: |
+                    sub common_recv {
+                    }
+
+      cmdfileConfigPath:
+        type: string
+        default: /etc/varnish/cmds.cli
+        x-since:
+          enterprise: v1.2.0
+        description: |
+          A path to the [CLI command file][varnish-cmdfile]. This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the `-I` argument in the {product} container when `server.cmdfileConfig` is not empty.
+
+      cmdfileConfig:
+        type: string
+        x-type-label: template string
+        default: ""
+        x-since:
+          enterprise: v1.2.0
+        description: |
+          A [CLI command file][varnish-cmdfile] for running management commands when `varnishd` is launched. For example, when loading extra VCL in multi-tenancy mode. See also [External VCL ConfigMap](https://docs.varnish-software.com/varnish-helm/guides/using-external-vcl-configmap/#configmap-for-multiple-vcl-files).
+        x-examples:
+          - description: "For example:"
+            value: |
+              vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
+              vcl.label label_tenant1 vcl_tenant1
+              vcl.load vcl_main /etc/varnish/main.vcl
+              vcl.use vcl_main
+
+      cmdfileConfigFile:
+        type: string
+        default: ""
+        description: |
+          Use the content of the given file path as a cmdfile. The file will be parsed as templated string. Will override `server.cmdfileConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
+        x-examples:
+          - description: "For example:"
+            value: files/cmds.cli
+
       baseUrl:
         x-flavor: enterprise
 
