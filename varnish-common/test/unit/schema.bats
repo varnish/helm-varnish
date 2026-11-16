@@ -105,6 +105,19 @@ EOT
   [[ "$output" == *'image: "'*':7.6"'* ]]
 }
 
+@test "Schema: numeric image tags render without scientific notation" {
+  # numbers from values files and --set-json reach the templates as float64
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  printf 'server:\n  image:\n    tag: 20241129\n' > "${values}"
+  schema_accepts -f "${values}"
+  [[ "$output" == *'image: "'*':20241129"'* ]]
+
+  schema_accepts --set-json server.image.tag=20241129.5
+  [[ "$output" == *'image: "'*':20241129.5"'* ]]
+  [[ "$output" != *'e+07'* ]]
+}
+
+
 @test "Schema: accepts null on keys without a default" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   cat > "${values}" <<EOT

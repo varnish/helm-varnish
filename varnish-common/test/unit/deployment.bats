@@ -121,6 +121,40 @@ rollingUpdate:
     [ "${actual}" == "ubuntu:24.04" ]
 }
 
+@test "Deployment/agent: initContainer keeps a numeric tag 0" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'server.kind=Deployment' \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set 'global.initContainer.tag=0' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
+
+    [ "${actual}" == "busybox:0" ]
+}
+
+@test "Deployment/agent: initContainer numeric tag renders without scientific notation" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'server.kind=Deployment' \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set-json 'global.initContainer.tag=20241129' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
+
+    [ "${actual}" == "busybox:20241129" ]
+}
+
 @test "Deployment/agent/persistence: cannot be enabled" {
     skip_unless_enterprise
     cd "$(chart_dir)"

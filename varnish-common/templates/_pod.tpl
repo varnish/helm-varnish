@@ -1088,7 +1088,10 @@ initContainers:
 {{- end }}
 {{- if and (include "varnish-common.agentEnabled" .) .Values.server.initAgent.enabled }}
   - name: init-agent
-    image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ .Values.global.initContainer.tag | default "1.36"}}
+    {{- $initTag := .Values.global.initContainer.tag }}
+    {{- /* not "default": it would also replace a numeric tag 0 */}}
+    {{- if not (include "varnish-common.isSet" $initTag) }}{{ $initTag = "1.36" }}{{ end }}
+    image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ include "varnish-common.imageTag" $initTag }}
     command:
       - /bin/sh
       - -c

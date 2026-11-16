@@ -73,6 +73,15 @@ string. Unlike a plain "if", zero and false count as set.
 {{- end }}
 
 {{/*
+Renders an image tag as a string. Numbers from values files and --set-json
+are float64, which toString prints in scientific notation (2.0241129e+07);
+toJson prints them as plain decimals.
+*/}}
+{{- define "varnish-common.imageTag" -}}
+{{- if kindIs "float64" . }}{{ toJson . }}{{ else }}{{ toString . }}{{ end }}
+{{- end }}
+
+{{/*
 Sets up the Varnish image and its overrides (if any)
 */}}
 {{- define "varnish-common.image" }}
@@ -82,7 +91,7 @@ Sets up the Varnish image and its overrides (if any)
 {{- if eq (toString $tag) "-" }}{{ $tag = $base.tag }}{{ end }}
 {{- /* not "default": it would also replace a numeric tag 0 */}}
 {{- if or (kindIs "invalid" $tag) (eq (toString $tag) "") }}{{ $tag = .Chart.AppVersion }}{{ end }}
-image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{ $tag }}"
+image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{ include "varnish-common.imageTag" $tag }}"
 imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else }}{{ $image.pullPolicy }}{{ end }}
 {{- end }}
 
