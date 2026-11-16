@@ -1297,7 +1297,9 @@ server:
       - type: Resource
         resource:
           name: cpu
-          targetAverageUtilization: 80
+          target:
+            type: Utilization
+            averageUtilization: 80
 ```
 
 **server.pdb**

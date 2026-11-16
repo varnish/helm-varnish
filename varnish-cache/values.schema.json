@@ -1081,7 +1081,7 @@
               "default": "",
               "description": "Sets the [HorizontalPodAutoscaling][k8s-hpa] metrics. The value can be set as either an array or a template string.\n",
               "examples": [
-                "- type: Resource\n  resource:\n    name: cpu\n    targetAverageUtilization: 80\n"
+                "- type: Resource\n  resource:\n    name: cpu\n    target:\n      type: Utilization\n      averageUtilization: 80\n"
               ]
             }
           }
