@@ -1,6 +1,6 @@
 # The values of the varnish-cache and varnish-enterprise charts: a draft-07 JSON
 # Schema with x- keywords. generate.py turns it into each chart's
-# values.schema.json and values docs. See README.md next to this file.
+# values.schema.json, values.yaml and values docs. See README.md next to this file.
 $schema: http://json-schema.org/draft-07/schema#
 type: object
 additionalProperties: false
@@ -2006,6 +2006,8 @@ properties:
       networkPolicy:
         type: object
         additionalProperties: false
+        x-since:
+          enterprise: v1.9.0
         description: |
           An object for configuring the [NetworkPolicy][k8s-networkpolicy] of the {product} Pods.
         properties:
@@ -2787,6 +2789,8 @@ properties:
 
   extraManifests:
     x-docs-section: extraManifests
+    x-since:
+      enterprise: v1.2.1
     type: [array, "null"]
     default: []
     description: |

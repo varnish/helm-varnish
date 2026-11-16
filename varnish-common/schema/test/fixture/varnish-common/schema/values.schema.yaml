@@ -1,6 +1,5 @@
 # Generator test fixture: a minimal source exercising every x- keyword.
 $schema: http://json-schema.org/draft-07/schema#
-x-generate-values: true
 x-links:
   k8s-pod: https://kubernetes.io/docs/concepts/workloads/pods/
   unused-link: https://example.com/

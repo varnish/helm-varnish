@@ -1,8 +1,7 @@
 #!/usr/bin/env bats
 
 # Runs generate.py against a copy of the fixture tree in fixture/, which holds a
-# minimal source using every x- keyword and hand-written values.yaml files
-# matching its defaults.
+# minimal source using every x- keyword.
 
 bats_require_minimum_version 1.5.0
 
@@ -10,6 +9,7 @@ setup() {
   GENERATE="${BATS_TEST_DIRNAME}/../generate.py"
   ROOT="${BATS_TEST_TMPDIR}/root"
   cp -r "${BATS_TEST_DIRNAME}/fixture" "${ROOT}"
+  mkdir -p "${ROOT}/varnish-enterprise"
   SOURCE="${ROOT}/varnish-common/schema/values.schema.yaml"
 }
 
@@ -183,6 +183,9 @@ enterprise_docs() {
   # The long description is wrapped within 90 columns
   [ -z "$(awk 'length > 90' "${values}")" ]
   grep -qxF '# A second paragraph.' "${values}"
+  # Reference links become inline ones, as values.yaml has no link definitions
+  grep -qF '[Pod](https://kubernetes.io/docs/concepts/workloads/pods/)' "${values}"
+  run ! grep -qF '][' "${values}"
   grep -qzF $'# Overrides the name of the chart.' "${values}"
 
   # Type, Availability and Example, in that order, each example after its description
@@ -196,36 +199,4 @@ enterprise_docs() {
 
   # A multi-line default is a block scalar
   grep -qzF $'  script: |\n    line one\n    line two\n' "${values}"
-}
-
-@test "generate: --compare-values accepts matching values" {
-  generate --compare-values
-  [ "$status" -eq 0 ]
-  [ -z "$output" ]
-}
-
-@test "generate: --compare-values reports mismatches" {
-  yq -i '.a.mode = "y" | .a.extra = 1' "${ROOT}/varnish-enterprise/values.yaml"
-
-  generate --compare-values
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"varnish-enterprise/values.yaml: a.mode:"* ]]
-  [[ "$output" == *"varnish-enterprise/values.yaml: a.extra:"* ]]
-  [[ "$output" != *"varnish-cache/values.yaml"* ]]
-
-  # Restricted to a path
-  generate --compare-values global
-  [ "$status" -eq 0 ]
-  generate --compare-values a.mode
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"a.mode"* ]]
-  [[ "$output" != *"a.extra"* ]]
-}
-
-@test "generate: --compare-values reports defaults missing from values.yaml" {
-  yq -i 'del(.a.dir)' "${ROOT}/varnish-cache/values.yaml"
-
-  generate --compare-values
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"varnish-cache/values.yaml: a.dir:"* ]]
 }
