@@ -67,6 +67,23 @@ EOT
   schema_rejects "at '/global/imagePullSecrets'" --set global.imagePullSecrets=foo
 }
 
+@test "Schema: rejects non-object items in Kubernetes object arrays" {
+  schema_rejects "at '/server/extraVolumes/0'" --set server.extraVolumes[0]=foo
+  schema_rejects "at '/server/tolerations/0'" --set server.tolerations[0]=foo
+  schema_rejects "at '/server/topologySpreadConstraints/0'" --set-json 'server.topologySpreadConstraints=[null]'
+  schema_rejects "at '/server/extraEnvs/0'" --set server.extraEnvs[0]=foo
+}
+
+@test "Schema: rejects malformed global.imagePullSecrets items" {
+  schema_rejects "at '/global/imagePullSecrets/0'" --set global.imagePullSecrets[0]=regcred
+  schema_rejects "at '/global/imagePullSecrets/0/name'" --set global.imagePullSecrets[0].name=1
+}
+
+@test "Schema: accepts global.imagePullSecrets items with a name" {
+  schema_accepts --set global.imagePullSecrets[0].name=regcred
+  [[ "$output" == *'- name: regcred'* ]]
+}
+
 @test "Schema: rejects an unknown server.kind" {
   schema_rejects "at '/server/kind'" --set server.kind=Pod
 }

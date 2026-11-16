@@ -17,7 +17,10 @@
         "array",
         "string",
         "null"
-      ]
+      ],
+      "items": {
+        "type": "object"
+      }
     },
     "env": {
       "type": [
@@ -25,7 +28,10 @@
         "array",
         "string",
         "null"
-      ]
+      ],
+      "items": {
+        "type": "object"
+      }
     },
     "k8sObject": {
       "type": [
@@ -226,6 +232,14 @@
             "array",
             "null"
           ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
           "default": [],
           "description": "An array of objects that conforms to the Kubernetes [imagePullSecrets][k8s-pod-v1-containers] definition. When set, each item in an array must consist of an object with a key `name` referencing the Kubernetes secret.\n",
           "examples": [

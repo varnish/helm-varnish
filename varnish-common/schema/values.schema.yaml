@@ -41,9 +41,13 @@ definitions:
   arrayOrTemplate:
     x-type-label: array or template string
     type: [array, string, "null"]
+    items:
+      type: object
   env:
     x-type-label: array of objects, object, or template string
     type: [object, array, string, "null"]
+    items:
+      type: object
   k8sObject:
     x-type-label: object
     type: [object, "null"]
@@ -163,6 +167,11 @@ properties:
       imagePullSecrets:
         type: [array, "null"]
         x-type-label: array of objects
+        items:
+          type: object
+          properties:
+            name:
+              type: string
         default: []
         description: |
           An array of objects that conforms to the Kubernetes [imagePullSecrets][k8s-pod-v1-containers] definition. When set, each item in an array must consist of an object with a key `name` referencing the Kubernetes secret.

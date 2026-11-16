@@ -3280,6 +3280,7 @@ requests:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set-json 'server.topologySpreadConstraints=[null]' \
+        --skip-schema-validation \
         --namespace default \
         --show-only ${template} \
         . || true) 2>&1 |
