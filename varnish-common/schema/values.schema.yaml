@@ -174,7 +174,6 @@ properties:
       initContainer:
         x-flavor: enterprise
         type: object
-        additionalProperties: false
         description: |
           Overrides the default busybox initContainer image.
         properties:
@@ -292,7 +291,6 @@ properties:
       natsServer:
         x-flavor: enterprise
         type: object
-        additionalProperties: false
         description: |
           An object configuring Varnish Controller Agent access to NATS.
         properties:
@@ -304,7 +302,6 @@ properties:
 
           internal:
             type: object
-            additionalProperties: false
             properties:
               enabled:
                 $ref: "#/definitions/boolOrDash"
@@ -326,7 +323,6 @@ properties:
 
               passwordFrom:
                 type: object
-                additionalProperties: false
                 x-since:
                   enterprise: v1.3.0
                 description: |

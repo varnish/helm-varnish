@@ -31,6 +31,14 @@ ${name}:
   enabled: true
 global:
   parentOnly: x
+  initContainer:
+    parentOnly: x
+  natsServer:
+    parentOnly: x
+    internal:
+      parentOnly: x
+      passwordFrom:
+        parentOnly: x
 EOT
 
   run helm template p "${parent}" --namespace default

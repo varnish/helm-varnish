@@ -53,7 +53,7 @@ Text:
 
 1. Declare the key where it belongs, in values.yaml order. Mark Enterprise-only keys with `x-flavor: enterprise`.
 2. Type it from what the templates accept. Strings that the templates compare with `eq x ""` are `string` only. Include `null` only if the default is null, or the key has no default and the templates tolerate null. Strings evaluated with `tpl` never get a `pattern`. Reuse the shapes under `definitions` (ports are `#/definitions/port`, image tags are `[string, integer, number]`), and never put constraints next to a `$ref`: use `allOf: [{$ref: ...}, {...}]`.
-3. Close chart-owned objects with `additionalProperties: false`. Kubernetes passthroughs, `global`, `server.parameters` and filename-keyed maps stay open.
+3. Close chart-owned objects with `additionalProperties: false`. Kubernetes passthroughs, `global` and every object in it (the generator drops `additionalProperties: false` there), `server.parameters` and filename-keyed maps stay open.
 4. Set `default` (or `x-default`), or `x-values-example` for optional keys.
 5. Write the `description`, with `{product}` for the product name, and move examples to `x-examples`.
 6. Run `generate.py`, and commit the source with the generated files.

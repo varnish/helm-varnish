@@ -56,6 +56,21 @@ enterprise_docs() {
   [ "${actual}" == '"string"' ]
 }
 
+@test "generate: objects under global stay open" {
+  yq -i '.properties.global.properties.nested = {"type": "object", "additionalProperties": false, "description": "A nested global.", "properties": {"x": {"type": "string", "default": "x", "description": "A nested global field."}}}' "${SOURCE}"
+  generate
+  [ "$status" -eq 0 ]
+
+  local actual=$(jq -c '.properties.global.properties.nested.additionalProperties' "$(enterprise_schema)")
+  [ "${actual}" == 'null' ]
+
+  actual=$(jq -c '.properties.global.properties.nested.properties.x.type' "$(enterprise_schema)")
+  [ "${actual}" == '"string"' ]
+
+  actual=$(jq -c '.properties.a.additionalProperties' "$(enterprise_schema)")
+  [ "${actual}" == 'false' ]
+}
+
 @test "generate: cache schema drops enterprise-only enum values" {
   generate
   [ "$status" -eq 0 ]

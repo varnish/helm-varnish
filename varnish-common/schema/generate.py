@@ -206,14 +206,16 @@ def items_of(node, definitions):
 def schema_for(node, flavor, under_global=False, root=False):
     """Filters a schema node for the flavor and strips the x- keywords.
 
-    under_global is true for global and the nodes under it: global stays open
-    for parent charts, so other-flavor keys are left out there rather than
-    denied."""
+    under_global is true for global and the nodes under it: global and every
+    object in it stay open for parent charts, so other-flavor keys are left
+    out there rather than denied, and additionalProperties: false is dropped."""
     if not isinstance(node, dict):
         return node
     result = {}
     for key, value in node.items():
         if key.startswith("x-"):
+            continue
+        if under_global and key == "additionalProperties" and value is False:
             continue
         if key == "properties":
             properties = {}

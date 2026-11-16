@@ -238,7 +238,6 @@
         },
         "initContainer": {
           "type": "object",
-          "additionalProperties": false,
           "description": "Overrides the default busybox initContainer image.\n",
           "properties": {
             "image": {
@@ -322,7 +321,6 @@
         },
         "natsServer": {
           "type": "object",
-          "additionalProperties": false,
           "description": "An object configuring Varnish Controller Agent access to NATS.\n",
           "properties": {
             "externalAddress": {
@@ -332,7 +330,6 @@
             },
             "internal": {
               "type": "object",
-              "additionalProperties": false,
               "properties": {
                 "enabled": {
                   "$ref": "#/definitions/boolOrDash",
@@ -351,7 +348,6 @@
                 },
                 "passwordFrom": {
                   "type": "object",
-                  "additionalProperties": false,
                   "description": "Sets internal NATS password from an external secret. Internal NATS must be configured separately. See [Varnish Controller Helm Chart documentation](https://docs.varnish-software.com/varnish-helm/varnish-controller/configurations/) for more information.\n\nNote: if internal Varnish Controller is deployed on another namespace than the one Varnish Enterprise is deployed to, the `varnish-controller-credentials` secret needs to be manually copied from the Varnish Controller namespace.\n",
                   "properties": {
                     "name": {
