@@ -4,7 +4,6 @@ Sets up Pod annotations
 {{- define "varnish-common.podAnnotations" }}
 {{- $section := default "server" .section }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $mseConfig := include "varnish-common.mseConfig" . }}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
 {{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- $vclConfig := include "varnish-common.vclConfig" . }}
@@ -13,9 +12,6 @@ Sets up Pod annotations
 {{- $secretConfig := include "varnish-common.secretConfig" . }}
 {{- $extraManifests := .Values.extraManifests }}
 {{- $checksum := dict }}
-{{- if not (eq $mseConfig "") }}
-{{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-mse") (sha256sum $mseConfig)) $checksum) }}
-{{- end }}
 {{- if not (eq $mse4Config "") }}
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-mse4") (sha256sum $mse4Config)) $checksum) }}
 {{- end }}
@@ -171,11 +167,6 @@ volumes:
   secret:
     secretName: {{ .Values.server.licenseSecret }}
 {{- end}}
-{{- if not (eq (include "varnish-common.mseConfig" .) "") }}
-- name: {{ .Release.Name }}-config-mse
-  configMap:
-    name: {{ include "varnish-common.fullname" . }}-mse
-{{- end }}
 {{- if not (eq (include "varnish-common.mse4Config" .) "") }}
 - name: {{ .Release.Name }}-config-mse4
   configMap:
@@ -292,7 +283,6 @@ Declares the probe for Varnish pod
 Declares the Varnish container
 */}}
 {{- define "varnish-common.serverContainer" -}}
-{{- $mseConfig := include "varnish-common.mseConfig" . }}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
 {{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- $cmdfileConfig := include "varnish-common.cmdfileConfig" . }}
@@ -385,21 +375,10 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
 {{- end -}}
 {{/*
-    MSE
+    MSE4
 */}}
 {{- if include "varnish-common.isEnterprise" . }}
-{{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
-  {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
-{{- else if include "varnish-common.mseEnabled" . }}
-  {{- if and .Values.server.mse.memoryTarget (not (eq .Values.server.mse.memoryTarget "")) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse.memoryTarget)))}}
-  {{- end }}
-  {{- if (not (empty $mseConfig)) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-s" (print "mse,/etc/varnish/mse.conf")) }}
-  {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-s" "mse") }}
-  {{- end }}
-{{- else if .Values.server.mse4.enabled }}
+{{- if .Values.server.mse4.enabled }}
   {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
     {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse4.memoryTarget))) }}
   {{- end }}
@@ -409,7 +388,7 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs (list "-s" "mse4") }}
   {{- end }}
 {{- else }}
-{{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+{{- fail "MSE4 must be enabled: 'server.mse4.enabled'" }}
 {{- end -}}
 {{- end -}}
 {{/*
@@ -511,18 +490,7 @@ Composing the $varnishArgs list or arguments
           fieldPath: status.podIP
     {{- end }}
     {{- if include "varnish-common.isEnterprise" . }}
-    {{- if and (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) .Values.server.mse4.enabled }}
-    {{- fail "Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'" }}
-    {{- else if include "varnish-common.mseEnabled" . }}
-    {{- if and .Values.server.mse.memoryTarget (not (eq .Values.server.mse.memoryTarget "")) }}
-    - name: MSE_MEMORY_TARGET
-      value: {{ .Values.server.mse.memoryTarget | quote }}
-    {{- end }}
-    {{- if (not (empty $mseConfig)) }}
-    - name: MSE_CONFIG
-      value: /etc/varnish/mse.conf
-    {{- end }}
-    {{- else if .Values.server.mse4.enabled }}
+    {{- if .Values.server.mse4.enabled }}
     {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
     - name: MSE_MEMORY_TARGET
       value: {{ .Values.server.mse4.memoryTarget | quote }}
@@ -535,7 +503,7 @@ Composing the $varnishArgs list or arguments
       value: "mse4"
     {{- end }}
     {{- else }}
-    {{- fail "Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'" }}
+    {{- fail "MSE4 must be enabled: 'server.mse4.enabled'" }}
     {{- end }}
     {{- end }}
 
@@ -582,11 +550,6 @@ Composing the $varnishArgs list or arguments
       readOnly: true
       subPath: varnish-enterprise.lic
     {{- end}}
-    {{- if not (eq (include "varnish-common.mseConfig" .) "") }}
-    - name: {{ .Release.Name }}-config-mse
-      mountPath: /etc/varnish/mse.conf
-      subPath: mse.conf
-    {{- end }}
     {{- if not (eq (include "varnish-common.mse4Config" .) "") }}
     - name: {{ .Release.Name }}-config-mse4
       mountPath: /etc/varnish/mse4.conf
@@ -649,10 +612,6 @@ Composing the $varnishArgs list or arguments
       mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
       subPath: cmds.cli
     {{- end }}
-    {{- end }}
-    {{- if and (eq .Values.server.kind "StatefulSet") (and (include "varnish-common.mseEnabled" .) .Values.server.mse.persistence.enabled) }}
-    - name: {{ .Release.Name }}-mse
-      mountPath: {{ .Values.server.mse.persistence.mountPath }}
     {{- end }}
     {{- if and (eq .Values.server.kind "StatefulSet") (and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}
     - name: {{ .Release.Name }}-mse4
@@ -1052,25 +1011,9 @@ Declares the Varnish extra container
 Declares the Varnish init containers
 */}}
 {{- define "varnish-common.initContainers" -}}
-{{- $msePersistenceEnabled := and (include "varnish-common.mseEnabled" .) .Values.server.mse.persistence.enabled }}
 {{- $mse4PersistenceEnabled := and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled }}
-{{- if or (and (include "varnish-common.agentEnabled" .) .Values.server.initAgent.enabled) .Values.server.extraInitContainers $msePersistenceEnabled $mse4PersistenceEnabled }}
+{{- if or (and (include "varnish-common.agentEnabled" .) .Values.server.initAgent.enabled) .Values.server.extraInitContainers $mse4PersistenceEnabled }}
 initContainers:
-{{- if $msePersistenceEnabled }}
-  - name: mse-config
-    {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
-    command:
-     - /bin/busybox
-     - sh
-     - -c
-     - mkfs.mse -c /etc/varnish/mse.conf || mkfs.mse -c /etc/varnish/mse.conf -r
-    volumeMounts:
-     - name: {{ .Release.Name }}-mse
-       mountPath: {{ .Values.server.mse.persistence.mountPath }}
-     - name: {{ .Release.Name }}-config-mse
-       mountPath: /etc/varnish/mse.conf
-       subPath: mse.conf
-{{- end }}
 {{- if $mse4PersistenceEnabled }}
   - name: mse4-config
     {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}

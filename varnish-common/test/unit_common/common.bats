@@ -3328,177 +3328,27 @@ podAntiAffinity:
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"app.kubernetes.io/name":"'"${chart}"'","app.kubernetes.io/instance":"release-name"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
 
-@test "${kind}/mse/memoryTarget: can be configured" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.mse.memoryTarget=80%' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command[] | select(match("memory_target")) | split("=")[1]' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == "80%" ]
-}
-
-@test "${kind}/mse/memoryTarget: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command[] | select(match("memory_target")) | split("=")[1]' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == "" ]
-}
-
-@test "${kind}/mse/config: can be configured" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local mseConfig='
-env: {
-  id = "env";
-  memcache_size = "auto";
-  books = ( {
-    id = "book1";
-    directory = "{{ .Values.server.mse.persistence.mountPath }}/book1";
-    database_size = "1G";
-    stores = ( {
-      id = "store";
-      filename = "{{ .Values.server.mse.persistence.mountPath }}/store1.dat";
-      size = "9G";
-    } );
-  } );
-};'
-
-    local expectedMseConfig='
-env: {
-  id = "env";
-  memcache_size = "auto";
-  books = ( {
-    id = "book1";
-    directory = "var/lib/mse/book1";
-    database_size = "1G";
-    stores = ( {
-      id = "store";
-      filename = "/var/lib/mse/store1.dat";
-      size = "9G";
-    } );
-  } );
-};'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.mse.config=${mseConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-mse"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '743d1704f0c1d9c5dcbadb6ecf463947ef37f1e8c3db0e58ac150ecd5a1a74a8' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-mse","configMap":{"name":"release-name-'"${chart}"'-mse"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[ index("-s") + 1 ] | split(",")[1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/mse.conf" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-mse","mountPath":"/etc/varnish/mse.conf","subPath":"mse.conf"}' ]
-}
-
-@test "${kind}/mse/config: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-mse"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'null' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[ index("-s") + 1 ] | split(",")[1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "null" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-}
-
-@test "${kind}/mse/config: cannot be disabled" {
+@test "${kind}/mse4/config: cannot be disabled" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     run helm template \
         --set "server.kind=${kind}" \
-        --set 'server.mse.enabled=false' \
+        --set 'server.mse4.enabled=false' \
         --namespace default \
         --show-only ${template} \
         .
     echo "${output}" >&2
     [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
+    [[ "${output}" == *"MSE4 must be enabled: 'server.mse4.enabled'"* ]]
 }
 
-@test "${kind}/mse/config: can be disabled when mse4 is enabled" {
+@test "${kind}/mse4/config: enabled by default" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.mse.enabled=false' \
-        --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -3512,44 +3362,6 @@ env: {
             tee -a /dev/stderr)
 
     [ "${actual}" == "mse4" ]
-}
-
-@test "${kind}/mse4/config: can be enabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.mse4.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-             .command' |
-            jq -r -c '.[ index("-s") + 1 ] | split(",")[0]' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == "mse4" ]
-}
-
-@test "${kind}/mse4/config: cannot be enabled when mse is enabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.mse.enabled=true' \
-        --set 'server.mse4.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
 }
 
 @test "${kind}/mse4/memoryTarget: can be configured" {

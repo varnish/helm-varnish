@@ -91,18 +91,18 @@ rollingUpdate:
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
 }
 
-@test "DaemonSet/mse/persistence: cannot be enabled" {
+@test "DaemonSet/mse4/persistence: cannot be enabled" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     run --separate-stderr helm template \
         --set 'server.kind=DaemonSet' \
-        --set 'server.mse.persistence.enabled=true' \
+        --set 'server.mse4.persistence.enabled=true' \
         --namespace default \
         --show-only templates/daemonset.yaml \
         .
     [ "$status" -ne 0 ]
-    [[ "$stderr" == *"'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'"* ]]
+    [[ "$stderr" == *"'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'"* ]]
 }
 
 @test "DaemonSet/agent/persistence: cannot be enabled" {

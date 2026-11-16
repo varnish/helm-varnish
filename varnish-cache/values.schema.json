@@ -730,10 +730,6 @@
             "- name: {{ .Release.Name }}-local-data\n  hostPath:\n    path: /data\n    type: Directory\n"
           ]
         },
-        "mse": {
-          "type": "null",
-          "description": "Varnish Enterprise only."
-        },
         "mse4": {
           "type": "null",
           "description": "Varnish Enterprise only."

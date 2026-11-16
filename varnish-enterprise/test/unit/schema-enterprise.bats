@@ -19,13 +19,12 @@ load _helpers
   schema_rejects "additional properties 'licenseSecret' not allowed" --set server.agent.licenseSecret=x
 }
 
-@test "Schema: rejects a numeric mse storageSize" {
-  schema_rejects "at '/server/mse/persistence/storageSize'" --set server.mse.persistence.storageSize=10
+@test "Schema: rejects a numeric mse4 storageSize" {
+  schema_rejects "at '/server/mse4/persistence/storageSize'" --set server.mse4.persistence.storageSize=10
 }
 
-@test "Schema: mse.enabled accepts '-' only as a string" {
-  schema_accepts --set server.mse.enabled=-
-  schema_rejects "at '/server/mse/enabled'" --set server.mse.enabled=yes
+@test "Schema: rejects the removed MSE3 server.mse key" {
+  schema_rejects "additional properties 'mse' not allowed" --set server.mse.enabled=true
 }
 
 @test "Schema: rejects unknown cluster keys" {

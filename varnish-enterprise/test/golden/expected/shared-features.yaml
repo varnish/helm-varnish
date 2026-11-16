@@ -116,6 +116,8 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           env:
+            - name: VARNISH_STORAGE_BACKEND
+              value: "mse4"
             - name: VARNISH_TLS_CFG
               value: /etc/varnish/tls.conf
             - name: VARNISH_WORKDIR
@@ -144,7 +146,7 @@ spec:
             - -a
             - http=0.0.0.0:6081
             - -s
-            - mse
+            - mse4
             - -A
             - /etc/varnish/tls.conf
           volumeMounts:

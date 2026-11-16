@@ -15,7 +15,7 @@ server:
         port = "6443"
       }
       pem-file = "/etc/varnish/certs/example.pem"
-  mse:
+  mse4:
     enabled: true
     persistence:
       enabled: true

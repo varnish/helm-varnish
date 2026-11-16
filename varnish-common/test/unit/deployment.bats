@@ -89,18 +89,18 @@ rollingUpdate:
     [[ "${output}" == *"'server.updateStrategy' cannot be enabled"* ]]
 }
 
-@test "Deployment/mse/persistence: cannot be enabled" {
+@test "Deployment/mse4/persistence: cannot be enabled" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     run --separate-stderr helm template \
         --set 'server.kind=Deployment' \
-        --set 'server.mse.persistence.enabled=true' \
+        --set 'server.mse4.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
         .
     [ "$status" -ne 0 ]
-    [[ "$stderr" == *"'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'"* ]]
+    [[ "$stderr" == *"'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'"* ]]
 }
 
 @test "Deployment/agent: test initContainer image and tag" {
