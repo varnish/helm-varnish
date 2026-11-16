@@ -756,14 +756,14 @@ Sets the default Time To Live (in seconds) for a cached object.
 
 **server.minThreads**
 
-- Type: number or string
+- Type: number
 - Default: `50`
 
 Sets the minimum number of worker threads in each pool. See also [varnishd documentation][varnishd].
 
 **server.maxThreads**
 
-- Type: number or string
+- Type: number
 - Default: `1000`
 
 Sets the maximum number of worker threads in each pool. See also [varnishd documentation][varnishd].

@@ -413,12 +413,12 @@ server:
 
   # Sets the minimum number of worker threads in each pool. See also [varnishd
   # documentation](https://varnish-cache.org/docs/6.0/reference/varnishd.html).
-  # Type: number or string
+  # Type: number
   minThreads: 50
 
   # Sets the maximum number of worker threads in each pool. See also [varnishd
   # documentation](https://varnish-cache.org/docs/6.0/reference/varnishd.html).
-  # Type: number or string
+  # Type: number
   maxThreads: 1000
 
   # Sets the number of seconds after which idle threads are destroyed.
