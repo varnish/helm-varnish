@@ -3988,6 +3988,7 @@ env: {
 }
 
 @test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown shutdown_delay seconds" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -6344,6 +6345,35 @@ release-namespace: to-be-override
             tee -a /dev/stderr)
 
     [ "${actual}" == "localhost/${chart}-ncsa:ncsa-latest" ]
+}
+
+@test "${kind}/varnishncsa/image: numeric tag 0 is kept" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.image.repository=localhost/${chart}" \
+        --set "server.image.tag=0" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .image' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == "localhost/${chart}:0" ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .image' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == "localhost/${chart}:0" ]
 }
 
 @test "${kind}/varnishncsa/startupProbe: not configured by default" {

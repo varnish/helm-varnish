@@ -78,7 +78,11 @@ Sets up the Varnish image and its overrides (if any)
 {{- define "varnish-common.image" }}
 {{- $base := .base | default dict }}
 {{- $image := .image | default dict }}
-image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{- if eq $image.tag "-" }}{{ default .Chart.AppVersion $base.tag }}{{ else }}{{ default $.Chart.AppVersion $image.tag }}{{ end }}"
+{{- $tag := $image.tag }}
+{{- if eq (toString $tag) "-" }}{{ $tag = $base.tag }}{{ end }}
+{{- /* not "default": it would also replace a numeric tag 0 */}}
+{{- if or (kindIs "invalid" $tag) (eq (toString $tag) "") }}{{ $tag = .Chart.AppVersion }}{{ end }}
+image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{ $tag }}"
 imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else }}{{ $image.pullPolicy }}{{ end }}
 {{- end }}
 

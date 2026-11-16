@@ -113,6 +113,15 @@ enterprise_docs() {
   run ! grep -qF '**enabled**' "$(cache_docs)"
 }
 
+@test "generate: docs list the flavor's enum values in the type" {
+  generate
+  [ "$status" -eq 0 ]
+
+  # grep -F would take each line as a separate pattern
+  [[ "$(cat "$(cache_docs)")" == *$'**a.mode**\n\n- Type: string, one of `x`\n'* ]]
+  [[ "$(cat "$(enterprise_docs)")" == *$'**a.mode**\n\n- Type: string, one of `x` or `y`\n'* ]]
+}
+
 @test "generate: --check detects drift" {
   generate
   [ "$status" -eq 0 ]
