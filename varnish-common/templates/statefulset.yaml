@@ -42,6 +42,7 @@ spec:
       {{- include "varnish-common.nodeSelector" . | indent 6 }}
       {{- include "varnish-common.affinity" . | indent 6 }}
       {{- include "varnish-common.tolerations" . | indent 6 }}
+      {{- include "varnish-common.topologySpreadConstraints" . | indent 6 }}
       {{- include "varnish-common.terminationGracePeriodSeconds" . | indent 6 }}
   {{- $msePersistenceEnabled := (and (include "varnish-common.mseEnabled" .) .Values.server.mse.persistence.enabled) }}
   {{- $mse4PersistenceEnabled := (and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}

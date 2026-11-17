@@ -52,5 +52,6 @@ spec:
       {{- include "varnish-common.nodeSelector" . | indent 6 }}
       {{- include "varnish-common.affinity" . | indent 6 }}
       {{- include "varnish-common.tolerations" . | indent 6 }}
+      {{- include "varnish-common.topologySpreadConstraints" . | indent 6 }}
       {{- include "varnish-common.terminationGracePeriodSeconds" . | indent 6 }}
 {{- end }}
