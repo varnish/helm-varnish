@@ -10,7 +10,6 @@ on:
         type: choice
         options:
           - varnish-cache
-          - orca-chart
           - varnish-enterprise
           - varnish-controller
           - varnish-controller-router
@@ -66,7 +65,6 @@ jobs:
       matrix:
         chart:
           - varnish-cache
-          - orca-chart
           - varnish-enterprise
           - varnish-controller
           - varnish-controller-router

@@ -29,11 +29,6 @@ jobs:
         # varnish-cache and varnish-enterprise share their templates and must
         # keep the same version (checked in ci.yml).
         group:
-          - name: 'orca-chart'
-            charts:
-              - chart_dir: 'orca-chart'
-                docker_image: 'varnish/orca:latest'
-                version_command: 'varnish-supervisor --version | head -n 1'
           - name: 'varnish'
             charts:
               - chart_dir: 'varnish-enterprise'
