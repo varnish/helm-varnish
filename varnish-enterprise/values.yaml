@@ -1175,6 +1175,22 @@ server:
               app.kubernetes.io/instance: {{ .Release.Name }}
           topologyKey: kubernetes.io/hostname
 
+  # A list that conforms to the Kubernetes [topologySpreadConstraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
+  # definition of a Pod. This configuration is used to spread Pods evenly across zones, nodes
+  # or other topology domains. A constraint without a labelSelector (or with a null one)
+  # selects the Pods of this release. The value can be set as either an array or a template string.
+  # With a Deployment, set matchLabelKeys to [pod-template-hash] (Kubernetes 1.27+) so that
+  # a rolling update spreads the new Pods on their own instead of together with the old ones.
+  # Type: array or template string
+  # Example:
+  #   topologySpreadConstraints:
+  #     - maxSkew: 1
+  #       topologyKey: topology.kubernetes.io/zone
+  #       whenUnsatisfiable: DoNotSchedule
+  #       matchLabelKeys:
+  #         - pod-template-hash
+  topologySpreadConstraints: []
+
   # Configures a [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
   # for the Varnish Enterprise Pods.
   # Availability: v1.9.0

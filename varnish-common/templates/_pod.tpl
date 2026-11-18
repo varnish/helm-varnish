@@ -99,6 +99,38 @@ tolerations:
 {{- end }}
 
 {{/*
+Sets up Pod topology spread constraints depending on whether a YAML list or a
+string is given. A constraint without a labelSelector counts no pods and so
+spreads nothing, so a missing or null one defaults to the pods of this release.
+*/}}
+{{- define "varnish-common.topologySpreadConstraints" -}}
+{{- $constraints := .Values.server.topologySpreadConstraints | default list }}
+{{- if kindIs "string" $constraints }}
+{{- $constraints = tpl $constraints . | fromYamlArray }}
+{{- end }}
+{{- if not (kindIs "slice" $constraints) }}
+{{- fail (printf "'server.topologySpreadConstraints' must be a list, got: %v" $constraints) }}
+{{- end }}
+{{- $out := list }}
+{{- range $constraints }}
+{{- /* fromYamlArray reports a parse error as a string entry, so this also
+surfaces YAML errors from the template string form. */}}
+{{- if not (kindIs "map" .) }}
+{{- fail (printf "'server.topologySpreadConstraints' entries must be objects, got: %v" .) }}
+{{- end }}
+{{- $constraint := deepCopy . }}
+{{- if kindIs "invalid" (index $constraint "labelSelector") }}
+{{- $_ := set $constraint "labelSelector" (dict "matchLabels" (include "varnish-common.selectorLabels" $ | fromYaml)) }}
+{{- end }}
+{{- $out = append $out $constraint }}
+{{- end }}
+{{- if $out }}
+topologySpreadConstraints:
+  {{- toYaml $out | nindent 2 }}
+{{- end }}
+{{- end }}
+
+{{/*
 Sets up terminationGracePeriodSeconds based on whether there's an explicit
 terminationGracePeriodSeconds, or 60 seconds after delayedHaltSeconds if
 present.

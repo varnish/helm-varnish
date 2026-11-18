@@ -3130,6 +3130,151 @@ requests:
     [ "${actual}" == 'null' ]
 }
 
+@test "${kind}/topologySpreadConstraints: can be configured" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.topologySpreadConstraints[0].maxSkew=1' \
+        --set 'server.topologySpreadConstraints[0].topologyKey=topology.kubernetes.io/zone' \
+        --set 'server.topologySpreadConstraints[0].whenUnsatisfiable=DoNotSchedule' \
+        --set 'server.topologySpreadConstraints[0].labelSelector.matchLabels.tier=edge' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec.topologySpreadConstraints' | tee -a /dev/stderr)
+
+    [ "${actual}" == '[{"labelSelector":{"matchLabels":{"tier":"edge"}},"maxSkew":1,"topologyKey":"topology.kubernetes.io/zone","whenUnsatisfiable":"DoNotSchedule"}]' ]
+}
+
+@test "${kind}/topologySpreadConstraints: selects the release's pods by default" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.topologySpreadConstraints[0].maxSkew=1' \
+        --set 'server.topologySpreadConstraints[0].topologyKey=topology.kubernetes.io/zone' \
+        --set 'server.topologySpreadConstraints[0].whenUnsatisfiable=DoNotSchedule' \
+        --set 'server.topologySpreadConstraints[1].maxSkew=2' \
+        --set 'server.topologySpreadConstraints[1].topologyKey=kubernetes.io/hostname' \
+        --set 'server.topologySpreadConstraints[1].whenUnsatisfiable=ScheduleAnyway' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '[.spec.template.spec.topologySpreadConstraints[].labelSelector]' | tee -a /dev/stderr)
+
+    [ "${actual}" == '[{"matchLabels":{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'"}},{"matchLabels":{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'"}}]' ]
+}
+
+@test "${kind}/topologySpreadConstraints: defaults a null labelSelector to the release's pods" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set-json 'server.topologySpreadConstraints=[{"maxSkew":1,"topologyKey":"topology.kubernetes.io/zone","whenUnsatisfiable":"DoNotSchedule","labelSelector":null}]' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '[.spec.template.spec.topologySpreadConstraints[].labelSelector]' | tee -a /dev/stderr)
+
+    [ "${actual}" == '[{"matchLabels":{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'"}}]' ]
+}
+
+@test "${kind}/topologySpreadConstraints: can be configured as templated string" {
+    cd "$(chart_dir)"
+
+    local topologySpreadConstraints='
+- maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: DoNotSchedule
+  labelSelector:
+    matchLabels:
+      tier: {{ .Release.Name }}-edge
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
+'
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.topologySpreadConstraints=${topologySpreadConstraints}" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec.topologySpreadConstraints' | tee -a /dev/stderr)
+
+    [ "${actual}" == '[{"labelSelector":{"matchLabels":{"tier":"release-name-edge"}},"maxSkew":1,"topologyKey":"topology.kubernetes.io/zone","whenUnsatisfiable":"DoNotSchedule"},{"labelSelector":{"matchLabels":{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'"}},"maxSkew":1,"topologyKey":"kubernetes.io/hostname","whenUnsatisfiable":"ScheduleAnyway"}]' ]
+}
+
+@test "${kind}/topologySpreadConstraints: not configured when the templated string renders empty" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set-json 'server.topologySpreadConstraints="{{- if .Values.server.hostNetwork }}- maxSkew: 1{{- end }}"' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec | has("topologySpreadConstraints")' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'false' ]
+}
+
+@test "${kind}/topologySpreadConstraints: not configured by default" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec.topologySpreadConstraints' | tee -a /dev/stderr)
+
+    [ "${actual}" == 'null' ]
+}
+
+@test "${kind}/topologySpreadConstraints: fails on a templated string that is not valid YAML" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.topologySpreadConstraints=- maxSkew: [' \
+        --namespace default \
+        --show-only ${template} \
+        . || true) 2>&1 |
+        tee -a /dev/stderr)
+
+    [[ "${actual}" == *"'server.topologySpreadConstraints' entries must be objects, got: error converting YAML to JSON"* ]]
+}
+
+@test "${kind}/topologySpreadConstraints: fails on a map instead of a list" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set-json 'server.topologySpreadConstraints={"maxSkew":1}' \
+        --namespace default \
+        --show-only ${template} \
+        . || true) 2>&1 |
+        tee -a /dev/stderr)
+
+    [[ "${actual}" == *"'server.topologySpreadConstraints' must be a list"* ]]
+}
+
+@test "${kind}/topologySpreadConstraints: fails on a null entry" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set-json 'server.topologySpreadConstraints=[null]' \
+        --namespace default \
+        --show-only ${template} \
+        . || true) 2>&1 |
+        tee -a /dev/stderr)
+
+    [[ "${actual}" == *"'server.topologySpreadConstraints' entries must be objects, got: <nil>"* ]]
+}
+
 @test "${kind}/affinity: can be configured" {
     cd "$(chart_dir)"
 

@@ -1128,6 +1128,26 @@ An object that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definit
 
 This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Cache Pods are always run in a different node. To disable this behavior, set to empty string (""). The value can be set as either an object or a template string.
 
+**server.topologySpreadConstraints**
+
+- Type: array or template string
+
+A list that conforms to the Kubernetes [topologySpreadConstraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) definition of a Pod. This configuration is used to spread Pods evenly across zones, nodes or other topology domains. A constraint without a `labelSelector` (or with `labelSelector: null`) selects the Pods of this release. The value can be set as either an array or a template string.
+
+For example, to spread Pods evenly across availability zones:
+
+```yaml
+server:
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      matchLabelKeys:
+        - pod-template-hash
+```
+
+`matchLabelKeys: [pod-template-hash]` (Kubernetes 1.27+) is recommended with `server.kind=Deployment`. Without it, the Pods of the old and the new ReplicaSet are counted together during a rolling update, and the new Pods can end up unevenly spread once the old ones are gone.
+
 **server.delayedShutdown.method**
 
 - Type: string, one of `none`, `sleep`, or `mempool`
