@@ -179,7 +179,7 @@ server:
 
 #### Values validation
 
-Values are validated against `values.schema.json` when you run `helm install`, `upgrade`, `template` or `lint`. Unknown keys and values of the wrong type are rejected, and the error names the offending path, for example `at '/server': additional properties 'foo' not allowed`. Pass `--skip-schema-validation` to skip this check; the checks done by the chart templates still apply.
+Values are validated against `values.schema.json` when you run `helm install`, `upgrade`, `template` or `lint`. Unknown keys and values of the wrong type are rejected, and the error names the offending path, for example `at '/server': additional properties 'foo' not allowed`. Pass `--skip-schema-validation` (Helm 3.16 or newer) to skip this check; the checks done by the chart templates still apply. With older Helm versions, fix the values instead.
 
 #### Using as a subchart
 
