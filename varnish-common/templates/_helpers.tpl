@@ -73,9 +73,9 @@ string. Unlike a plain "if", zero and false count as set.
 {{- end }}
 
 {{/*
-Renders an image tag as a string. Numbers from values files and --set-json
-are float64, which toString prints in scientific notation (2.0241129e+07);
-toJson prints them as plain decimals.
+Renders an image tag as a string. The schema only accepts string tags, but
+renders with --skip-schema-validation can pass float64 numbers, which
+toString prints in scientific notation (2.0241129e+07); toJson does not.
 */}}
 {{- define "varnish-common.imageTag" -}}
 {{- if kindIs "float64" . }}{{ toJson . }}{{ else }}{{ toString . }}{{ end }}
