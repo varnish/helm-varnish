@@ -132,14 +132,14 @@ topologySpreadConstraints:
 
 {{/*
 Sets up terminationGracePeriodSeconds based on whether there's an explicit
-terminationGracePeriodSeconds, or 60 seconds after delayedHaltSeconds if
-present.
+terminationGracePeriodSeconds, or 60 seconds after delayedHaltSeconds
+(rounded up) if present.
 */}}
 {{- define "varnish-common.terminationGracePeriodSeconds" -}}
 {{- if not (empty .Values.server.terminationGracePeriodSeconds) }}
 terminationGracePeriodSeconds: {{ .Values.server.terminationGracePeriodSeconds }}
 {{- else if not (empty .Values.server.delayedHaltSeconds) }}
-terminationGracePeriodSeconds: {{ add .Values.server.delayedHaltSeconds 60 }}
+terminationGracePeriodSeconds: {{ add (ceil .Values.server.delayedHaltSeconds | int64) 60 }}
 {{- end }}
 {{- end }}
 

@@ -189,9 +189,18 @@ EOT
   schema_accepts -f "${values}"
 }
 
-@test "Schema: rejects a fractional delayedHaltSeconds string" {
-  # the template adds it to the grace period with toInt64, which turns "120.5" into 0
-  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=120.5
+@test "Schema: accepts a fractional delayedHaltSeconds string, rounding the grace period up" {
+  # --set keeps 120.5 as a string
+  schema_accepts --set server.delayedHaltSeconds=120.5
+  [[ "$output" == *'command: ["/bin/sleep", "120.5"]'* ]]
+  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
+  schema_accepts --set-json server.delayedHaltSeconds=120.5
+  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
+}
+
+@test "Schema: rejects a nonnumeric delayedHaltSeconds string" {
+  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=soon
+  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=1.
 }
 
 @test "Schema: accepts a null nodePort on an extra service" {
