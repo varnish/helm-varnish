@@ -194,6 +194,13 @@ EOT
   schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=120.5
 }
 
+@test "Schema: accepts a null nodePort on an extra service" {
+  local values="${BATS_TEST_TMPDIR}/values.yaml"
+  printf 'server:\n  service:\n    extraServices:\n      - name: foo\n        targetPort: 8080\n        port: 8080\n        nodePort: null\n' > "${values}"
+  schema_accepts -f "${values}"
+  [[ "$output" != *"nodePort"* ]]
+}
+
 @test "Schema: still rejects fractional thread counts" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   printf 'server:\n  minThreads: 1.5\n' > "${values}"

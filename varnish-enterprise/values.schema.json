@@ -1525,7 +1525,14 @@
                     "description": "Sets the port to expose this extra service. Required unless the Service is headless (`server.service.clusterIP` set to \"None\"), in which case `targetPort` is used instead.\n"
                   },
                   "nodePort": {
-                    "$ref": "#/definitions/port",
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/port"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
                     "description": "Sets the port to expose this extra service on the node itself. Only applicable when `server.service.type` is set to NodePort. This value must be within the Kubernetes service-node-port-range (default: 30000-32767).\n"
                   }
                 }
