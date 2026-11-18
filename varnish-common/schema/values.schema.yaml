@@ -68,9 +68,13 @@ definitions:
     x-type-label: number or string
     anyOf:
       - $ref: "#/definitions/port"
+      # a name needs a letter: all-digit strings are port numbers, and must
+      # stay within the port range above
       - type: string
-        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
         maxLength: 15
+        allOf:
+          - pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+          - pattern: "[a-z]"
   nonNegInt:
     x-type-label: number
     anyOf:

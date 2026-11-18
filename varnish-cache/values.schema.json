@@ -73,8 +73,15 @@
         },
         {
           "type": "string",
-          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-          "maxLength": 15
+          "maxLength": 15,
+          "allOf": [
+            {
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+            },
+            {
+              "pattern": "[a-z]"
+            }
+          ]
         }
       ]
     },

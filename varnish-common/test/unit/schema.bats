@@ -339,6 +339,12 @@ EOT
     --set 'server.service.extraServices[0].port=8088'
   schema_rejects "at '/server/service/extraServices/0/targetPort'" \
     --set 'server.service.extraServices[0].name=proxy' --set 'server.service.extraServices[0].targetPort=Extra_Proxy'
+  # an all-digit string is a port number, not a name, so the port range applies
+  schema_rejects "at '/server/service/extraServices/0/targetPort'" \
+    --set 'server.service.extraServices[0].name=proxy' --set-string 'server.service.extraServices[0].targetPort=65536' \
+    --set 'server.service.extraServices[0].port=8088'
+  schema_accepts --set 'server.service.extraServices[0].name=proxy' --set-string 'server.service.extraServices[0].targetPort=8088' \
+    --set 'server.service.extraServices[0].port=8088'
 }
 
 @test "Schema: accepts a template-string autoscaling.behavior" {
