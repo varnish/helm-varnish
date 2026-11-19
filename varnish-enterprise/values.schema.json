@@ -809,8 +809,8 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "default": true,
-              "description": "Enables Massive Storage Engine 4. MSE4 is the only supported storage engine, so this must be left enabled.\n"
+              "default": false,
+              "description": "Enables Massive Storage Engine 4. When disabled, varnishd uses its default storage.\n"
             },
             "memoryTarget": {
               "type": "string",

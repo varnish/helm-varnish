@@ -3328,27 +3328,29 @@ podAntiAffinity:
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"app.kubernetes.io/name":"'"${chart}"'","app.kubernetes.io/instance":"release-name"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
 
-@test "${kind}/mse4/config: cannot be disabled" {
+@test "${kind}/mse4/config: disabled by default" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    run helm template \
+    local container=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.mse4.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"MSE4 must be enabled: 'server.mse4.enabled'"* ]]
+        . || render_failed) |
+        yq -o=json -I=0 '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+        tee -a /dev/stderr)
+
+    [ "$(echo "$container" | jq -c '.command | index("-s")')" == "null" ]
+    [ "$(echo "$container" | jq -c '[.env[]? | select(.name == "VARNISH_STORAGE_BACKEND" or .name == "MSE4_CONFIG")]')" == "[]" ]
 }
 
-@test "${kind}/mse4/config: enabled by default" {
+@test "${kind}/mse4/config: can be enabled" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'server.mse4.enabled=true' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |

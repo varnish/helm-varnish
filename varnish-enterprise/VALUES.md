@@ -707,10 +707,10 @@ An object for configuring the Massive Storage Engine 4 (MSE4).
 **server.mse4.enabled**
 
 - Type: boolean
-- Default: `true`
+- Default: `false`
 - Availability: v1.6.1
 
-Enables Massive Storage Engine 4. MSE4 is the only supported storage engine, so this must be left enabled.
+Enables Massive Storage Engine 4. When disabled, varnishd uses its default storage.
 
 **server.mse4.memoryTarget**
 

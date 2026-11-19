@@ -377,8 +377,7 @@ Composing the $varnishArgs list or arguments
 {{/*
     MSE4
 */}}
-{{- if include "varnish-common.isEnterprise" . }}
-{{- if .Values.server.mse4.enabled }}
+{{- if include "varnish-common.mse4Enabled" . }}
   {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
     {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse4.memoryTarget))) }}
   {{- end }}
@@ -387,9 +386,6 @@ Composing the $varnishArgs list or arguments
   {{- else }}
     {{- $varnishArgs = concat $varnishArgs (list "-s" "mse4") }}
   {{- end }}
-{{- else }}
-{{- fail "MSE4 must be enabled: 'server.mse4.enabled'" }}
-{{- end -}}
 {{- end -}}
 {{/*
     TLS
@@ -489,8 +485,7 @@ Composing the $varnishArgs list or arguments
         fieldRef:
           fieldPath: status.podIP
     {{- end }}
-    {{- if include "varnish-common.isEnterprise" . }}
-    {{- if .Values.server.mse4.enabled }}
+    {{- if include "varnish-common.mse4Enabled" . }}
     {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
     - name: MSE_MEMORY_TARGET
       value: {{ .Values.server.mse4.memoryTarget | quote }}
@@ -501,9 +496,6 @@ Composing the $varnishArgs list or arguments
     {{- else }}
     - name: VARNISH_STORAGE_BACKEND
       value: "mse4"
-    {{- end }}
-    {{- else }}
-    {{- fail "MSE4 must be enabled: 'server.mse4.enabled'" }}
     {{- end }}
     {{- end }}
 

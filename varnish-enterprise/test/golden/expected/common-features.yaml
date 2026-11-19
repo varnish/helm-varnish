@@ -176,8 +176,6 @@ spec:
             limits:
               memory: 1Gi
           env:
-            - name: VARNISH_STORAGE_BACKEND
-              value: "mse4"
             - name: VARNISH_WORKDIR
               valueFrom:
                 fieldRef:
@@ -207,8 +205,6 @@ spec:
             - http=0.0.0.0:6081
             - -S
             - /etc/varnish/secret
-            - -s
-            - mse4
             - -p
             - thread_pool_stack=96k
             - -a

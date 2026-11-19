@@ -87,8 +87,6 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           env:
-            - name: VARNISH_STORAGE_BACKEND
-              value: "mse4"
             - name: VARNISH_WORKDIR
               valueFrom:
                 fieldRef:
@@ -112,8 +110,6 @@ spec:
             - "120"
             - -a
             - http=0.0.0.0:6081
-            - -s
-            - mse4
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
