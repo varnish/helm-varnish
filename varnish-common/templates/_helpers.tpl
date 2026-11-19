@@ -35,7 +35,7 @@ Create chart name and version as used by the chart label.
 {{/*
 Returns "true" when rendering the Varnish Enterprise flavor of the chart, as
 set by the "flavor" annotation in Chart.yaml. Enterprise-only
-values (cluster, mse, mse4, agent, initAgent, licenseSecret, baseUrl,
+values (cluster, mse4, agent, initAgent, licenseSecret, baseUrl,
 global.natsServer) are absent from the Varnish Cache values, so they must only
 be read behind this check or one of the predicates below.
 */}}
@@ -49,15 +49,6 @@ be read behind this check or one of the predicates below.
 
 {{- define "varnish-common.agentEnabled" -}}
 {{- if and (include "varnish-common.isEnterprise" .) .Values.server.agent.enabled }}true{{ end }}
-{{- end }}
-
-{{/*
-MSE is enabled by default ("-") unless MSE4 is enabled.
-*/}}
-{{- define "varnish-common.mseEnabled" -}}
-{{- if include "varnish-common.isEnterprise" . }}
-{{- if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}true{{ end }}
-{{- end }}
 {{- end }}
 
 {{- define "varnish-common.mse4Enabled" -}}

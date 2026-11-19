@@ -205,8 +205,6 @@ spec:
             - http=0.0.0.0:6081
             - -S
             - /etc/varnish/secret
-            - -s
-            - mse
             - -p
             - thread_pool_stack=96k
             - -a

@@ -25,11 +25,11 @@ metadata:
 data:
   secret: czNjcjN0
 ---
-# Source: varnish-enterprise/templates/configmap-mse.yaml
+# Source: varnish-enterprise/templates/configmap-mse4.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: golden-varnish-enterprise-mse
+  name: golden-varnish-enterprise-mse4
   labels:
     helm.sh/chart: varnish-enterprise-CHART_VERSION
     app.kubernetes.io/name: varnish-enterprise
@@ -37,17 +37,15 @@ metadata:
     app.kubernetes.io/version: "APP_VERSION"
     app.kubernetes.io/managed-by: Helm
 data:
-  mse.conf: |
+  mse4.conf: |
     env: {
-      id = "mse";
-      memcache_size = "auto";
       books = ( {
         id = "book";
-        directory = "/var/lib/mse/book";
-        database_size = "214748364";
+        filename = "/var/lib/mse4/book";
+        size = "214748364";
         stores = ( {
           id = "store";
-          filename = "/var/lib/mse/store.dat";
+          filename = "/var/lib/mse4/store";
           size = "19542101196";
         } );
       } );
@@ -157,7 +155,7 @@ spec:
         app.kubernetes.io/instance: golden
         app.kubernetes.io/name: varnish-enterprise
       annotations:
-        checksum/golden-mse: 1c67517c566038ad2dcfd2b6ae9fc4a700017ef18d099fe0a3bbb97613dbb20f
+        checksum/golden-mse4: e868260f72f01987df6f24d0842897d58589a80a5f08ee0f06d0f2a7134d3a4c
         checksum/golden-secret: 4e738ca5563c06cfd0018299933d58db1dd8bf97f6973dc99bf6cdc64b5550bd
         checksum/golden-tls: 50f7b62aaa3af5ec74b343ed5e0f9156f95fbdaded43ddb690f4f7711f1172bb
     spec:
@@ -196,8 +194,8 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           env:
-            - name: MSE_CONFIG
-              value: /etc/varnish/mse.conf
+            - name: MSE4_CONFIG
+              value: /etc/varnish/mse4.conf
             - name: VARNISH_TLS_CFG
               value: /etc/varnish/tls.conf
             - name: VARNISH_WORKDIR
@@ -241,7 +239,7 @@ spec:
             - -S
             - /etc/varnish/secret
             - -s
-            - mse,/etc/varnish/mse.conf
+            - mse4,/etc/varnish/mse4.conf
             - -A
             - /etc/varnish/tls.conf
           volumeMounts:
@@ -253,9 +251,9 @@ spec:
               mountPath: /etc/varnish/varnish-enterprise.lic
               readOnly: true
               subPath: varnish-enterprise.lic
-            - name: golden-config-mse
-              mountPath: /etc/varnish/mse.conf
-              subPath: mse.conf
+            - name: golden-config-mse4
+              mountPath: /etc/varnish/mse4.conf
+              subPath: mse4.conf
             - name: golden-config-tls
               mountPath: /etc/varnish/tls.conf
               subPath: tls.conf
@@ -265,8 +263,8 @@ spec:
             - name: golden-config-vcl-wrapped-default-vcl
               mountPath: "/etc/varnish/wrapped-default.vcl"
               subPath: "wrapped-default.vcl"
-            - name: golden-mse
-              mountPath: /var/lib/mse
+            - name: golden-mse4
+              mountPath: /var/lib/mse4
             - name: golden-varnish-controller
               mountPath: /var/lib/varnish-controller
         - name: varnish-enterprise-ncsa
@@ -426,20 +424,20 @@ spec:
                       sleep 1
                     done
       initContainers:
-        - name: mse-config
+        - name: mse4-config
           image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
           imagePullPolicy: IfNotPresent
           command:
-           - /bin/busybox
-           - sh
+           - mkfs.mse4
            - -c
-           - mkfs.mse -c /etc/varnish/mse.conf || mkfs.mse -c /etc/varnish/mse.conf -r
+           - /etc/varnish/mse4.conf
+           - configure
           volumeMounts:
-           - name: golden-mse
-             mountPath: /var/lib/mse
-           - name: golden-config-mse
-             mountPath: /etc/varnish/mse.conf
-             subPath: mse.conf
+           - name: golden-mse4
+             mountPath: /var/lib/mse4
+           - name: golden-config-mse4
+             mountPath: /etc/varnish/mse4.conf
+             subPath: mse4.conf
         - name: init-agent
           image: busybox:1.36
           command:
@@ -471,9 +469,9 @@ spec:
       - name: varnish-license-volume
         secret:
           secretName: varnish-license
-      - name: golden-config-mse
+      - name: golden-config-mse4
         configMap:
-          name: golden-varnish-enterprise-mse
+          name: golden-varnish-enterprise-mse4
       - name: golden-config-tls
         configMap:
           name: golden-varnish-enterprise-tls
@@ -510,7 +508,7 @@ spec:
           requests:
             storage: "512Mi"
     - metadata:
-        name: golden-mse
+        name: golden-mse4
         labels:
           helm.sh/chart: varnish-enterprise-CHART_VERSION
           app.kubernetes.io/name: varnish-enterprise

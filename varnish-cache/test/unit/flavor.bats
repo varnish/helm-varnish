@@ -39,7 +39,6 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
 
     for value in \
         'cluster.enabled=true' \
-        'server.mse.enabled=true' \
         'server.mse4.enabled=true' \
         'server.agent.enabled=true' \
         'server.initAgent.enabled=true' \
@@ -56,7 +55,6 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
 
     for value in \
         'cluster=null' \
-        'server.mse=null' \
         'server.mse4=null' \
         'server.agent=null' \
         'server.initAgent=null' \

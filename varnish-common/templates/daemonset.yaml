@@ -3,9 +3,6 @@
 {{- fail "'server.strategy' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
 {{- end }}
 {{- if include "varnish-common.isEnterprise" . }}
-{{- if .Values.server.mse.persistence.enabled }}
-{{- fail "'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
-{{- end }}
 {{- if .Values.server.mse4.persistence.enabled }}
 {{- fail "'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
 {{- end }}
