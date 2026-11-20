@@ -30,21 +30,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     team: web
 ---
-# Source: varnish-enterprise/templates/configmap-cmdfile.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: golden-cmdfile
-  labels:
-    helm.sh/chart: varnish-enterprise-CHART_VERSION
-    app.kubernetes.io/name: golden
-    app.kubernetes.io/instance: golden
-    app.kubernetes.io/version: "APP_VERSION"
-    app.kubernetes.io/managed-by: Helm
-data:
-  cmds.cli: |
-    vcl.list
----
 # Source: varnish-enterprise/templates/configmap-vcl.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -117,7 +102,6 @@ spec:
         app.kubernetes.io/name: golden
         tier: edge
       annotations:
-        checksum/golden-cmdfile: 9ed82005a153fb8bd0f926b3bcf69eebda794f1c5e8ec764fea3f819c5c1e2a8
         checksum/golden-extra-extra-cm: 6d3fc6f0f003717c7e5188f3fcd9874f709ab7b0d8eaaa63f04e5e335fd4d868
         checksum/golden-vcl: efa6171b0848c327d81f850523aae1bc8d3a502564d77ccebc9e4c4cf930a49c
     spec:
@@ -168,8 +152,6 @@ spec:
             - -F
             - -T
             - 127.0.0.1:6082
-            - -I
-            - /etc/varnish/cmds.cli
             - -f
             - /etc/varnish/default.vcl
             - -p
@@ -196,9 +178,6 @@ spec:
             - name: golden-config-vcl
               mountPath: "/etc/varnish/default.vcl"
               subPath: default.vcl
-            - name: golden-config-cmdfile
-              mountPath: "/etc/varnish/cmds.cli"
-              subPath: cmds.cli
         - name: varnish-enterprise-ncsa
           securityContext:
             runAsNonRoot: true
@@ -263,9 +242,6 @@ spec:
       - name: golden-config-vcl
         configMap:
           name: golden-vcl
-      - name: golden-config-cmdfile
-        configMap:
-          name: golden-cmdfile
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

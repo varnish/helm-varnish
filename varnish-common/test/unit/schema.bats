@@ -262,6 +262,26 @@ EOT
   schema_rejects "additional properties 'workDir' not allowed" --set server.workDir=x
 }
 
+@test "Schema: rejects the removed server.vclConfigFile" {
+  schema_rejects "additional properties 'vclConfigFile' not allowed" --set server.vclConfigFile=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfig" {
+  schema_rejects "additional properties 'cmdfileConfig' not allowed" --set server.cmdfileConfig=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfigFile" {
+  schema_rejects "additional properties 'cmdfileConfigFile' not allowed" --set server.cmdfileConfigFile=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfigPath" {
+  schema_rejects "additional properties 'cmdfileConfigPath' not allowed" --set server.cmdfileConfigPath=x
+}
+
+@test "Schema: rejects the removed server.tls.configFile" {
+  schema_rejects "additional properties 'configFile' not allowed" --set server.tls.configFile=x
+}
+
 @test "Schema: vcls routes need vclContent" {
   schema_rejects "at '/server/vcls/routes/0'" --set server.vcls.routes[0].name=a
 }

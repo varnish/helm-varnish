@@ -114,67 +114,33 @@ In the case where `server.vclConfigPath` was configured to any value apart from 
 
 #### Serving multiple domains
 
-To serve multiple domains with Varnish Cache, it is highly recommended to [use multiple VCL files and use cmdfile to load them](https://varnish-cache.org/docs/trunk/users-guide/vcl-separate.html). To do this with Varnish Cache Helm Chart, set `server.cmdfileConfig`, and `server.vclConfigs` accordingly:
+To serve multiple domains with Varnish Cache, it is highly recommended to [use a separate VCL for each domain](https://varnish-cache.org/docs/trunk/users-guide/vcl-separate.html). Set `server.vcls.routes`: the chart generates the routing VCL and the cmdfile that loads each route as a separate VCL, labeled with its name, and selects it based on the Host header:
 
 ```yaml
 ---
 server:
-  vclConfigs:
-    # We need an entrypoint VCL separately from default.vcl (which is now used as a fallback VCL)
-    main.vcl: |
-      vcl 4.1
+  vcls:
+    routes:
+      - name: example
+        hostnames:
+          - example.com
+          - www.example.com
+        vclContent: |
+          vcl 4.1;
+          # ...
 
-      import std;
+      - name: home
+        hostnames:
+          - home.arpa
+        vclContent: |
+          vcl 4.1;
+          # ...
 
-      sub vcl_recv {
-        set req.http.host = std.tolower(req.http.host);
-        if (req.http.host ~ "(^|\.)example\.com(\:[0-9]+)?$") {
-          return (vcl(label_example));
-        } elseif (req.http.host ~ "(^|\.)home\.arpa(\:[0-9]+)?$") {
-          return (vcl(label_home));
-        }
-      }
-
-    # Define VCL for each domains
-    example.vcl: |
-      # ...
-
-    home.vcl: |
-      # ...
-
-  cmdfileConfig: |
-    vcl.load vcl_example /etc/varnish/example.vcl
-    vcl.label label_example
-    vcl.load vcl_home /etc/varnish/home.vcl
-    vcl.label label_home
-    vcl.load vcl_main /etc/varnish/main.vcl
-    vcl.use vcl_main
-```
-
-Instead of using `server.vclConfigs`, it is also possible to use external VCL for each domains by adapting the configuration from _Using external ConfigMap_ section:
-
-```yaml
----
-server:
-  # ...omit...
-
-  extraVolumes:
-    - name: example
-      configMap:
-        name: example-vcl
-
-    - name: home
-      configMap:
-        name: home-vcl
-
-  extraVolumeMounts:
-    - name: example
-      mountPath: /etc/varnish/example.vcl
-      subPath: example.vcl
-
-    - name: home
-      mountPath: /etc/varnish/home.vcl
-      subPath: home.vcl
+      # A route without hostnames catches all other requests, and must be the last one
+      - vclContent: |
+          vcl 4.1;
+          backend default none;
+          sub vcl_recv { return (synth(404)); }
 ```
 
 #### Values validation
@@ -576,7 +542,7 @@ Sets the port to expose HTTPS traffic directly on the node the Pod runs on, as t
 - Type: string
 - Default: `0.0.0.0`
 
-Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when neither `server.tls.config` nor `server.tls.configFile` is set.
+Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when `server.tls.config` is not set.
 
 **server.tls.config**
 
@@ -596,20 +562,6 @@ server:
       }
 
       pem-file = "/etc/varnish/certs/example.pem"
-```
-
-**server.tls.configFile**
-
-- Type: string
-
-Uses the content of the given file as `server.tls.config`. The file is parsed as a template string and must be placed inside the `files/` directory of the Helm chart. Overrides `server.tls.config` if set.
-
-For example:
-
-```yaml
-server:
-  tls:
-    configFile: files/tls.cfg
 ```
 
 **server.extraListens**
@@ -904,19 +856,6 @@ server:
     }
 ```
 
-**server.vclConfigFile**
-
-- Type: string
-
-Use the content of the given file path as VCL configuration. The file will be parsed as templated string. Will override `server.vclConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
-
-For example:
-
-```yaml
-server:
-  vclConfigFile: files/default.vcl
-```
-
 **server.vclConfigs**
 
 - Type: object of template strings
@@ -957,13 +896,13 @@ server:
 
 - Type: object
 
-Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields. `server.cmdfileConfig` and `server.cmdfileConfigFile` must not be set when `server.vcls.routes` is non-empty.
+Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields.
 
 **server.vcls.routes**
 
 - Type: array of objects
 
-Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig`, `server.vclConfigFile`, `server.vclConfigs` and `server.cmdfileConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
+Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig` and `server.vclConfigs` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
 
 For example:
 
@@ -1017,43 +956,6 @@ server:
       helpers.vcl: |
         sub common_recv {
         }
-```
-
-**server.cmdfileConfigPath**
-
-- Type: string
-- Default: `/etc/varnish/cmds.cli`
-
-A path to the [CLI command file][varnish-cmdfile]. This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the `-I` argument in the Varnish Cache container when `server.cmdfileConfig` is not empty.
-
-**server.cmdfileConfig**
-
-- Type: template string
-
-A [CLI command file][varnish-cmdfile] for running management commands when `varnishd` is launched. For example, when loading extra VCL in multi-tenancy mode. See also [External VCL ConfigMap](https://docs.varnish-software.com/varnish-helm/guides/using-external-vcl-configmap/#configmap-for-multiple-vcl-files).
-
-For example:
-
-```yaml
-server:
-  cmdfileConfig: |
-    vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-    vcl.label label_tenant1 vcl_tenant1
-    vcl.load vcl_main /etc/varnish/main.vcl
-    vcl.use vcl_main
-```
-
-**server.cmdfileConfigFile**
-
-- Type: string
-
-Use the content of the given file path as a cmdfile. The file will be parsed as templated string. Will override `server.cmdfileConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
-
-For example:
-
-```yaml
-server:
-  cmdfileConfigFile: files/cmds.cli
 ```
 
 **server.terminationGracePeriodSeconds**
@@ -2242,7 +2144,6 @@ The full content of the manifest.
 [k8s-service-clusterip]: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip
 [k8s-statefulset-updatestrategy]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 [k8s-volume-claim-templates]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#volume-claim-templates
-[varnish-cmdfile]: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
 [varnishd]: https://varnish-cache.org/docs/6.0/reference/varnishd.html
 [varnishncsa]: https://varnish-cache.org/docs/6.0/reference/varnishncsa.html
 
@@ -2263,6 +2164,5 @@ The full content of the manifest.
 [k8s-service]: https://kubernetes.io/docs/concepts/services-networking/service/
 [k8s-statefulset-updatestrategy]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 [k8s-volume-claim-templates]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#volume-claim-templates
-[varnish-cmdfile]: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
 [varnishd]: https://varnish-cache.org/docs/6.0/reference/varnishd.html
 [varnishncsa]: https://varnish-cache.org/docs/6.0/reference/varnishncsa.html

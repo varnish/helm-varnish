@@ -8,7 +8,6 @@ Sets up Pod annotations
 {{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- $vclConfig := include "varnish-common.vclConfig" . }}
 {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- $cmdfileConfig := include "varnish-common.cmdfileConfig" . }}
 {{- $extraManifests := .Values.extraManifests }}
 {{- $checksum := dict }}
 {{- if not (eq $mse4Config "") }}
@@ -24,9 +23,6 @@ Sets up Pod annotations
 {{- range $k, $v := $vclConfigs }}
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl-" (regexReplaceAll "\\W+" $k "-")) (sha256sum (tpl $v $))) $checksum) }}
 {{- end }}
-{{- end }}
-{{- if not (eq $cmdfileConfig "") }}
-{{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-cmdfile") (sha256sum $cmdfileConfig)) $checksum) }}
 {{- end }}
 {{- if not (empty .Values.server.vcls.routes) }}
 {{- $bundleData := dict
@@ -210,11 +206,6 @@ volumes:
   configMap:
     name: {{ include "varnish-common.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
 {{- end }}
-{{- if not (eq (include "varnish-common.cmdfileConfig" .) "") }}
-- name: {{ .Release.Name }}-config-cmdfile
-  configMap:
-    name: {{ include "varnish-common.fullname" . }}-cmdfile
-{{- end }}
 {{- end }}
 {{- if and (include "varnish-common.agentEnabled" .) (not .Values.server.agent.persistence.enabled) (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
 - name: {{ .Release.Name }}-varnish-controller
@@ -264,7 +255,6 @@ Declares the Varnish container
 {{- define "varnish-common.serverContainer" -}}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
 {{- $tlsConfig := include "varnish-common.tlsConfig" . }}
-{{- $cmdfileConfig := include "varnish-common.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath -}}
 {{/*
 Composing the $varnishArgs list or arguments
@@ -275,15 +265,11 @@ Composing the $varnishArgs list or arguments
   {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli" "-f" "") }}
 {{- else }}
   {{- if (include "varnish-common.agentEnabled" .) }}
-    {{- if not (eq $cmdfileConfig "") }}
-      {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
-    {{- else if .Values.server.initAgent.enabled }}
+    {{- if .Values.server.initAgent.enabled }}
       {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
     {{- else }}
       {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
     {{- end }}
-  {{- else if not (eq $cmdfileConfig "") }}
-    {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
   {{- end }}
   {{- if (include "varnish-common.clusterEnabled" .) }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
@@ -555,11 +541,6 @@ Composing the $varnishArgs list or arguments
       mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
       subPath: {{ $wrappedDefaultVCL | quote }}
     {{- end }}
-    {{- if not (eq (include "varnish-common.cmdfileConfig" .) "") }}
-    - name: {{ .Release.Name }}-config-cmdfile
-      mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
-      subPath: cmds.cli
-    {{- end }}
     {{- end }}
     {{- if and (eq .Values.server.kind "StatefulSet") (and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}
     - name: {{ .Release.Name }}-mse4
@@ -795,11 +776,6 @@ Declares the Varnish Controller Agent container
       mountPath: {{ list (dir $.Values.server.vclConfigPath) $k | join "/" | quote }}
       subPath: {{ $k | quote }}
     {{- end }}
-    {{- end }}
-    {{- if not (eq (include "varnish-common.cmdfileConfig" .) "") }}
-    - name: {{ .Release.Name }}-config-cmdfile
-      mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
-      subPath: cmds.cli
     {{- end }}
     {{- if not (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
     - name: {{ .Values.server.agent.persistence.enableWithVolumeName }}

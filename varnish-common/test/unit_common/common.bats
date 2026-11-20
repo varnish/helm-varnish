@@ -9,10 +9,6 @@ default_fsgroup=$(yq -r '.global.podSecurityContext.fsGroup' < "$(chart_dir)/val
 default_uid=$(yq -r '.global.securityContext.runAsUser' < "$(chart_dir)/values.yaml")
 
 teardown() {
-    # Set by tests that need a file inside the chart
-    if [ -n "${tls_file:-}" ]; then
-        rm -f "$(chart_dir)/${tls_file}"
-    fi
     check_render
 }
 
@@ -657,45 +653,6 @@ release-namespace: {{ .Release.Namespace }}
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
             tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/tls.conf" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-tls")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-tls","mountPath":"/etc/varnish/tls.conf","subPath":"tls.conf"}' ]
-}
-
-@test "${kind}/tls: can be enabled with custom config file" {
-    cd "$(chart_dir)"
-
-    # .Files.Get only sees files inside the chart and outside of test/ (see
-    # .helmignore), the content is not validated by the chart
-    tls_file=$(mktemp files/bats-tls-XXXXXX.conf)
-    printf 'frontend = {\n  host = "*"\n  port = "443"\n}\n' >"${tls_file}"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.tls.enabled=true' \
-        --set "server.tls.configFile=${tls_file}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.command' |
-            tee -a /dev/stderr)
-    [[ "${actual}" == *'"-A","/etc/varnish/tls.conf"'* ]]
-    [[ "${actual}" != *'https='* ]]
 
     local actual=$(echo "$container" |
         yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
@@ -2226,108 +2183,27 @@ backend default {
     [ "${actual}" == '{"mountPath":"/etc/varnish/tenant1.vcl","name":"varnish-vcl-tenant1","subpath":"tenant1.vcl"}' ]
 }
 
-@test "${kind}/cmdfile: can be configured" {
+@test "${kind}/cmdfile: no -I without agent or routes" {
     cd "$(chart_dir)"
 
-    local cmdfileConfig='
-vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-vcl.label label_tenant1 vcl_tenant1
-vcl.load vcl_main /etc/varnish/main.vcl
-vcl.use vcl_main
-'
-
-    local object=$((helm template \
+    local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set "server.cmdfileConfig=${cmdfileConfig}" \
+        --namespace default \
+        . || render_failed) |
+        yq -r 'select(.kind == "ConfigMap") | .metadata.name' |
+            tee -a /dev/stderr)
+    [[ "${actual}" != *-cmdfile* ]]
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-cmdfile"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '624d35eb30614898dff2f0a0d0b877fb27f394debc7f8316605a9208ed5b1c6d' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-cmdfile")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-cmdfile","configMap":{"name":"release-name-'"${chart}"'-cmdfile"}}' ]
-
-    local container=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") | .command' |
             tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-I", "/etc/varnish/cmds.cli"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/cmds.cli' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-cmdfile","mountPath":"/etc/varnish/cmds.cli","subPath":"cmds.cli"}' ]
-}
-
-@test "${kind}/cmdfile: can be relocated" {
-    cd "$(chart_dir)"
-
-    local cmdfileConfig='
-vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-vcl.label label_tenant1 vcl_tenant1
-vcl.load vcl_main /etc/varnish/main.vcl
-vcl.use vcl_main
-'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.cmdfileConfig=${cmdfileConfig}" \
-        --set "server.cmdfileConfigPath=/etc/varnish/cmdfile" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-I", "/etc/varnish/cmdfile"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/cmdfile' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-cmdfile","mountPath":"/etc/varnish/cmdfile","subPath":"cmds.cli"}' ]
-}
-
-@test "${kind}/cmdfile: cannot be configured with agent" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local cmdfileConfig='
-vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-vcl.label label_tenant1 vcl_tenant1
-vcl.load vcl_main /etc/varnish/main.vcl
-vcl.use vcl_main
-'
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.cmdfileConfig=${cmdfileConfig}" \
-        --set "server.agent.enabled=true" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Cannot enable both cmdfile and agent"* ]]
+    [ -n "${actual}" ]
+    [[ "${actual}" != *'"-I"'* ]]
 }
 
 @test "${kind}/image: can be configured" {

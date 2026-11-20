@@ -86,3 +86,7 @@ server:
 EOT
   schema_rejects "at '/server/agent/location/latitude'" -f "${values}"
 }
+
+@test "Schema: rejects the removed server.mse4.configFile" {
+  schema_rejects "additional properties 'configFile' not allowed" --set server.mse4.configFile=x
+}

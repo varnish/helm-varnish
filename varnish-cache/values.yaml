@@ -245,7 +245,7 @@ server:
     #hostPort: 8443
 
     # Configures the address on which Varnish will listen for HTTPS traffic. Only
-    # applicable when neither `server.tls.config` nor `server.tls.configFile` is set.
+    # applicable when `server.tls.config` is not set.
     # Type: string
     address: "0.0.0.0"
 
@@ -262,14 +262,6 @@ server:
     #
     #     pem-file = "/etc/varnish/certs/example.pem"
     config: ""
-
-    # Uses the content of the given file as `server.tls.config`. The file is parsed as a
-    # template string and must be placed inside the `files/` directory of the Helm chart.
-    # Overrides `server.tls.config` if set.
-    # Type: string
-    # Example:
-    #   configFile: files/tls.cfg
-    configFile: ""
 
   # An array of extra ports for Varnish to listen to.
   # Type: array of objects
@@ -456,14 +448,6 @@ server:
   #     }
   vclConfig: ""
 
-  # Use the content of the given file path as VCL configuration. The file will be parsed
-  # as templated string. Will override `server.vclConfig` if set. Note that the file must
-  # be placed inside the files/ directory in the Helm chart itself.
-  # Type: string
-  # Example:
-  #   vclConfigFile: files/default.vcl
-  vclConfigFile: ""
-
   # Extra VCL configuration where a filename as a key and template string as a value. The
   # path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`.
   #
@@ -497,18 +481,16 @@ server:
 
   # Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart
   # generates a routing VCL and a cmdfile from these settings, superseding the
-  # `server.vclConfig*` fields. `server.cmdfileConfig` and `server.cmdfileConfigFile` must
-  # not be set when `server.vcls.routes` is non-empty.
+  # `server.vclConfig*` fields.
   # Type: object
   vcls:
     # Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile
     # that load each route as a separate VCL and select it based on the Host header,
-    # superseding `server.vclConfig`, `server.vclConfigFile`, `server.vclConfigs` and
-    # `server.cmdfileConfig` (which must not be set). Each route must set `vclContent`,
-    # and can set `name` (defaults to the first hostname, prefixed with `route_` if it
-    # does not start with a letter) and `hostnames`. As it is used as a VCL label, `name`
-    # must start with a letter. A route without hostnames is a catch-all and must be the
-    # last one.
+    # superseding `server.vclConfig` and `server.vclConfigs` (which must not be set). Each
+    # route must set `vclContent`, and can set `name` (defaults to the first hostname,
+    # prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is
+    # used as a VCL label, `name` must start with a letter. A route without hostnames is a
+    # catch-all and must be the last one.
     # Type: array of objects
     # Example:
     #   routes:
@@ -536,36 +518,6 @@ server:
     #       sub common_recv {
     #       }
     includes: {}
-
-  # A path to the [CLI command
-  # file](https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file).
-  # This configuration affects the location where `server.cmdfileConfig` will be saved to,
-  # as well as the `-I` argument in the Varnish Cache container when
-  # `server.cmdfileConfig` is not empty.
-  # Type: string
-  cmdfileConfigPath: "/etc/varnish/cmds.cli"
-
-  # A [CLI command
-  # file](https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file)
-  # for running management commands when `varnishd` is launched. For example, when loading
-  # extra VCL in multi-tenancy mode. See also [External VCL
-  # ConfigMap](https://docs.varnish-software.com/varnish-helm/guides/using-external-vcl-configmap/#configmap-for-multiple-vcl-files).
-  # Type: template string
-  # Example:
-  #   cmdfileConfig: |
-  #     vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-  #     vcl.label label_tenant1 vcl_tenant1
-  #     vcl.load vcl_main /etc/varnish/main.vcl
-  #     vcl.use vcl_main
-  cmdfileConfig: ""
-
-  # Use the content of the given file path as a cmdfile. The file will be parsed as
-  # templated string. Will override `server.cmdfileConfig` if set. Note that the file must
-  # be placed inside the files/ directory in the Helm chart itself.
-  # Type: string
-  # Example:
-  #   cmdfileConfigFile: files/cmds.cli
-  cmdfileConfigFile: ""
 
   # Sets the termination grace period seconds to wait for Varnish Cache to shut down. Once
   # this number of seconds is reached without the Varnish Cache Pod shutting down,

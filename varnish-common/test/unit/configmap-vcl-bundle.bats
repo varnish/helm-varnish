@@ -302,18 +302,6 @@ vcl.use router-0" ]
     [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfig'"* ]]
 }
 
-@test "vcl-bundle: error when server.vcls.routes and server.vclConfigFile both set" {
-    cd "$(chart_dir)"
-    run --separate-stderr helm template \
-        --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.vclConfigFile=files/default.vcl" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigFile'"* ]]
-}
-
 @test "vcl-bundle: error when server.vcls.routes and server.vclConfigs both set" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
@@ -324,30 +312,6 @@ vcl.use router-0" ]
         .
     [ "$status" -ne 0 ]
     [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigs'"* ]]
-}
-
-@test "vcl-bundle: error when server.vcls.routes and server.cmdfileConfig both set" {
-    cd "$(chart_dir)"
-    run --separate-stderr helm template \
-        --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.cmdfileConfig=vcl.use boot;" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'"* ]]
-}
-
-@test "vcl-bundle: error when server.vcls.routes and server.cmdfileConfigPath both set" {
-    cd "$(chart_dir)"
-    run --separate-stderr helm template \
-        --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.cmdfileConfigPath=/etc/varnish/custom.cli" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set"* ]]
 }
 
 @test "vcl-bundle: error when server.vcls.includes set without server.vcls.routes" {

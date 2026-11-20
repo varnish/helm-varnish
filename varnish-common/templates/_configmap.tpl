@@ -32,13 +32,7 @@ env: {
 
 {{- define "varnish-common.mse4Config" -}}
 {{- if include "varnish-common.mse4Enabled" . }}
-{{- if (not (eq .Values.server.mse4.configFile "")) -}}
-{{- $mse4ConfigFile := (.Files.Get .Values.server.mse4.configFile) }}
-{{- if (eq $mse4ConfigFile "") }}
-{{ fail "'server.mse4.configFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $mse4ConfigFile . }}
-{{- else if (not (eq .Values.server.mse4.config "")) -}}
+{{- if (not (eq .Values.server.mse4.config "")) -}}
 {{- tpl .Values.server.mse4.config . }}
 {{- else if .Values.server.mse4.persistence.enabled }}
 {{- include "varnish-common.mse4PersistenceConfig" . }}
@@ -47,13 +41,7 @@ env: {
 {{- end }}
 
 {{- define "varnish-common.tlsConfig" -}}
-{{- if (not (eq .Values.server.tls.configFile "")) -}}
-{{- $tlsConfigFile := (.Files.Get .Values.server.tls.configFile) }}
-{{- if (eq $tlsConfigFile "") }}
-{{ fail "'server.tls.configFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $tlsConfigFile . }}
-{{- else if (not (eq .Values.server.tls.config "")) -}}
+{{- if (not (eq .Values.server.tls.config "")) -}}
 {{- tpl .Values.server.tls.config . }}
 {{- end }}
 {{- end }}
@@ -65,16 +53,7 @@ env: {
 {{- if (not (eq .Values.server.vclConfig "")) }}
 {{ fail (print "Cannot enable both 'server.vclConfigs.\"" $defaultVcl "\"' and 'server.vclConfig'") }}
 {{- end }}
-{{- if (not (eq .Values.server.vclConfigFile "")) }}
-{{ fail (print "Cannot enable both 'server.vclConfigs.\"" $defaultVcl "\"' and 'server.vclConfigFile'") }}
-{{- end }}
 {{- tpl (get .Values.server.vclConfigs $defaultVcl) . }}
-{{- else if (not (eq .Values.server.vclConfigFile "")) -}}
-{{- $vclConfigFile := (.Files.Get .Values.server.vclConfigFile) }}
-{{- if (eq $vclConfigFile "") }}
-{{ fail "'server.vclConfigFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $vclConfigFile . }}
 {{- else if (not (eq .Values.server.vclConfig "")) }}
 {{- tpl .Values.server.vclConfig . }}
 {{- end }}
@@ -112,7 +91,7 @@ any
 {{- end -}}
 
 {{/*
-Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings.
+Fails if server.vcls.routes conflicts with legacy VCL config settings.
 */}}
 {{- define "varnish-common.vclBundleConflictCheck" -}}
   {{- if empty .Values.server.vcls.routes -}}
@@ -129,17 +108,8 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- if not (eq .Values.server.vclConfig "") -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfig'" -}}
     {{- end -}}
-    {{- if not (eq .Values.server.vclConfigFile "") -}}
-      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigFile'" -}}
-    {{- end -}}
     {{- if not (empty .Values.server.vclConfigs) -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigs'" -}}
-    {{- end -}}
-    {{- if not (eq (include "varnish-common.cmdfileConfig" .) "") -}}
-      {{- fail "Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'/'server.cmdfileConfigFile'" -}}
-    {{- end -}}
-    {{- if not (eq .Values.server.cmdfileConfigPath "/etc/varnish/cmds.cli") -}}
-      {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
     {{- end -}}
     {{- $routerVolName := printf "%s-config-vcl-bundle-router" $.Release.Name -}}
     {{- if gt (len $routerVolName) 63 -}}
@@ -220,15 +190,3 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
     {{- end -}}
   {{- end -}}
 {{- end -}}
-
-{{- define "varnish-common.cmdfileConfig" -}}
-{{- if (not (eq .Values.server.cmdfileConfigFile "")) -}}
-{{- $cmdfileConfigFile := (.Files.Get .Values.server.cmdfileConfigFile) }}
-{{- if (eq $cmdfileConfigFile "") }}
-{{ fail "'server.cmdfileConfigFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $cmdfileConfigFile . }}
-{{- else if (not (eq .Values.server.cmdfileConfig "")) }}
-{{- tpl .Values.server.cmdfileConfig . }}
-{{- end }}
-{{- end }}
