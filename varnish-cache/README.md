@@ -924,14 +924,6 @@ Sets the termination grace period seconds to wait for Varnish Cache to shut down
 
 The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
 
-**server.delayedHaltSeconds**
-
-- Type: number
-
-Deprecated: use `server.delayedShutdown` instead.
-
-Delays stopping of the Varnish Cache container by the given seconds.
-
 **server.delayedShutdown**
 
 - Type: object

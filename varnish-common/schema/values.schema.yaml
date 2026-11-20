@@ -814,7 +814,7 @@ properties:
             description: |
               An MSE4 configuration. By default, the value is unset and MSE4 is run in a memory-only mode.
 
-              If `server.mse4.persistence.enabled` is true, it is recommended to reference to MSE path using `{{ .Values.server.mse4.persistence.mountPath }}` template string in the configuration.
+              If `server.mse4.persistence.enabled` is true, the persistent volume is mounted at `/var/lib/mse4`; use that path for the books and stores in the configuration.
 
           persistence:
             type: object
@@ -849,12 +849,6 @@ properties:
                   Store size relative to `server.mse4.persistence.storageSize`, for auto-configuring MSE4. Can be set as a percentage or a value.
 
                   `server.mse4.persistence.bookSize` and `server.mse4.persistence.storeSize` must add up to 100% or `server.mse4.persistence.storageSize`. Only applicable if `server.mse4.config` is empty.
-
-              mountPath:
-                type: string
-                default: /var/lib/mse4
-                description: |
-                  Sets the mount path for the PersistentVolumeClaim for MSE4.
 
               labels:
                 $ref: "#/definitions/objectOrTemplate"
@@ -994,19 +988,6 @@ properties:
           Sets the termination grace period seconds to wait for {product} to shut down. Once this number of seconds is reached without the {product} Pod shutting down, Kubernetes will send SIGKILL to the Pod. When `server.delayedShutdown` is used, this value should be set to a higher value than the **maximum** time (in seconds) it took for {product} to fully shut down after a delayed shutdown.
 
           The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
-
-      delayedHaltSeconds:
-        x-type-label: number
-        anyOf:
-          - type: integer
-          - type: number
-          - type: string
-            pattern: "^[0-9]+(\\.[0-9]+)?$"
-          - type: "null"
-        x-values-example: 0
-        x-deprecated: use `server.delayedShutdown` instead.
-        description: |
-          Delays stopping of the {product} container by the given seconds.
 
       delayedShutdown:
         type: object

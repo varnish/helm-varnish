@@ -199,7 +199,6 @@ rollingUpdate:
         --set 'server.kind=StatefulSet' \
         --set 'server.mse4.enabled=true' \
         --set 'server.mse4.persistence.enabled=true' \
-        --set 'server.mse4.persistence.mountPath=/data1/mse4' \
         --set 'server.mse4.persistence.storageSize=100G' \
         --namespace default \
         --show-only templates/statefulset.yaml \
@@ -220,7 +219,7 @@ rollingUpdate:
     local actual=$(echo "$containerObject" |
         yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-mse4","mountPath":"/data1/mse4"}' ]
+    [ "${actual}" = '{"name":"release-name-mse4","mountPath":"/var/lib/mse4"}' ]
 }
 
 @test "StatefulSet/agent/persistence: can be enabled" {

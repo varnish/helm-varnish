@@ -2524,11 +2524,11 @@ podAntiAffinity:
 env: {
   books = ( {
     id = "book";
-    filename = "{{ .Values.server.mse4.persistence.mountPath }}/book";
+    filename = "/var/lib/mse4/book";
     size = "1G";
     stores = ( {
       id = "store";
-      filename = "{{ .Values.server.mse4.persistence.mountPath }}/store";
+      filename = "/var/lib/mse4/store";
       size = "9G";
     } );
   } );
@@ -2621,67 +2621,6 @@ env: {
         yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-mse4")' |
             tee -a /dev/stderr)
     [ "${actual}" == '' ]
-}
-
-@test "${kind}/delayedHaltSeconds: not enabled by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
-    [ "${actual}" == "null" ]
-}
-
-@test "${kind}/delayedHaltSeconds: can be enabled" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.delayedHaltSeconds=120" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
-    [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
-}
-
-@test "${kind}/delayedHaltSeconds: takes priority over delayedShutdown" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.delayedHaltSeconds=120" \
-        --set "server.delayedShutdown.method=sleep" \
-        --set "server.delayedShutdown.sleep.seconds=90" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
-    [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
 }
 
 @test "${kind}/delayedShutdown: not enabled by default" {
@@ -2819,43 +2758,6 @@ env: {
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "120" ]
-}
-
-@test "${kind}/terminationGracePeriodSeconds: can be enabled with delayedHaltSeconds" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.delayedHaltSeconds=60" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.terminationGracePeriodSeconds' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "120" ]
-}
-
-@test "${kind}/terminationGracePeriodSeconds: can be overriden by grace period seconds" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.terminationGracePeriodSeconds=180" \
-        --set "server.delayedHaltSeconds=60" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.terminationGracePeriodSeconds' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "180" ]
 }
 
 @test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown sleep seconds" {

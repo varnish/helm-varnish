@@ -499,12 +499,6 @@ server:
   # Type: number
   terminationGracePeriodSeconds: 0
 
-  # Deprecated: use `server.delayedShutdown` instead.
-  #
-  # Delays stopping of the Varnish Cache container by the given seconds.
-  # Type: number
-  #delayedHaltSeconds: 0
-
   # Configures delayed shutdown for zero-downtime downscaling.
   # Type: object
   delayedShutdown:

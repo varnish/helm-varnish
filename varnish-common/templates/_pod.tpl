@@ -112,15 +112,11 @@ topologySpreadConstraints:
 {{- end }}
 
 {{/*
-Sets up terminationGracePeriodSeconds based on whether there's an explicit
-terminationGracePeriodSeconds, or 60 seconds after delayedHaltSeconds
-(rounded up) if present.
+Sets up terminationGracePeriodSeconds if set explicitly.
 */}}
 {{- define "varnish-common.terminationGracePeriodSeconds" -}}
 {{- if not (empty .Values.server.terminationGracePeriodSeconds) }}
 terminationGracePeriodSeconds: {{ .Values.server.terminationGracePeriodSeconds }}
-{{- else if not (empty .Values.server.delayedHaltSeconds) }}
-terminationGracePeriodSeconds: {{ add (ceil .Values.server.delayedHaltSeconds | int64) 60 }}
 {{- end }}
 {{- end }}
 
@@ -523,7 +519,7 @@ Composing the $varnishArgs list or arguments
     {{- include "varnish-common.vclIncludeMounts" . }}
     {{- if and (eq .Values.server.kind "StatefulSet") (and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}
     - name: {{ .Release.Name }}-mse4
-      mountPath: {{ .Values.server.mse4.persistence.mountPath }}
+      mountPath: /var/lib/mse4
     {{- end }}
     {{- if (include "varnish-common.agentEnabled" .) }}
     {{- if not (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
@@ -542,17 +538,11 @@ Composing the $varnishArgs list or arguments
         {{- toYaml .Values.server.extraVolumeMounts | nindent 4 }}
       {{- end }}
     {{- end }}
-  {{- if or .Values.server.delayedHaltSeconds (eq .Values.server.delayedShutdown.method "sleep") }}
-  {{ $haltSeconds := 0 }}
-  {{- if .Values.server.delayedHaltSeconds }}
-  {{ $haltSeconds = .Values.server.delayedHaltSeconds }}
-  {{- else }}
-  {{ $haltSeconds = .Values.server.delayedShutdown.sleep.seconds }}
-  {{- end }}
+  {{- if eq .Values.server.delayedShutdown.method "sleep" }}
   lifecycle:
     preStop:
       exec:
-        command: ["/bin/sleep", {{ $haltSeconds | quote }}]
+        command: ["/bin/sleep", {{ .Values.server.delayedShutdown.sleep.seconds | quote }}]
   {{- else if eq .Values.server.delayedShutdown.method "mempool" }}
   lifecycle:
     preStop:
@@ -906,7 +896,7 @@ initContainers:
      - configure
     volumeMounts:
      - name: {{ .Release.Name }}-mse4
-       mountPath: {{ .Values.server.mse4.persistence.mountPath }}
+       mountPath: /var/lib/mse4
      - name: {{ .Release.Name }}-config-mse4
        mountPath: /etc/varnish/mse4.conf
        subPath: mse4.conf

@@ -18,12 +18,12 @@
 env: {
   books = ( {
     id = "book";
-    filename = "{{ .Values.server.mse4.persistence.mountPath }}/book";
+    filename = "/var/lib/mse4/book";
     size = "{{ $bookSize }}";
 
     stores = ( {
       id = "store";
-      filename = "{{ .Values.server.mse4.persistence.mountPath }}/store";
+      filename = "/var/lib/mse4/store";
       size = "{{ $storeSize }}";
     } );
   } );

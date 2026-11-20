@@ -691,7 +691,7 @@ Sets the amount of memory to use for MSE4. The value can be set as either a perc
 
 An MSE4 configuration. By default, the value is unset and MSE4 is run in a memory-only mode.
 
-If `server.mse4.persistence.enabled` is true, it is recommended to reference to MSE path using `{{ .Values.server.mse4.persistence.mountPath }}` template string in the configuration.
+If `server.mse4.persistence.enabled` is true, the persistent volume is mounted at `/var/lib/mse4`; use that path for the books and stores in the configuration.
 
 **server.mse4.persistence.enabled**
 
@@ -717,13 +717,6 @@ Database size relative to `server.mse4.persistence.storageSize`, for auto-config
 Store size relative to `server.mse4.persistence.storageSize`, for auto-configuring MSE4. Can be set as a percentage or a value.
 
 `server.mse4.persistence.bookSize` and `server.mse4.persistence.storeSize` must add up to 100% or `server.mse4.persistence.storageSize`. Only applicable if `server.mse4.config` is empty.
-
-**server.mse4.persistence.mountPath**
-
-- Type: string
-- Default: `/var/lib/mse4`
-
-Sets the mount path for the PersistentVolumeClaim for MSE4.
 
 **server.mse4.persistence.labels**
 
@@ -863,14 +856,6 @@ Sets a base URL for Varnish Controller and Varnish Controller Router when perfor
 Sets the termination grace period seconds to wait for Varnish Enterprise to shut down. Once this number of seconds is reached without the Varnish Enterprise Pod shutting down, Kubernetes will send SIGKILL to the Pod. When `server.delayedShutdown` is used, this value should be set to a higher value than the **maximum** time (in seconds) it took for Varnish Enterprise to fully shut down after a delayed shutdown.
 
 The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
-
-**server.delayedHaltSeconds**
-
-- Type: number
-
-Deprecated: use `server.delayedShutdown` instead.
-
-Delays stopping of the Varnish Enterprise container by the given seconds.
 
 **server.delayedShutdown**
 

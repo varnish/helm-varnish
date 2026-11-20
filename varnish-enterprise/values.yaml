@@ -525,9 +525,8 @@ server:
     # An MSE4 configuration. By default, the value is unset and MSE4 is run in a
     # memory-only mode.
     #
-    # If `server.mse4.persistence.enabled` is true, it is recommended to reference to MSE
-    # path using `{{ .Values.server.mse4.persistence.mountPath }}` template string in the
-    # configuration.
+    # If `server.mse4.persistence.enabled` is true, the persistent volume is mounted at
+    # `/var/lib/mse4`; use that path for the books and stores in the configuration.
     # Type: template string
     # Availability: v1.6.1
     config: ""
@@ -555,10 +554,6 @@ server:
       # `server.mse4.config` is empty.
       # Type: string or number
       storeSize: "91%"
-
-      # Sets the mount path for the PersistentVolumeClaim for MSE4.
-      # Type: string
-      mountPath: "/var/lib/mse4"
 
       # Sets the extra labels for the PersistentVolumeClaim for MSE4. Can be set as an
       # object or a template string.
@@ -663,12 +658,6 @@ server:
   # Type: number
   # Availability: v1.6.0
   terminationGracePeriodSeconds: 0
-
-  # Deprecated: use `server.delayedShutdown` instead.
-  #
-  # Delays stopping of the Varnish Enterprise container by the given seconds.
-  # Type: number
-  #delayedHaltSeconds: 0
 
   # Configures delayed shutdown for zero-downtime downscaling.
   # Type: object

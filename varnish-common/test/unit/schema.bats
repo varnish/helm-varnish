@@ -156,7 +156,8 @@ EOT
 server:
   http:
     hostPort: null
-  delayedHaltSeconds: null
+  tls:
+    hostPort: null
 EOT
   schema_accepts -f "${values}"
 }
@@ -183,24 +184,10 @@ EOT
 
 @test "Schema: accepts fractional seconds" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
-  printf 'server:\n  ttl: 0.5\n  threadTimeout: 1.5\n  delayedHaltSeconds: 2.5\n' > "${values}"
+  printf 'server:\n  ttl: 0.5\n  threadTimeout: 1.5\n' > "${values}"
   schema_accepts -f "${values}"
   printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: sleep\n    sleep:\n      seconds: 2.5\n' > "${values}"
   schema_accepts -f "${values}"
-}
-
-@test "Schema: accepts a fractional delayedHaltSeconds string, rounding the grace period up" {
-  # --set keeps 120.5 as a string
-  schema_accepts --set server.delayedHaltSeconds=120.5
-  [[ "$output" == *'command: ["/bin/sleep", "120.5"]'* ]]
-  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
-  schema_accepts --set-json server.delayedHaltSeconds=120.5
-  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
-}
-
-@test "Schema: rejects a nonnumeric delayedHaltSeconds string" {
-  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=soon
-  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=1.
 }
 
 @test "Schema: accepts a null nodePort on an extra service" {
@@ -280,6 +267,10 @@ EOT
 
 @test "Schema: rejects the removed server.cmdfileConfigPath" {
   schema_rejects "additional properties 'cmdfileConfigPath' not allowed" --set server.cmdfileConfigPath=x
+}
+
+@test "Schema: rejects the removed server.delayedHaltSeconds" {
+  schema_rejects "additional properties 'delayedHaltSeconds' not allowed" --set server.delayedHaltSeconds=120
 }
 
 @test "Schema: rejects the removed server.tls.configFile" {

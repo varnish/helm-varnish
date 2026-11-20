@@ -90,3 +90,7 @@ EOT
 @test "Schema: rejects the removed server.mse4.configFile" {
   schema_rejects "additional properties 'configFile' not allowed" --set server.mse4.configFile=x
 }
+
+@test "Schema: rejects the removed server.mse4.persistence.mountPath" {
+  schema_rejects "additional properties 'mountPath' not allowed" --set server.mse4.persistence.mountPath=/data1/mse4
+}
