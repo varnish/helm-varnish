@@ -184,8 +184,6 @@ EOT
 
 @test "Schema: accepts fractional seconds" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
-  printf 'server:\n  ttl: 0.5\n  threadTimeout: 1.5\n' > "${values}"
-  schema_accepts -f "${values}"
   printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: sleep\n    sleep:\n      seconds: 2.5\n' > "${values}"
   schema_accepts -f "${values}"
 }
@@ -283,6 +281,14 @@ EOT
 
 @test "Schema: rejects the removed server.tls.configFile" {
   schema_rejects "additional properties 'configFile' not allowed" --set server.tls.configFile=x
+}
+
+@test "Schema: rejects the removed server.ttl" {
+  schema_rejects "additional properties 'ttl' not allowed" --set server.ttl=120
+}
+
+@test "Schema: rejects the removed server.threadTimeout" {
+  schema_rejects "additional properties 'threadTimeout' not allowed" --set server.threadTimeout=120
 }
 
 @test "Schema: vcls routes need vclContent" {

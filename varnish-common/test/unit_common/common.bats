@@ -761,46 +761,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '["sh","-c","umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret"]' ]
 }
 
-@test "${kind}/ttl: omitted when null" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.ttl=null' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-            jq -r -c 'if . == null then "no command" else index(["-t"]) end' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'null' ]
-}
-
-@test "${kind}/ttl: zero is kept" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.ttl=0' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-            jq -r -c '.[index(["-t", "0"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '0' ]
-}
-
 @test "${kind}/threads: omitted when null" {
     cd "$(chart_dir)"
 
@@ -808,7 +768,6 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --set 'server.minThreads=null' \
         --set 'server.maxThreads=null' \
-        --set 'server.threadTimeout=null' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -821,6 +780,72 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c 'if . == null then "no command" else [.[] | select(startswith("thread_pool_"))] end' |
             tee -a /dev/stderr)
     [ "${actual}" == '[]' ]
+}
+
+@test "${kind}/threads: min before max, before parameters" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.minThreads=10' \
+        --set 'server.maxThreads=80' \
+        --set 'server.parameters.acceptorSleepMax=0.05' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local command=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$command" |
+        jq -r -c '[index("thread_pool_min=10"), index("thread_pool_max=80"), index("acceptor_sleep_max=0.05")] |
+            if all(. != null) and .[0] < .[1] and .[1] < .[2] then "ordered" else tostring end' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'ordered' ]
+
+    local actual=$(echo "$command" |
+        jq -r -c '[index(["-t"]), (.[] | select(startswith("thread_pool_timeout")))]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '[null]' ]
+}
+
+@test "${kind}/threads: defaults" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            jq -r -c '[.[] | select(startswith("thread_pool_"))]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["thread_pool_min=50","thread_pool_max=1000"]' ]
+}
+
+@test "${kind}/threads: rejected in parameters" {
+    cd "$(chart_dir)"
+
+    for key in threadPoolMin threadPoolMax thread_pool_min thread_pool_max; do
+        run helm template \
+            --set "server.kind=${kind}" \
+            --set "server.parameters.${key}=5" \
+            --namespace default \
+            --show-only ${template} \
+            .
+        echo "${output}" >&2
+        [ "${status}" -ne 0 ]
+        [[ "${output}" == *"Set thread pool sizes with 'server.minThreads'/'server.maxThreads', not 'server.parameters'"* ]]
+    done
 }
 
 @test "${kind}/workdir: no -n" {
@@ -1101,12 +1126,6 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-t", "120"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '120' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
             jq -r -c '.[index(["-p", "thread_pool_min=50"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_min=50' ]
@@ -1116,12 +1135,6 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c '.[index(["-p", "thread_pool_max=1000"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_max=1000' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_timeout=120"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_timeout=120' ]
 }
 
 @test "${kind}/settings: can be configured" {
@@ -1129,10 +1142,8 @@ release-namespace: {{ .Release.Namespace }}
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.ttl=240' \
         --set 'server.minThreads=300' \
         --set 'server.maxThreads=5000' \
-        --set 'server.threadTimeout=500' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -1145,12 +1156,6 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-t", "240"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '240' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
             jq -r -c '.[index(["-p", "thread_pool_min=300"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_min=300' ]
@@ -1160,12 +1165,6 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c '.[index(["-p", "thread_pool_max=5000"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_max=5000' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_timeout=500"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_timeout=500' ]
 }
 
 @test "${kind}/command: can be configured" {

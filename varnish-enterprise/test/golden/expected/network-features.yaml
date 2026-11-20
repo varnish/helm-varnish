@@ -121,13 +121,9 @@ spec:
             - -f
             - /etc/varnish/default.vcl
             - -p
-            - thread_pool_max=1000
-            - -p
             - thread_pool_min=50
             - -p
-            - thread_pool_timeout=120
-            - -t
-            - "120"
+            - thread_pool_max=1000
             - -a
             - http=0.0.0.0:6081
             - -S

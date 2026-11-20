@@ -515,33 +515,19 @@ server:
       value: {{ .Release.Namespace }}
 ```
 
-**server.ttl**
-
-- Type: number or string
-- Default: `120`
-
-Sets the default Time To Live (in seconds) for a cached object.
-
 **server.minThreads**
 
 - Type: number
 - Default: `50`
 
-Sets the minimum number of worker threads in each pool. See also [varnishd documentation][varnishd].
+Sets the minimum number of worker threads in each pool. Passed as `-p thread_pool_min` before `server.parameters` (min first). See also [varnishd documentation][varnishd].
 
 **server.maxThreads**
 
 - Type: number
 - Default: `1000`
 
-Sets the maximum number of worker threads in each pool. See also [varnishd documentation][varnishd].
-
-**server.threadTimeout**
-
-- Type: number or string
-- Default: `120`
-
-Sets the number of seconds after which idle threads are destroyed.
+Sets the maximum number of worker threads in each pool. Passed as `-p thread_pool_max` after `thread_pool_min` and before `server.parameters`. See also [varnishd documentation][varnishd].
 
 **server.command**
 

@@ -268,16 +268,20 @@ Composing the $varnishArgs list or arguments
 {{/*
     Parameter list
 */}}
-{{- $threadParams := dict }}
-{{- range $pKey, $pValue := dict
-    "thread_pool_min" .Values.server.minThreads
-    "thread_pool_max" .Values.server.maxThreads
-    "thread_pool_timeout" .Values.server.threadTimeout }}
-  {{- if include "varnish-common.isSet" $pValue }}
-    {{- $_ := set $threadParams $pKey (toString $pValue) }}
+{{- $userParams := .Values.server.parameters | default dict }}
+{{- range $pKey := list "threadPoolMin" "threadPoolMax" "thread_pool_min" "thread_pool_max" }}
+  {{- if hasKey $userParams $pKey }}
+    {{- fail "Set thread pool sizes with 'server.minThreads'/'server.maxThreads', not 'server.parameters'" }}
   {{- end }}
 {{- end }}
-{{- $varnishParams := merge $threadParams .Values.server.parameters }}
+{{- /* min first: varnishd checks min <= max at each -p, and its default min is 100 */}}
+{{- if include "varnish-common.isSet" .Values.server.minThreads }}
+  {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_min=" (toString .Values.server.minThreads))) }}
+{{- end }}
+{{- if include "varnish-common.isSet" .Values.server.maxThreads }}
+  {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_max=" (toString .Values.server.maxThreads))) }}
+{{- end }}
+{{- $varnishParams := merge (dict) $userParams }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
   {{- if not (include "varnish-common.isEnterprise" .) }}
     {{- fail "'server.delayedShutdown.method' 'shutdown_delay' requires Varnish Enterprise, use 'sleep' or 'mempool' instead" }}
@@ -294,12 +298,6 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
   {{- end }}
 {{- end -}}
-{{/*
-    TTL
-*/}}
-{{- if include "varnish-common.isSet" .Values.server.ttl }}
-{{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
-{{- end }}
 {{/*
     Listen address
 */}}

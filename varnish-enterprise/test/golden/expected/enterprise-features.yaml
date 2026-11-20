@@ -209,15 +209,11 @@ spec:
             - -f
             - /etc/varnish/wrapped-default.vcl
             - -p
-            - default_ttl=60
+            - thread_pool_min=50
             - -p
             - thread_pool_max=1000
             - -p
-            - thread_pool_min=50
-            - -p
-            - thread_pool_timeout=120
-            - -t
-            - "120"
+            - default_ttl=60
             - -a
             - http=0.0.0.0:6081
             - -S

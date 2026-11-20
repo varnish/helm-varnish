@@ -126,17 +126,13 @@ spec:
             - -f
             - /etc/varnish/default.vcl
             - -p
-            - backend_idle_timeout=60
-            - -p
-            - feature=+http2
+            - thread_pool_min=50
             - -p
             - thread_pool_max=1000
             - -p
-            - thread_pool_min=50
+            - backend_idle_timeout=60
             - -p
-            - thread_pool_timeout=120
-            - -t
-            - "120"
+            - feature=+http2
             - -a
             - http=0.0.0.0:6081
             - -S
