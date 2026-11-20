@@ -393,15 +393,6 @@
           "default": false,
           "description": "Whether to enable shared PID namespace between all containers in a Pod. This is useful for a scenario where it is necessary to send a signal to a process across a container.\n"
         },
-        "workDir": {
-          "type": [
-            "string",
-            "integer",
-            "null"
-          ],
-          "description": "Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to \"-\", the Pod name is used. When empty, varnishd runs without `-n` and uses the Varnish default, so `varnishstat`, `varnishadm` and `varnishlog` work without `-n` in `kubectl exec` and in extra containers.\n",
-          "default": ""
-        },
         "http": {
           "type": "object",
           "additionalProperties": false,
@@ -484,22 +475,6 @@
               "examples": [
                 "files/tls.cfg"
               ]
-            }
-          }
-        },
-        "admin": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "address": {
-              "type": "string",
-              "default": "127.0.0.1",
-              "description": "Configures the address for Varnish management interface.\n"
-            },
-            "port": {
-              "$ref": "#/definitions/port",
-              "default": 6082,
-              "description": "Configures the port for Varnish management interface.\n"
             }
           }
         },
@@ -701,7 +676,7 @@
         "extraContainers": {
           "$ref": "#/definitions/arrayOrTemplate",
           "default": [],
-          "description": "An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string.\n",
+          "description": "An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string. A sidecar that mounts the `{{ .Release.Name }}-varnish-vsm` volume at `/var/lib/varnish` can run `varnishstat`, `varnishlog` and `varnishadm` without `-n`, as varnishd uses its default working directory. The varnishd admin interface listens on `127.0.0.1:6082` and its secret is `/etc/varnish/shared/secret` (mount the `{{ .Release.Name }}-config-shared` volume at `/etc/varnish/shared`).\n",
           "examples": [
             "- name: varnish-hello\n  securityContext:\n    {{- toYaml .Values.global.securityContext | nindent 4 }}\n  image: hello-world:latest\n  volumeMounts:\n    - name: {{ .Release.Name }}-varnish-vsm\n      mountPath: /var/lib/varnish\n"
           ]
@@ -733,44 +708,6 @@
         "mse4": {
           "type": "null",
           "description": "Varnish Enterprise only."
-        },
-        "secret": {
-          "type": "string",
-          "default": "",
-          "description": "Sets the Varnish secret for accessing the varnishd admin interface. Either this value or `server.secretFrom` can be set. If unset, Varnish will generate one on every Pod start.\n"
-        },
-        "secretFrom": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": false,
-          "default": {},
-          "description": "Sets the Varnish secret from an external Kubernetes secret for accessing the varnishd admin interface. Either this value or `server.secret` can be set.\n",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "The name of the Kubernetes secret. Required when `server.secretFrom` is set.\n"
-            },
-            "key": {
-              "type": "string",
-              "description": "The key of the Kubernetes secret holding the Varnish secret. Required when `server.secretFrom` is set.\n"
-            }
-          },
-          "examples": [
-            {
-              "name": "secret-name",
-              "key": "varnish-secret"
-            }
-          ]
-        },
-        "secretFile": {
-          "type": "string",
-          "default": "",
-          "description": "Use the content of the given file path as Varnish secret. The file will be parsed as templated string. Will override `server.secret` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.\n",
-          "examples": [
-            "files/secret"
-          ]
         },
         "vclConfigPath": {
           "type": "string",

@@ -232,17 +232,3 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
 {{- tpl .Values.server.cmdfileConfig . }}
 {{- end }}
 {{- end }}
-
-{{- define "varnish-common.secretConfig" -}}
-{{- if empty .Values.server.secretFrom }}
-{{- if (not (eq .Values.server.secretFile "")) -}}
-{{- $secretFile := (.Files.Get .Values.server.secretFile) }}
-{{- if (eq $secretFile "") }}
-{{ fail "'server.secretFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $secretFile . }}
-{{- else if (not (eq .Values.server.secret "")) }}
-{{- tpl .Values.server.secret . }}
-{{- end }}
-{{- end }}
-{{- end }}

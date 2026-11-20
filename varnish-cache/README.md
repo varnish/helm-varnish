@@ -515,12 +515,6 @@ Setting this will also set the DNS policy to `ClusterFirstWithHostNet` to allow 
 
 Whether to enable shared PID namespace between all containers in a Pod. This is useful for a scenario where it is necessary to send a signal to a process across a container.
 
-**server.workDir**
-
-- Type: string or number
-
-Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to "-", the Pod name is used. When empty, varnishd runs without `-n` and uses the Varnish default, so `varnishstat`, `varnishadm` and `varnishlog` work without `-n` in `kubectl exec` and in extra containers.
-
 **server.http.enabled**
 
 - Type: boolean
@@ -617,20 +611,6 @@ server:
   tls:
     configFile: files/tls.cfg
 ```
-
-**server.admin.address**
-
-- Type: string
-- Default: `127.0.0.1`
-
-Configures the address for Varnish management interface.
-
-**server.admin.port**
-
-- Type: number
-- Default: `6082`
-
-Configures the port for Varnish management interface.
 
 **server.extraListens**
 
@@ -826,7 +806,7 @@ server:
 
 - Type: array or template string
 
-An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string.
+An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string. A sidecar that mounts the `{{ .Release.Name }}-varnish-vsm` volume at `/var/lib/varnish` can run `varnishstat`, `varnishlog` and `varnishadm` without `-n`, as varnishd uses its default working directory. The varnishd admin interface listens on `127.0.0.1:6082` and its secret is `/etc/varnish/shared/secret` (mount the `{{ .Release.Name }}-config-shared` volume at `/etc/varnish/shared`).
 
 For example:
 
@@ -892,52 +872,6 @@ server:
       hostPath:
         path: /data
         type: Directory
-```
-
-**server.secret**
-
-- Type: string
-
-Sets the Varnish secret for accessing the varnishd admin interface. Either this value or `server.secretFrom` can be set. If unset, Varnish will generate one on every Pod start.
-
-**server.secretFrom**
-
-- Type: object
-
-Sets the Varnish secret from an external Kubernetes secret for accessing the varnishd admin interface. Either this value or `server.secret` can be set.
-
-For example:
-
-```yaml
-server:
-  secretFrom:
-    name: secret-name
-    key: varnish-secret
-```
-
-**server.secretFrom.name**
-
-- Type: string
-
-The name of the Kubernetes secret. Required when `server.secretFrom` is set.
-
-**server.secretFrom.key**
-
-- Type: string
-
-The key of the Kubernetes secret holding the Varnish secret. Required when `server.secretFrom` is set.
-
-**server.secretFile**
-
-- Type: string
-
-Use the content of the given file path as Varnish secret. The file will be parsed as templated string. Will override `server.secret` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
-
-For example:
-
-```yaml
-server:
-  secretFile: files/secret
 ```
 
 **server.vclConfigPath**

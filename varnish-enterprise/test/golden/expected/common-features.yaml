@@ -30,20 +30,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     team: web
 ---
-# Source: varnish-enterprise/templates/secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: golden-secret
-  labels:
-    helm.sh/chart: varnish-enterprise-CHART_VERSION
-    app.kubernetes.io/name: golden
-    app.kubernetes.io/instance: golden
-    app.kubernetes.io/version: "APP_VERSION"
-    app.kubernetes.io/managed-by: Helm
-data:
-  secret: czNjcjN0
----
 # Source: varnish-enterprise/templates/configmap-cmdfile.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -133,7 +119,6 @@ spec:
       annotations:
         checksum/golden-cmdfile: 9ed82005a153fb8bd0f926b3bcf69eebda794f1c5e8ec764fea3f819c5c1e2a8
         checksum/golden-extra-extra-cm: 6d3fc6f0f003717c7e5188f3fcd9874f709ab7b0d8eaaa63f04e5e335fd4d868
-        checksum/golden-secret: 4e738ca5563c06cfd0018299933d58db1dd8bf97f6973dc99bf6cdc64b5550bd
         checksum/golden-vcl: efa6171b0848c327d81f850523aae1bc8d3a502564d77ccebc9e4c4cf930a49c
     spec:
       imagePullSecrets:
@@ -176,10 +161,6 @@ spec:
             limits:
               memory: 1Gi
           env:
-            - name: VARNISH_WORKDIR
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
             - name: "FOO"
               value: "bar"
           command:
@@ -197,14 +178,12 @@ spec:
             - thread_pool_min=50
             - -p
             - thread_pool_timeout=120
-            - -n
-            - $(VARNISH_WORKDIR)
             - -t
             - "120"
             - -a
             - http=0.0.0.0:6081
             - -S
-            - /etc/varnish/secret
+            - /etc/varnish/shared/secret
             - -p
             - thread_pool_stack=96k
             - -a
@@ -214,9 +193,6 @@ spec:
               mountPath: /var/lib/varnish
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
-            - name: golden-config-secret
-              mountPath: /etc/varnish/secret
-              subPath: secret
             - name: golden-config-vcl
               mountPath: "/etc/varnish/default.vcl"
               subPath: default.vcl
@@ -231,23 +207,17 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnishncsa"]
           args:
-            - -n
-            - $(VARNISH_WORKDIR)
             - -F
             - '%h %r %s'
           env:
             - name: VSM_NOPID
               value: "1"
-            - name: VARNISH_WORKDIR
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
           readinessProbe:
             exec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -258,7 +228,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -269,6 +239,20 @@ spec:
               mountPath: /var/lib/varnish
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
+      initContainers:
+        - name: varnish-enterprise-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
       volumes:
       - name: golden-varnish-vsm
         emptyDir:
@@ -276,9 +260,6 @@ spec:
       - name: golden-config-shared
         emptyDir:
           medium: "Memory"
-      - name: golden-config-secret
-        secret:
-          secretName: golden-secret
       - name: golden-config-vcl
         configMap:
           name: golden-vcl

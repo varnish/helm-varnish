@@ -110,6 +110,8 @@ spec:
             - "120"
             - -a
             - http=$(POD_IP):6081
+            - -S
+            - /etc/varnish/shared/secret
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
@@ -152,6 +154,20 @@ spec:
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      initContainers:
+        - name: varnish-cache-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "docker.io/varnish:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
       volumes:

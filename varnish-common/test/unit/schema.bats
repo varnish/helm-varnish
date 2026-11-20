@@ -242,12 +242,24 @@ EOT
   schema_rejects "at '/server/vclConfigs'" --set server.vclConfigs=foo
 }
 
-@test "Schema: rejects a numeric server.secret" {
-  schema_rejects "at '/server/secret'" --set server.secret=1234
+@test "Schema: rejects the removed server.secret" {
+  schema_rejects "additional properties 'secret' not allowed" --set server.secret=x
 }
 
-@test "Schema: rejects unknown secretFrom keys" {
-  schema_rejects "additional properties 'nme' not allowed" --set server.secretFrom.nme=a
+@test "Schema: rejects the removed server.secretFrom" {
+  schema_rejects "additional properties 'secretFrom' not allowed" --set server.secretFrom.name=x
+}
+
+@test "Schema: rejects the removed server.secretFile" {
+  schema_rejects "additional properties 'secretFile' not allowed" --set server.secretFile=x
+}
+
+@test "Schema: rejects the removed server.admin" {
+  schema_rejects "additional properties 'admin' not allowed" --set server.admin.port=1
+}
+
+@test "Schema: rejects the removed server.workDir" {
+  schema_rejects "additional properties 'workDir' not allowed" --set server.workDir=x
 }
 
 @test "Schema: vcls routes need vclContent" {

@@ -2,7 +2,6 @@
 # share templates.
 server:
   kind: StatefulSet
-  workDir: golden
   parameters:
     backendIdleTimeout: "60"
     feature:
