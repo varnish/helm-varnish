@@ -130,3 +130,20 @@ load _helpers
 
     [ "${actual}" == "Local" ]
 }
+
+@test "Service: fails when neither HTTP nor TLS is enabled" {
+    cd "$(chart_dir)"
+    run helm template \
+        --set 'server.http.enabled=false' \
+        --set 'server.tls.enabled=false' \
+        --set 'server.livenessProbe=null' \
+        --set 'server.readinessProbe=null' \
+        --set 'server.varnishncsa.livenessProbe=null' \
+        --set 'server.varnishncsa.readinessProbe=null' \
+        --namespace default \
+        --show-only templates/service.yaml \
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"The Service needs a port: enable 'server.http.enabled' or 'server.tls.enabled', or disable 'server.service.enabled'"* ]]
+}

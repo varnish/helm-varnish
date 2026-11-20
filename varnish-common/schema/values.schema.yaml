@@ -689,7 +689,7 @@ properties:
           type: [string, number, boolean, array]
         default: {}
         description: |
-          Sets {product} parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.
+          Sets {product} parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Thread pool sizes are set with `server.minThreads` and `server.maxThreads`: setting `thread_pool_min` or `thread_pool_max` here, in any spelling, fails rendering.
         x-examples:
           - description: "For example, the following results in `-p backend_idle_timeout=60 -p feature=+http2`:"
             value:

@@ -545,7 +545,7 @@ Sets the extra arguments to varnishd. A string is split on whitespace into separ
 
 - Type: object
 
-Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.
+Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Thread pool sizes are set with `server.minThreads` and `server.maxThreads`: setting `thread_pool_min` or `thread_pool_max` here, in any spelling, fails rendering.
 
 For example, the following results in `-p backend_idle_timeout=60 -p feature=+http2`:
 

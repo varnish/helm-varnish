@@ -161,9 +161,8 @@ The following values were removed. As unknown keys are rejected by `values.schem
 - `server.vclConfigPath` → none, the main VCL is always `/etc/varnish/default.vcl`.
 - `server.vclConfigFile: files/x.vcl` → `helm ... --set-file server.vclConfig=x.vcl`.
 - `server.tls.configFile: files/x.cfg` → `helm ... --set-file server.tls.config=x.cfg`.
-- `server.secretFile` → none, see `server.secret`.
 - `server.cmdfileConfig`, `server.cmdfileConfigFile`, `server.cmdfileConfigPath` → `server.vcls.routes` to load one VCL per domain; there is no replacement for arbitrary CLI commands.
-- `server.secret`, `server.secretFrom` → none. An init container generates a secret per Pod at `/etc/varnish/shared/secret`. Extra containers that need the varnishd CLI mount the `<release>-config-shared` volume at `/etc/varnish/shared` and run `varnishadm -T 127.0.0.1:6082 -S /etc/varnish/shared/secret`.
+- `server.secret`, `server.secretFrom`, `server.secretFile` → none. An init container generates a secret per Pod at `/etc/varnish/shared/secret`. Extra containers that need the varnishd CLI mount the `<release>-config-shared` volume at `/etc/varnish/shared` and run `varnishadm -T 127.0.0.1:6082 -S /etc/varnish/shared/secret`.
 - `server.admin.address`, `server.admin.port` → none, the admin interface always listens on `127.0.0.1:6082`.
 - `server.workDir` → none, varnishd runs without `-n`. Tools in the Pod (`kubectl exec`, extra containers mounting the `<release>-varnish-vsm` volume at `/var/lib/varnish`) need no `-n`.
 - `server.ttl: N` → `server.parameters.defaultTtl: N`.
@@ -729,7 +728,7 @@ Sets the extra arguments to varnishd. A string is split on whitespace into separ
 
 - Type: object
 
-Sets Varnish Cache parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.
+Sets Varnish Cache parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Thread pool sizes are set with `server.minThreads` and `server.maxThreads`: setting `thread_pool_min` or `thread_pool_max` here, in any spelling, fails rendering.
 
 For example, the following results in `-p backend_idle_timeout=60 -p feature=+http2`:
 

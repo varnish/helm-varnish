@@ -26,6 +26,9 @@ spec:
   {{- if .Values.server.service.loadBalancerIP }}
   loadBalancerIP: {{ .Values.server.service.loadBalancerIP }}
   {{- end }}
+  {{- if not (or .Values.server.http.enabled .Values.server.tls.enabled) }}
+  {{- fail "The Service needs a port: enable 'server.http.enabled' or 'server.tls.enabled', or disable 'server.service.enabled'" }}
+  {{- end }}
   ports:
   {{- if .Values.server.http.enabled }}
     - name: http

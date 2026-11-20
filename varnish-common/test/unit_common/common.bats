@@ -482,6 +482,7 @@ release-namespace: {{ .Release.Namespace }}
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.startupProbe=' \
         --set 'server.readinessProbe=' \
         --set 'server.livenessProbe=' \
@@ -522,6 +523,7 @@ release-namespace: {{ .Release.Namespace }}
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.startupProbe.initialDelaySeconds=' \
         --set 'server.readinessProbe=' \
         --set 'server.livenessProbe=' \
@@ -539,6 +541,7 @@ release-namespace: {{ .Release.Namespace }}
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.livenessProbe=' \
         --namespace default \
         --show-only ${template} \
@@ -554,6 +557,7 @@ release-namespace: {{ .Release.Namespace }}
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.readinessProbe=' \
         --namespace default \
         --show-only ${template} \
@@ -835,7 +839,7 @@ release-namespace: {{ .Release.Namespace }}
 @test "${kind}/threads: rejected in parameters" {
     cd "$(chart_dir)"
 
-    for key in threadPoolMin threadPoolMax thread_pool_min thread_pool_max; do
+    for key in threadPoolMin threadPoolMax thread_pool_min thread_pool_max ThreadPoolMin ThreadPoolMax; do
         run helm template \
             --set "server.kind=${kind}" \
             --set "server.parameters.${key}=5" \
@@ -3014,6 +3018,7 @@ env: {
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.livenessProbe=' \
         --set 'server.readinessProbe=' \
         --namespace default \

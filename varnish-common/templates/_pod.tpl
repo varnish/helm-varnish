@@ -269,8 +269,8 @@ Composing the $varnishArgs list or arguments
     Parameter list
 */}}
 {{- $userParams := .Values.server.parameters | default dict }}
-{{- range $pKey := list "threadPoolMin" "threadPoolMax" "thread_pool_min" "thread_pool_max" }}
-  {{- if hasKey $userParams $pKey }}
+{{- range $pKey, $_ := $userParams }}
+  {{- if has (snakecase $pKey) (list "thread_pool_min" "thread_pool_max") }}
     {{- fail "Set thread pool sizes with 'server.minThreads'/'server.maxThreads', not 'server.parameters'" }}
   {{- end }}
 {{- end }}

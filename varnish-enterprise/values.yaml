@@ -408,7 +408,9 @@ server:
   extraArgs: []
 
   # Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names
-  # are converted from camelCase to snake_case, and arrays are joined with a comma.
+  # are converted from camelCase to snake_case, and arrays are joined with a comma. Thread
+  # pool sizes are set with `server.minThreads` and `server.maxThreads`: setting
+  # `thread_pool_min` or `thread_pool_max` here, in any spelling, fails rendering.
   # Type: object
   # Example:
   #   parameters:
