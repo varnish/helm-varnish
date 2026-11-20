@@ -238,8 +238,12 @@ EOT
   schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=wait
 }
 
-@test "Schema: rejects a string server.vclConfigs" {
-  schema_rejects "at '/server/vclConfigs'" --set server.vclConfigs=foo
+@test "Schema: rejects the removed server.vclConfigPath" {
+  schema_rejects "additional properties 'vclConfigPath' not allowed" --set server.vclConfigPath=x
+}
+
+@test "Schema: rejects the removed server.vclConfigs" {
+  schema_rejects "additional properties 'vclConfigs' not allowed" --set server.vclConfigs.x=y
 }
 
 @test "Schema: rejects the removed server.secret" {

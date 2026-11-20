@@ -757,19 +757,11 @@ Sets the storage class for the PersistentVolumeClaim for MSE4.
 
 Sets the storage size for the PersistentVolumeClaim for MSE4.
 
-**server.vclConfigPath**
-
-- Type: string
-- Default: `/etc/varnish/default.vcl`
-- Availability: v1.2.0
-
-A path to the main VCL configuration. This configuration affects the location where `server.vclConfig` will be saved to, as well as the `VARNISH_VCL_CONF` environment variable in the Varnish Enterprise container.
-
 **server.vclConfig**
 
 - Type: template string
 
-A VCL configuration for Varnish Enterprise.
+The main VCL of Varnish Enterprise, mounted at `/etc/varnish/default.vcl`. It can load the files of `server.vcls.includes` with `include "./vcls/<file>";`. It must not be set together with `server.vcls.routes`.
 
 For example:
 
@@ -788,55 +780,18 @@ server:
     }
 ```
 
-**server.vclConfigs**
-
-- Type: object of template strings
-- Availability: v1.2.0
-
-Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`.
-
-If the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.
-
-For example, with `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following configuration saves the file as `/etc/varnish/extra.vcl`:
-
-```yaml
-server:
-  vclConfigs:
-    extra.vcl: |
-      vcl 4.1;
-
-      backend default {
-        .host = "127.0.0.1";
-        .port = "8090";
-      }
-```
-
-With `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following is effectively the same as setting `server.vclConfig`, which must then be unset:
-
-```yaml
-server:
-  vclConfigs:
-    default.vcl: |
-      vcl 4.1;
-
-      backend default {
-        .host = "127.0.0.1";
-        .port = "8090";
-      }
-```
-
 **server.vcls**
 
 - Type: object
 - Availability: v1.8.0
 
-Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields.
+Per-domain VCL routing (multi-tenant) and shared VCL files. When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding `server.vclConfig`. `server.vcls.includes` works with or without routes.
 
 **server.vcls.routes**
 
 - Type: array of objects
 
-Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig` and `server.vclConfigs` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
+Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
 
 For example:
 
@@ -879,9 +834,9 @@ The VCL of the route. Required.
 
 - Type: object of template strings
 
-Shared VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs. Each key is a filename and each value a template string. Requires `server.vcls.routes`. Route VCLs include them with a relative path (`include "./helpers.vcl";`), as plain filenames are looked up in `vcl_path` instead.
+Extra VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs if any. Each key is a filename (subdirectories allowed) and each value a template string. Load them with a path relative to the including file: `include "./vcls/<file>";` from `server.vclConfig`, and `include "./<file>";` from a route VCL. Plain filenames are looked up in `vcl_path` instead.
 
-For example, a route VCL can use the following with `include "./helpers.vcl";` and `call common_recv;`:
+For example, `server.vclConfig` can use the following with `include "./vcls/helpers.vcl";` and `call common_recv;` (a route VCL would use `include "./helpers.vcl";`):
 
 ```yaml
 server:

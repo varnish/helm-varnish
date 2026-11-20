@@ -3,11 +3,9 @@ Sets up Pod annotations
 */}}
 {{- define "varnish-common.podAnnotations" }}
 {{- $section := default "server" .section }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
 {{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- $vclConfig := include "varnish-common.vclConfig" . }}
-{{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
 {{- $extraManifests := .Values.extraManifests }}
 {{- $checksum := dict }}
 {{- if not (eq $mse4Config "") }}
@@ -19,12 +17,7 @@ Sets up Pod annotations
 {{- if not (eq $vclConfig "") }}
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl") (sha256sum $vclConfig)) $checksum) }}
 {{- end }}
-{{- if not (empty $vclConfigs) }}
-{{- range $k, $v := $vclConfigs }}
-{{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl-" (regexReplaceAll "\\W+" $k "-")) (sha256sum (tpl $v $))) $checksum) }}
-{{- end }}
-{{- end }}
-{{- if not (empty .Values.server.vcls.routes) }}
+{{- if or (not (empty .Values.server.vcls.routes)) (not (empty .Values.server.vcls.includes)) }}
 {{- $bundleData := dict
     "routes" .Values.server.vcls.routes
     "includes" .Values.server.vcls.includes
@@ -145,8 +138,6 @@ imagePullSecrets:
 Declares the Pod's volume mounts.
 */}}
 {{- define "varnish-common.podVolumes" }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 volumes:
 - name: {{ .Release.Name }}-varnish-vsm
   emptyDir:
@@ -182,30 +173,22 @@ volumes:
   configMap:
     name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-{{ include "varnish-common.vclBundleK8sName" $name }}
 {{- end }}
-{{- range $filename, $_ := .Values.server.vcls.includes }}
-- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
-  configMap:
-    name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
-{{- end }}
 {{- else }}
 {{- if not (eq (include "varnish-common.vclConfig" .) "") }}
 - name: {{ .Release.Name }}-config-vcl
   configMap:
     name: {{ include "varnish-common.fullname" . }}-vcl
 {{- end }}
-{{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- if not (empty $vclConfigs) }}
-{{- range $k, $v := $vclConfigs }}
-- name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-  configMap:
-    name: {{ include "varnish-common.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-{{- end }}
-{{- end }}
 {{- if (include "varnish-common.clusterEnabled" .) }}
-- name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
+- name: {{ .Release.Name }}-config-vcl-wrapped-default-vcl
   configMap:
-    name: {{ include "varnish-common.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
+    name: {{ include "varnish-common.fullname" . }}-vcl-wrapped-default-vcl
 {{- end }}
+{{- end }}
+{{- range $filename, $_ := .Values.server.vcls.includes }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
+  configMap:
+    name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
 {{- end }}
 {{- if and (include "varnish-common.agentEnabled" .) (not .Values.server.agent.persistence.enabled) (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
 - name: {{ .Release.Name }}-varnish-controller
@@ -250,17 +233,26 @@ Declares the probe for Varnish pod
 {{- end }}
 
 {{/*
+Mounts server.vcls.includes under /etc/varnish/vcls/
+*/}}
+{{- define "varnish-common.vclIncludeMounts" }}
+{{- range $filename, $_ := .Values.server.vcls.includes }}
+    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
+      mountPath: /etc/varnish/vcls/{{ clean $filename }}
+      subPath: {{ base $filename }}
+{{- end }}
+{{- end }}
+
+{{/*
 Declares the Varnish container
 */}}
 {{- define "varnish-common.serverContainer" -}}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
-{{- $tlsConfig := include "varnish-common.tlsConfig" . }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath -}}
+{{- $tlsConfig := include "varnish-common.tlsConfig" . -}}
 {{/*
 Composing the $varnishArgs list or arguments
 */}}
 {{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" "127.0.0.1:6082" }}
-{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 {{- if not (empty .Values.server.vcls.routes) }}
   {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli" "-f" "") }}
 {{- else }}
@@ -272,9 +264,9 @@ Composing the $varnishArgs list or arguments
     {{- end }}
   {{- end }}
   {{- if (include "varnish-common.clusterEnabled" .) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" "/etc/varnish/wrapped-default.vcl") }}
   {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" "/etc/varnish/default.vcl") }}
   {{- end }}
 {{- end -}}
 {{/*
@@ -516,32 +508,19 @@ Composing the $varnishArgs list or arguments
       mountPath: /etc/varnish/vcls/{{ $name }}.vcl
       subPath: {{ $name }}.vcl
     {{- end }}
-    {{- range $filename, $_ := .Values.server.vcls.includes }}
-    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
-      mountPath: /etc/varnish/vcls/{{ clean $filename }}
-      subPath: {{ base $filename }}
-    {{- end }}
     {{- else }}
     {{- if not (eq (include "varnish-common.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
-      mountPath: {{ .Values.server.vclConfigPath | quote }}
-      subPath: {{ $defaultVcl }}
-    {{- end }}
-    {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-    {{- if not (empty $vclConfigs) }}
-    {{- range $k, $v := $vclConfigs }}
-    - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-      mountPath: {{ list (dir $.Values.server.vclConfigPath) $k | join "/" | quote }}
-      subPath: {{ $k | quote }}
-    {{- end }}
+      mountPath: "/etc/varnish/default.vcl"
+      subPath: default.vcl
     {{- end }}
     {{- if (include "varnish-common.clusterEnabled" .) }}
-    {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
-    - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
-      mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
-      subPath: {{ $wrappedDefaultVCL | quote }}
+    - name: {{ .Release.Name }}-config-vcl-wrapped-default-vcl
+      mountPath: "/etc/varnish/wrapped-default.vcl"
+      subPath: "wrapped-default.vcl"
     {{- end }}
     {{- end }}
+    {{- include "varnish-common.vclIncludeMounts" . }}
     {{- if and (eq .Values.server.kind "StatefulSet") (and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}
     - name: {{ .Release.Name }}-mse4
       mountPath: {{ .Values.server.mse4.persistence.mountPath }}
@@ -766,17 +745,10 @@ Declares the Varnish Controller Agent container
       mountPath: /etc/varnish/shared
     {{- if not (eq (include "varnish-common.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
-      mountPath: {{ .Values.server.vclConfigPath | quote }}
-      subPath: {{ osBase .Values.server.vclConfigPath }}
+      mountPath: "/etc/varnish/default.vcl"
+      subPath: default.vcl
     {{- end }}
-    {{- $vclConfigs := omit .Values.server.vclConfigs (osBase .Values.server.vclConfigPath) }}
-    {{- if not (empty $vclConfigs) }}
-    {{- range $k, $v := $vclConfigs }}
-    - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-      mountPath: {{ list (dir $.Values.server.vclConfigPath) $k | join "/" | quote }}
-      subPath: {{ $k | quote }}
-    {{- end }}
-    {{- end }}
+    {{- include "varnish-common.vclIncludeMounts" . }}
     {{- if not (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
     - name: {{ .Values.server.agent.persistence.enableWithVolumeName }}
       mountPath: /var/lib/varnish-controller

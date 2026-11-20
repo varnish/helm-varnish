@@ -397,7 +397,7 @@ properties:
     x-docs-section: Server configurations
     type: object
     additionalProperties: false
-    required: [vclConfigs, vcls]
+    required: [vcls]
     properties:
       replicas:
         $ref: "#/definitions/nonNegInt"
@@ -889,20 +889,12 @@ properties:
                 description: |
                   Sets the storage size for the PersistentVolumeClaim for MSE4.
 
-      vclConfigPath:
-        type: string
-        default: /etc/varnish/default.vcl
-        x-since:
-          enterprise: v1.2.0
-        description: |
-          A path to the main VCL configuration. This configuration affects the location where `server.vclConfig` will be saved to, as well as the `VARNISH_VCL_CONF` environment variable in the {product} container.
-
       vclConfig:
         type: string
         x-type-label: template string
         default: ""
         description: |
-          A VCL configuration for {product}.
+          The main VCL of {product}, mounted at `/etc/varnish/default.vcl`. It can load the files of `server.vcls.includes` with `include "./vcls/<file>";`. It must not be set together with `server.vcls.routes`.
         x-examples:
           - description: "For example:"
             value: |
@@ -917,52 +909,20 @@ properties:
                 set bereq.http.Host = "www.example.com";
               }
 
-      vclConfigs:
-        type: object
-        x-type-label: object of template strings
-        additionalProperties:
-          type: string
-        default: {}
-        x-since:
-          enterprise: v1.2.0
-        description: |
-          Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`.
-
-          If the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.
-        x-examples:
-          - description: "For example, with `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following configuration saves the file as `/etc/varnish/extra.vcl`:"
-            value:
-              extra.vcl: |
-                vcl 4.1;
-
-                backend default {
-                  .host = "127.0.0.1";
-                  .port = "8090";
-                }
-          - description: "With `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following is effectively the same as setting `server.vclConfig`, which must then be unset:"
-            value:
-              default.vcl: |
-                vcl 4.1;
-
-                backend default {
-                  .host = "127.0.0.1";
-                  .port = "8090";
-                }
-
       vcls:
         type: object
         additionalProperties: false
         x-since:
           enterprise: v1.8.0
         description: |
-          Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields.
+          Per-domain VCL routing (multi-tenant) and shared VCL files. When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding `server.vclConfig`. `server.vcls.includes` works with or without routes.
         properties:
           routes:
             type: [array, "null"]
             x-type-label: array of objects
             default: []
             description: |
-              Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig` and `server.vclConfigs` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
+              Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
             x-examples:
               - description: "For example:"
                 value:
@@ -1008,9 +968,9 @@ properties:
               type: string
             default: {}
             description: |
-              Shared VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs. Each key is a filename and each value a template string. Requires `server.vcls.routes`. Route VCLs include them with a relative path (`include "./helpers.vcl";`), as plain filenames are looked up in `vcl_path` instead.
+              Extra VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs if any. Each key is a filename (subdirectories allowed) and each value a template string. Load them with a path relative to the including file: `include "./vcls/<file>";` from `server.vclConfig`, and `include "./<file>";` from a route VCL. Plain filenames are looked up in `vcl_path` instead.
             x-examples:
-              - description: "For example, a route VCL can use the following with `include \"./helpers.vcl\";` and `call common_recv;`:"
+              - description: "For example, `server.vclConfig` can use the following with `include \"./vcls/helpers.vcl\";` and `call common_recv;` (a route VCL would use `include \"./helpers.vcl\";`):"
                 value:
                   helpers.vcl: |
                     sub common_recv {
