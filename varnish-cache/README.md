@@ -110,7 +110,7 @@ server:
       subPath: default.vcl
 ```
 
-In the case where `server.vclConfigPath` was configured to any value apart from the default, `mountPath` also needed to be changed to match that value.
+The main VCL is always `/etc/varnish/default.vcl`.
 
 #### Serving multiple domains
 
