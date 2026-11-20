@@ -153,6 +153,26 @@ Values are validated against `values.schema.json` when you run `helm install`, `
 
 ### Upgrading
 
+#### To 2.0.0: values removed
+
+The following values were removed. As unknown keys are rejected by `values.schema.json`, remove them from your values before upgrading:
+
+- `server.vclConfigs.<file>` → `server.vcls.includes.<file>`, mounted at `/etc/varnish/vcls/<file>`; load it from `server.vclConfig` with `include "./vcls/<file>";`. A `server.vclConfigs` entry named after the main VCL (`default.vcl`) → `server.vclConfig`.
+- `server.vclConfigPath` → none, the main VCL is always `/etc/varnish/default.vcl`.
+- `server.vclConfigFile: files/x.vcl` → `helm ... --set-file server.vclConfig=x.vcl`.
+- `server.tls.configFile: files/x.cfg` → `helm ... --set-file server.tls.config=x.cfg`.
+- `server.secretFile` → none, see `server.secret`.
+- `server.cmdfileConfig`, `server.cmdfileConfigFile`, `server.cmdfileConfigPath` → `server.vcls.routes` to load one VCL per domain; there is no replacement for arbitrary CLI commands.
+- `server.secret`, `server.secretFrom` → none. An init container generates a secret per Pod at `/etc/varnish/shared/secret`. Extra containers that need the varnishd CLI mount the `<release>-config-shared` volume at `/etc/varnish/shared` and run `varnishadm -T 127.0.0.1:6082 -S /etc/varnish/shared/secret`.
+- `server.admin.address`, `server.admin.port` → none, the admin interface always listens on `127.0.0.1:6082`.
+- `server.workDir` → none, varnishd runs without `-n`. Tools in the Pod (`kubectl exec`, extra containers mounting the `<release>-varnish-vsm` volume at `/var/lib/varnish`) need no `-n`.
+- `server.ttl: N` → `server.parameters.defaultTtl: N`.
+- `server.threadTimeout: N` → `server.parameters.threadPoolTimeout: N`.
+- `server.delayedHaltSeconds: N` → `server.delayedShutdown` with `method: sleep` and `sleep.seconds: N`, plus `server.terminationGracePeriodSeconds` (previously defaulted to N + 60).
+- `server.service.http.enabled`, `server.service.https.enabled` → none, the Service exposes `http` if and only if `server.http.enabled` is true, and `https` if and only if `server.tls.enabled` is true.
+
+`server.minThreads` and `server.maxThreads` are now passed as `-p thread_pool_min` then `-p thread_pool_max`, before `server.parameters`. Setting `threadPoolMin` or `threadPoolMax` in `server.parameters` now fails rendering; use `server.minThreads` and `server.maxThreads` instead.
+
 #### To 1.9.0: user and group changed from 999 to 1000
 
 The chart version jumps from 0.1.x to 1.9.0, as `varnish-cache` and `varnish-enterprise` are now released together, with the same version.
