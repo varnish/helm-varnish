@@ -418,6 +418,7 @@ vcl.use router-0" ]
 @test "vcl-bundle: error when route has no vclContent" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
+        --skip-schema-validation \
         --namespace default \
         --set "server.vcls.routes[0].hostnames[0]=foo.com" \
         --show-only templates/configmap-vcl.yaml \
@@ -738,6 +739,7 @@ vcl.use router-0" ]
 @test "vcl-bundle: error when include filename contains invalid characters" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
+        --skip-schema-validation \
         --namespace default \
         --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
         --set "server.vcls.includes.sub!helpers\\.vcl=sub common_recv {}" \

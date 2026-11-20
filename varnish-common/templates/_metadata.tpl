@@ -130,35 +130,6 @@ Sets up the common ingress extra labels
 {{- end }}
 
 {{/*
-Sets up the common MSE extra annotations
-*/}}
-{{- define "varnish-common.mseAnnotations" -}}
-{{- if .Values.server.mse.persistence.annotations }}
-annotations:
-  {{- $tp := kindOf .Values.server.mse.persistence.annotations }}
-  {{- if eq $tp "string" }}
-    {{- tpl .Values.server.mse.persistence.annotations . | trim | nindent 2 }}
-  {{- else }}
-    {{- toYaml .Values.server.mse.persistence.annotations | nindent 2 }}
-  {{- end }}
-{{- end }}
-{{- end }}
-
-{{/*
-Sets up the common MSE PVC labels
-*/}}
-{{- define "varnish-common.msePvcLabels" -}}
-{{- if .Values.server.mse.persistence.labels }}
-{{- $tp := kindOf .Values.server.mse.persistence.labels }}
-{{- if eq $tp "string" }}
-  {{- tpl .Values.server.mse.persistence.labels . | trim | nindent 0 }}
-{{- else }}
-  {{- toYaml .Values.server.mse.persistence.labels | nindent 0 }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{/*
 Sets up the common MSE4 extra annotations
 */}}
 {{- define "varnish-common.mse4Annotations" -}}

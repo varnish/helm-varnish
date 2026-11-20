@@ -143,8 +143,6 @@ spec:
             - "120"
             - -a
             - http=0.0.0.0:6081
-            - -s
-            - mse
             - -A
             - /etc/varnish/tls.conf
           volumeMounts:

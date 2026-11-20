@@ -28,16 +28,16 @@ chart=$(chart_name)
 @test "StatefulSet/strategy: cannot be enabled" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=StatefulSet' \
         --set 'server.strategy.type=RollingUpdate' \
         --set 'server.strategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/statefulset.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.strategy' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.strategy' cannot be enabled"* ]]
 }
 
 @test "StatefulSet/updateStrategy: can be disabled" {
@@ -87,161 +87,6 @@ rollingUpdate:
         yq -r -o=json -I=0 '.spec.updateStrategy' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"type":"RollingUpdate","rollingUpdate":{"maxUnavailable":1}}' ]
-}
-
-@test "StatefulSet/mse/persistence: disabled by default" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set 'server.kind=StatefulSet' \
-        --namespace default \
-        --show-only templates/statefulset.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = "" ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = "" ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .volumeMounts[] | select(.name == "release-name-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = "" ]
-}
-
-@test "StatefulSet/mse/persistence: can be enabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set 'server.kind=StatefulSet' \
-        --set 'server.mse.persistence.enabled=true' \
-        --namespace default \
-        --show-only templates/statefulset.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse") |
-            .spec' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-mse","configMap":{"name":"release-name-'"${chart}"'-mse"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .volumeMounts[] | select(.name == "release-name-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-mse","mountPath":"/var/lib/mse"}' ]
-}
-
-@test "StatefulSet/mse/persistence: initContainer is not defined by default" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set 'server.kind=StatefulSet' \
-        --namespace default \
-        --show-only templates/statefulset.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
-              .name'  | tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-}
-
-@test "StatefulSet/mse/persistence: initContainer is defined when persistence is configured" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set 'server.kind=StatefulSet' \
-        --set 'server.mse.enabled=true' \
-        --set 'server.mse.persistence.enabled=true' \
-        --namespace default \
-        --show-only templates/statefulset.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
-              .name'  | tee -a /dev/stderr)
-    [ "${actual}" = 'mse-config' ]
-}
-
-@test "StatefulSet/mse/persistence: initContainer is not defined when mse is disabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set 'server.kind=StatefulSet' \
-        --set 'server.mse4.enabled=true' \
-        --set 'server.mse.persistence.enabled=true' \
-        --namespace default \
-        --show-only templates/statefulset.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.initContainers[]? | select(.name == "mse-config") |
-              .name'  | tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse") | .metadata.name' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-}
-
-@test "StatefulSet/mse/persistence: can be enabled with custom values" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set 'server.kind=StatefulSet' \
-        --set 'server.mse.persistence.enabled=true' \
-        --set 'server.mse.persistence.mountPath=/data1/mse' \
-        --set 'server.mse.persistence.storageSize=100G' \
-        --namespace default \
-        --show-only templates/statefulset.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse") |
-            .spec' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"100G"}}}' ]
-
-    local containerObject=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[] | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$containerObject" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-mse","mountPath":"/data1/mse"}' ]
 }
 
 @test "StatefulSet/mse4/persistence: disabled by default" {
@@ -344,30 +189,6 @@ rollingUpdate:
             .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
               .name'  | tee -a /dev/stderr)
     [ "${actual}" = 'mse4-config' ]
-}
-
-@test "StatefulSet/mse4/persistence: initContainer is not defined when mse4 is disabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set 'server.kind=StatefulSet' \
-        --set 'server.mse4.persistence.enabled=true' \
-        --namespace default \
-        --show-only templates/statefulset.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.initContainers[]? | select(.name == "mse4-config") |
-              .name'  | tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-mse4") | .metadata.name' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '' ]
 }
 
 @test "StatefulSet/mse4/persistence: can be enabled with custom values" {
@@ -571,7 +392,7 @@ release-name: {{ .Release.Name }}
         --set "server.kind=StatefulSet" \
         --set "server.agent.enabled=true" \
         --set "server.secret=hello-varnish" \
-        --set "server.mse.persistence.enabled=true" \
+        --set "server.mse4.persistence.enabled=true" \
         --set "server.agent.persistence.enabled=true" \
         --set "server.extraVolumeClaimTemplates[0].metadata.name=hello-pv" \
         --set "server.extraVolumeClaimTemplates[0].spec.accessModes[0]=ReadWriteOnce" \
@@ -631,7 +452,7 @@ release-name: {{ .Release.Name }}
         --set "server.kind=StatefulSet" \
         --set "server.agent.enabled=true" \
         --set "server.secret=hello-varnish" \
-        --set "server.mse.persistence.enabled=true" \
+        --set "server.mse4.persistence.enabled=true" \
         --set "server.agent.persistence.enabled=true" \
         --set "server.extraVolumeClaimTemplates=${volumeClaimTemplates}" \
         --namespace default \

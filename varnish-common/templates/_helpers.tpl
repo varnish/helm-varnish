@@ -35,7 +35,7 @@ Create chart name and version as used by the chart label.
 {{/*
 Returns "true" when rendering the Varnish Enterprise flavor of the chart, as
 set by the "flavor" annotation in Chart.yaml. Enterprise-only
-values (cluster, mse, mse4, agent, initAgent, licenseSecret, baseUrl,
+values (cluster, mse4, agent, initAgent, licenseSecret, baseUrl,
 global.natsServer) are absent from the Varnish Cache values, so they must only
 be read behind this check or one of the predicates below.
 */}}
@@ -51,15 +51,6 @@ be read behind this check or one of the predicates below.
 {{- if and (include "varnish-common.isEnterprise" .) .Values.server.agent.enabled }}true{{ end }}
 {{- end }}
 
-{{/*
-MSE is enabled by default ("-") unless MSE4 is enabled.
-*/}}
-{{- define "varnish-common.mseEnabled" -}}
-{{- if include "varnish-common.isEnterprise" . }}
-{{- if or (and (eq (kindOf .Values.server.mse.enabled) "bool") .Values.server.mse.enabled) (and (eq (kindOf .Values.server.mse.enabled) "string") (eq .Values.server.mse.enabled "-") (not .Values.server.mse4.enabled)) }}true{{ end }}
-{{- end }}
-{{- end }}
-
 {{- define "varnish-common.mse4Enabled" -}}
 {{- if and (include "varnish-common.isEnterprise" .) .Values.server.mse4.enabled }}true{{ end }}
 {{- end }}
@@ -73,12 +64,25 @@ string. Unlike a plain "if", zero and false count as set.
 {{- end }}
 
 {{/*
+Renders an image tag as a string. The schema only accepts string tags, but
+renders with --skip-schema-validation can pass float64 numbers, which
+toString prints in scientific notation (2.0241129e+07); toJson does not.
+*/}}
+{{- define "varnish-common.imageTag" -}}
+{{- if kindIs "float64" . }}{{ toJson . }}{{ else }}{{ toString . }}{{ end }}
+{{- end }}
+
+{{/*
 Sets up the Varnish image and its overrides (if any)
 */}}
 {{- define "varnish-common.image" }}
 {{- $base := .base | default dict }}
 {{- $image := .image | default dict }}
-image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{- if eq $image.tag "-" }}{{ default .Chart.AppVersion $base.tag }}{{ else }}{{ default $.Chart.AppVersion $image.tag }}{{ end }}"
+{{- $tag := $image.tag }}
+{{- if eq (toString $tag) "-" }}{{ $tag = $base.tag }}{{ end }}
+{{- /* not "default": it would also replace a numeric tag 0 */}}
+{{- if or (kindIs "invalid" $tag) (eq (toString $tag) "") }}{{ $tag = .Chart.AppVersion }}{{ end }}
+image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{ include "varnish-common.imageTag" $tag }}"
 imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else }}{{ $image.pullPolicy }}{{ end }}
 {{- end }}
 

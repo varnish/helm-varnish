@@ -39,7 +39,6 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
 
     for value in \
         'cluster.enabled=true' \
-        'server.mse.enabled=true' \
         'server.mse4.enabled=true' \
         'server.agent.enabled=true' \
         'server.initAgent.enabled=true' \
@@ -47,7 +46,7 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
         'server.baseUrl=http://example.com'; do
         run helm template --set "${value}" --namespace default .
         [ "$status" -ne 0 ]
-        [[ "$output" == *"want null"* || "$output" == *"Expected: null"* ]]
+        [[ "$output" == *"want null"* ]]
     done
 }
 
@@ -56,7 +55,6 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
 
     for value in \
         'cluster=null' \
-        'server.mse=null' \
         'server.mse4=null' \
         'server.agent=null' \
         'server.initAgent=null' \
@@ -71,9 +69,24 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
     cd "$(chart_dir)"
 
     run helm template \
+        --skip-schema-validation \
         --set 'server.delayedShutdown.method=shutdown_delay' \
         --namespace default \
         .
     [ "$status" -ne 0 ]
     [[ "$output" == *"'shutdown_delay' requires Varnish Enterprise"* ]]
+}
+
+@test "Flavor: schema rejects shutdown_delay" {
+    schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=shutdown_delay
+}
+
+@test "Flavor: docs do not mention Enterprise-only keys" {
+    cd "$(chart_dir)"
+    local docs=$(sed -n '/<!-- BEGIN GENERATED VALUES -->/,/<!-- END GENERATED VALUES -->/p' README.md)
+    [ -n "${docs}" ]
+    for key in '**cluster' '**server.mse' '**server.agent' '**server.initAgent' '**server.licenseSecret' '**server.baseUrl' 'shutdown_delay' 'natsServer'; do
+        echo "${key}" >&2
+        run ! grep -qF -- "${key}" <<<"${docs}"
+    done
 }

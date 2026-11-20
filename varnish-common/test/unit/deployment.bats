@@ -77,30 +77,30 @@ rollingUpdate:
 @test "Deployment/updateStrategy: cannot be enabled" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=Deployment' \
         --set 'server.updateStrategy.type=RollingUpdate' \
         --set 'server.updateStrategy.rollingUpdate.maxUnavailable=1' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.updateStrategy' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.updateStrategy' cannot be enabled"* ]]
 }
 
-@test "Deployment/mse/persistence: cannot be enabled" {
+@test "Deployment/mse4/persistence: cannot be enabled" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     run --separate-stderr helm template \
         --set 'server.kind=Deployment' \
-        --set 'server.mse.persistence.enabled=true' \
+        --set 'server.mse4.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
         .
     [ "$status" -ne 0 ]
-    [[ "$stderr" == *"'server.mse.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'"* ]]
+    [[ "$stderr" == *"'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'"* ]]
 }
 
 @test "Deployment/agent: test initContainer image and tag" {
@@ -121,21 +121,57 @@ rollingUpdate:
     [ "${actual}" == "ubuntu:24.04" ]
 }
 
-@test "Deployment/agent/persistence: cannot be enabled" {
+@test "Deployment/agent: initContainer keeps a numeric tag 0 when the schema is skipped" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     local actual=$((helm template \
+        --set 'server.kind=Deployment' \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --skip-schema-validation \
+        --set 'global.initContainer.tag=0' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
+
+    [ "${actual}" == "busybox:0" ]
+}
+
+@test "Deployment/agent: initContainer numeric tag renders without scientific notation when the schema is skipped" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set 'server.kind=Deployment' \
+        --set 'server.agent.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --skip-schema-validation \
+        --set-json 'global.initContainer.tag=20241129' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
+
+    [ "${actual}" == "busybox:20241129" ]
+}
+
+@test "Deployment/agent/persistence: cannot be enabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    run helm template \
         --set "server.kind=Deployment" \
         --set 'server.agent.enabled=true' \
         --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
 }
 
 @test "Deployment/agent/persistence: can be enabled with volume name" {
@@ -163,15 +199,15 @@ rollingUpdate:
 @test "Deployment/extraVolumeClaimTemplates: cannot be enabled" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set 'server.kind=Deployment' \
         --set "server.extraVolumeClaimTemplates[0].metadata.name=hello-pv" \
         --set "server.extraVolumeClaimTemplates[0].spec.accessModes[0]=ReadWriteOnce" \
         --set "server.extraVolumeClaimTemplates[0].spec.resources.requests.storage=10Gi" \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"'server.extraVolumeClaimTemplates' cannot be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.extraVolumeClaimTemplates' cannot be enabled"* ]]
 }

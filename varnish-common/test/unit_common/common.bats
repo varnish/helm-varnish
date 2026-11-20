@@ -525,7 +525,7 @@ release-namespace: {{ .Release.Namespace }}
 @test "${kind}/http: cannot be disabled without disabling startupProbe" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
         --set 'server.startupProbe.initialDelaySeconds=' \
@@ -534,54 +534,58 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"HTTP support must be enabled to enable startupProbe"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"HTTP support must be enabled to enable startupProbe"* ]]
 }
 
 @test "${kind}/http: cannot be disabled without disabling readinessProbe" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
         --set 'server.livenessProbe=' \
         --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"HTTP support must be enabled to enable readinessProbe"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"HTTP support must be enabled to enable readinessProbe"* ]]
 }
 
 @test "${kind}/http: cannot be disabled without disabling livenessProbe" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
         --set 'server.readinessProbe=' \
         --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"HTTP support must be enabled to enable livenessProbe"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"HTTP support must be enabled to enable livenessProbe"* ]]
 }
 
 @test "${kind}/http: cannot be disabled without disabling http service" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
         --set 'server.readinessProbe=' \
         --set 'server.livenessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"HTTP support must be enabled"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"HTTP support must be enabled"* ]]
 }
 
 @test "${kind}/tls: can be enabled" {
@@ -1738,74 +1742,79 @@ release-namespace: {{ .Release.Namespace }}
 @test "${kind}/secret: cannot be configured with both value and external secret" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.secret=super-secure-secret" \
         --set "server.secretFrom.name=external-secret" \
         --set "server.secretFrom.key=varnish-password" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"Either 'server.secret' or 'server.secretFrom' can be set"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"Either 'server.secret' or 'server.secretFrom' can be set"* ]]
 }
 
 @test "${kind}/secret: cannot be configured with external secret without name" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.secret=" \
         --set "server.secretFrom.key=varnish-password" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"'server.secretFrom' must contain a 'name' key"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.secretFrom' must contain a 'name' key"* ]]
 }
 
 @test "${kind}/secret: cannot be configured with external secret with name set to empty string" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.secret=" \
         --set "server.secretFrom.name=" \
         --set "server.secretFrom.key=varnish-password" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"'server.secretFrom' must contain a 'name' key"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.secretFrom' must contain a 'name' key"* ]]
 }
 
 @test "${kind}/secret: cannot be configured with external secret without key" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.secret=" \
         --set "server.secretFrom.name=external-secret" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"'server.secretFrom' must contain a 'key' key"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.secretFrom' must contain a 'key' key"* ]]
 }
 
 @test "${kind}/secret: cannot be configured with external secret with key set to empty string" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.secret=" \
         --set "server.secretFrom.name=external-secret" \
         --set "server.secretFrom.key=" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"'server.secretFrom' must contain a 'key' key"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.secretFrom' must contain a 'key' key"* ]]
 }
 
 @test "${kind}/secret: not configured by default" {
@@ -2330,15 +2339,16 @@ backend release-name {
   .port = "8080";
 }'
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.vclConfig=${vclConfig}" \
         --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot enable both 'server.vclConfigs.\"default.vcl\""* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"Cannot enable both 'server.vclConfigs.\"default.vcl\""* ]]
 }
 
 @test "${kind}/vcl: cannot be configured with both vclConfig and vclConfigs using alternative names" {
@@ -2360,16 +2370,17 @@ backend release-name {
   .port = "8080";
 }'
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.vclConfig=${vclConfig}" \
         --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
         --set 'server.vclConfigs.varnish\.vcl='"${vclConfig}" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot enable both 'server.vclConfigs.\"varnish.vcl\""* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"Cannot enable both 'server.vclConfigs.\"varnish.vcl\""* ]]
 }
 
 @test "${kind}/vcl: can be relocated" {
@@ -2579,15 +2590,16 @@ vcl.load vcl_main /etc/varnish/main.vcl
 vcl.use vcl_main
 '
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set "server.cmdfileConfig=${cmdfileConfig}" \
         --set "server.agent.enabled=true" \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"Cannot enable both cmdfile and agent"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"Cannot enable both cmdfile and agent"* ]]
 }
 
 @test "${kind}/image: can be configured" {
@@ -3253,6 +3265,7 @@ requests:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set-json 'server.topologySpreadConstraints={"maxSkew":1}' \
+        --skip-schema-validation \
         --namespace default \
         --show-only ${template} \
         . || true) 2>&1 |
@@ -3267,6 +3280,7 @@ requests:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set-json 'server.topologySpreadConstraints=[null]' \
+        --skip-schema-validation \
         --namespace default \
         --show-only ${template} \
         . || true) 2>&1 |
@@ -3314,190 +3328,20 @@ podAntiAffinity:
     [ "${actual}" == '{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchLabels":{"app.kubernetes.io/name":"'"${chart}"'","app.kubernetes.io/instance":"release-name"}},"topologyKey":"kubernetes.io/hostname"}]}}' ]
 }
 
-@test "${kind}/mse/memoryTarget: can be configured" {
+@test "${kind}/mse4/config: disabled by default" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.mse.memoryTarget=80%' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command[] | select(match("memory_target")) | split("=")[1]' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == "80%" ]
-}
-
-@test "${kind}/mse/memoryTarget: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
+    local container=$((helm template \
         --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
+        yq -o=json -I=0 '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command[] | select(match("memory_target")) | split("=")[1]' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == "" ]
-}
-
-@test "${kind}/mse/config: can be configured" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local mseConfig='
-env: {
-  id = "env";
-  memcache_size = "auto";
-  books = ( {
-    id = "book1";
-    directory = "{{ .Values.server.mse.persistence.mountPath }}/book1";
-    database_size = "1G";
-    stores = ( {
-      id = "store";
-      filename = "{{ .Values.server.mse.persistence.mountPath }}/store1.dat";
-      size = "9G";
-    } );
-  } );
-};'
-
-    local expectedMseConfig='
-env: {
-  id = "env";
-  memcache_size = "auto";
-  books = ( {
-    id = "book1";
-    directory = "var/lib/mse/book1";
-    database_size = "1G";
-    stores = ( {
-      id = "store";
-      filename = "/var/lib/mse/store1.dat";
-      size = "9G";
-    } );
-  } );
-};'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.mse.config=${mseConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-mse"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '743d1704f0c1d9c5dcbadb6ecf463947ef37f1e8c3db0e58ac150ecd5a1a74a8' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-mse","configMap":{"name":"release-name-'"${chart}"'-mse"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[ index("-s") + 1 ] | split(",")[1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/mse.conf" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-mse","mountPath":"/etc/varnish/mse.conf","subPath":"mse.conf"}' ]
-}
-
-@test "${kind}/mse/config: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-mse"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'null' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[ index("-s") + 1 ] | split(",")[1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "null" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-mse")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-}
-
-@test "${kind}/mse/config: cannot be disabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.mse.enabled=false' \
-        --namespace default \
-        --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"Either MSE or MSE4 must be enabled: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
-}
-
-@test "${kind}/mse/config: can be disabled when mse4 is enabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.mse.enabled=false' \
-        --set 'server.mse4.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-             .command' |
-            jq -r -c '.[ index("-s") + 1 ] | split(",")[0]' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == "mse4" ]
+    [ "$(echo "$container" | jq -c '.command | index("-s")')" == "null" ]
+    [ "$(echo "$container" | jq -c '[.env[]? | select(.name == "VARNISH_STORAGE_BACKEND" or .name == "MSE4_CONFIG")]')" == "[]" ]
 }
 
 @test "${kind}/mse4/config: can be enabled" {
@@ -3520,22 +3364,6 @@ env: {
             tee -a /dev/stderr)
 
     [ "${actual}" == "mse4" ]
-}
-
-@test "${kind}/mse4/config: cannot be enabled when mse is enabled" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.mse.enabled=true' \
-        --set 'server.mse4.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-
-    [[ "${actual}" == *"Only one of MSE or MSE4 can be enabled at the same time: 'server.mse.enabled' or 'server.mse4.enabled'"* ]]
 }
 
 @test "${kind}/mse4/memoryTarget: can be configured" {
@@ -3988,6 +3816,7 @@ env: {
 }
 
 @test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown shutdown_delay seconds" {
+    skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -4200,7 +4029,7 @@ env: {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
         --set "server.secret=hello-varnish" \
@@ -4210,9 +4039,10 @@ env: {
         --set 'server.readinessProbe=' \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"HTTP support must be enabled to enable Varnish Controller Agent"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"HTTP support must be enabled to enable Varnish Controller Agent"* ]]
 }
 
 @test "${kind}/agent: can be enabled with custom admin port" {
@@ -4286,14 +4116,15 @@ env: {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"Secret must be set to enable Varnish Controller agent"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"Secret must be set to enable Varnish Controller agent"* ]]
 }
 
 @test "${kind}/agent: can be enabled with private token" {
@@ -4602,7 +4433,7 @@ release-namespace: to-be-override
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    run helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
         --set 'server.secret=hello-varnish' \
@@ -4610,9 +4441,10 @@ release-namespace: to-be-override
         --set 'global.natsServer.internal.enabled=false' \
         --namespace default \
         --show-only ${template} \
-        . || true) 2>&1 |
-        tee -a /dev/stderr)
-    [[ "${actual}" == *"Either 'global.natsServer.internal.enabled' or 'global.natsServer.externalAddress' must be set"* ]]
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"Either 'global.natsServer.internal.enabled' or 'global.natsServer.externalAddress' must be set"* ]]
 }
 
 @test "${kind}/agent/logLevel: can be configured" {
@@ -6344,6 +6176,36 @@ release-namespace: to-be-override
             tee -a /dev/stderr)
 
     [ "${actual}" == "localhost/${chart}-ncsa:ncsa-latest" ]
+}
+
+@test "${kind}/varnishncsa/image: numeric tag 0 is kept when the schema is skipped" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.image.repository=localhost/${chart}" \
+        --skip-schema-validation \
+        --set "server.image.tag=0" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .image' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == "localhost/${chart}:0" ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .image' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == "localhost/${chart}:0" ]
 }
 
 @test "${kind}/varnishncsa/startupProbe: not configured by default" {

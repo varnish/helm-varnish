@@ -1,0 +1,118 @@
+# Generator test fixture: a minimal source exercising every x- keyword.
+$schema: http://json-schema.org/draft-07/schema#
+x-links:
+  k8s-pod: https://kubernetes.io/docs/concepts/workloads/pods/
+  unused-link: https://example.com/
+type: object
+additionalProperties: false
+definitions:
+  port:
+    x-type-label: number
+    anyOf:
+      - type: integer
+        minimum: 0
+        maximum: 65535
+      - type: string
+        pattern: "^[0-9]+$"
+properties:
+  name:
+    x-docs-section: Chart configurations
+    type: string
+    default: ""
+    x-default-text: name of the chart
+    description: |
+      Overrides the name of the chart. This description is long enough to be wrapped over several lines by the generator, as it runs well past ninety columns, and it links to the [Pod][k8s-pod] documentation of {product}.
+
+      A second paragraph.
+  enabled:
+    type: boolean
+    x-docs-skip: true
+    x-values-skip: true
+  global:
+    type: object
+    properties:
+      shared:
+        type: string
+        default: s
+        description: A global shared by both flavors.
+      entOnly:
+        x-flavor: enterprise
+        type: string
+        default: e
+        description: An Enterprise-only global.
+  a:
+    x-docs-section: A configurations
+    type: object
+    additionalProperties: false
+    properties:
+      b:
+        type: string
+        default: b
+        x-since:
+          cache: v1.2.0
+          enterprise: v1.1.0
+        description: The b key of {product}.
+        x-examples:
+          - description: "For example:"
+            value: fixture-example-value
+          - description: "Or, on several lines:"
+            value: |
+              first line
+              second line
+      ent:
+        x-flavor: enterprise
+        type: boolean
+        default: true
+        description: An Enterprise-only key.
+      mode:
+        type: string
+        enum: [x, y]
+        x-enum-flavor:
+          y: enterprise
+        default: x
+        description: The mode.
+      dir:
+        type: string
+        x-default:
+          cache: /cache
+          enterprise: /enterprise
+        description: A key whose default differs between flavors.
+      hostPort:
+        $ref: "#/definitions/port"
+        x-values-example: 8080
+        description: An optional port.
+      securityContext:
+        type: object
+        default:
+          runAsUser: 1000
+          runAsNonRoot: true
+        x-default-comments:
+          runAsUser: The user ID to run the container as.
+        description: A passthrough object.
+      script:
+        type: string
+        default: |
+          line one
+          line two
+        description: A multi-line default.
+      old:
+        type: string
+        default: ""
+        x-deprecated: Use `a.b` instead.
+        description: An old key.
+      skipped:
+        type: string
+        default: zzz
+        x-values-skip: true
+        description: A key left out of values.yaml.
+      list:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: The name of the item.
+        default:
+          - name: one
+        description: A list of objects.
