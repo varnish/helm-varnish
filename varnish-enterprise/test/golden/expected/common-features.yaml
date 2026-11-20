@@ -221,6 +221,9 @@ spec:
             runAsUser: 999
           image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
           imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: 1Gi
           command:
             - sh
             - -c

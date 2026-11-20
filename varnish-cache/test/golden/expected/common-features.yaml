@@ -226,6 +226,9 @@ spec:
             runAsUser: 1000
           image: "docker.io/varnish:APP_VERSION"
           imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: 1Gi
           command:
             - sh
             - -c

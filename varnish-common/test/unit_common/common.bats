@@ -2039,6 +2039,26 @@ backend release-name {
     [ "${actual}" == '{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}' ]
 }
 
+@test "${kind}/resources: secret init container inherits server resources" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'global.resources.limits.cpu=100m' \
+        --set 'global.resources.requests.cpu=100m' \
+        --set 'server.resources.limits.cpu=500m' \
+        --set 'server.resources.limits.memory=512Mi' \
+        --set 'server.resources.requests.memory=128Mi' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.initContainers[]? | select(.name == "'"${chart}"'-secret") |
+            .resources' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}' ]
+}
+
 @test "${kind}/resources: inherits resources from global and server with global as a templated string" {
     cd "$(chart_dir)"
 

@@ -877,6 +877,7 @@ initContainers:
   - name: {{ .Chart.Name }}-secret
     {{- include "varnish-common.securityContext" (merge (dict "section" "server") .) | nindent 4 }}
     {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    {{- include "varnish-common.resources" (merge (dict "section" "server") .) | nindent 4 }}
     command:
       - sh
       - -c
