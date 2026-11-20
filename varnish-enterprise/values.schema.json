@@ -1194,13 +1194,8 @@
             "http": {
               "type": "object",
               "additionalProperties": false,
-              "description": "Enables or disables the Varnish HTTP service.\n",
+              "description": "Configures the `http` port of the Service. The port is exposed if and only if `server.http.enabled` is true.\n",
               "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": true,
-                  "description": "Enables HTTP service. Requires `server.http.enabled`.\n"
-                },
                 "port": {
                   "$ref": "#/definitions/port",
                   "default": 80,
@@ -1222,13 +1217,8 @@
             "https": {
               "type": "object",
               "additionalProperties": false,
-              "description": "Enables or disables the Varnish HTTPS service.\n",
+              "description": "Configures the `https` port of the Service. The port is exposed if and only if `server.tls.enabled` is true.\n",
               "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enables HTTPS service. Requires `server.tls.enabled`.\n"
-                },
                 "port": {
                   "$ref": "#/definitions/port",
                   "default": 443,
@@ -1324,7 +1314,7 @@
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "Enables the [Ingress][k8s-ingress] for Varnish Enterprise. Requires `server.service.http.enabled` and `server.service.http.port`.\n"
+              "description": "Enables the [Ingress][k8s-ingress] for Varnish Enterprise. Requires `server.http.enabled`; the Ingress targets the Service's `http` port (`server.service.http.port`).\n"
             },
             "labels": {
               "$ref": "#/definitions/objectOrTemplate",

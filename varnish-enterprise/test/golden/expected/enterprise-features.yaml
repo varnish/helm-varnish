@@ -91,6 +91,9 @@ spec:
     - name: http
       port: 80
       targetPort: 6081
+    - name: https
+      port: 443
+      targetPort: 6443
   selector:
     app.kubernetes.io/name: varnish-enterprise
     app.kubernetes.io/instance: golden

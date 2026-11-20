@@ -1251,14 +1251,8 @@ properties:
             type: object
             additionalProperties: false
             description: |
-              Enables or disables the Varnish HTTP service.
+              Configures the `http` port of the Service. The port is exposed if and only if `server.http.enabled` is true.
             properties:
-              enabled:
-                type: boolean
-                default: true
-                description: |
-                  Enables HTTP service. Requires `server.http.enabled`.
-
               port:
                 $ref: "#/definitions/port"
                 default: 80
@@ -1280,14 +1274,8 @@ properties:
             type: object
             additionalProperties: false
             description: |
-              Enables or disables the Varnish HTTPS service.
+              Configures the `https` port of the Service. The port is exposed if and only if `server.tls.enabled` is true.
             properties:
-              enabled:
-                type: boolean
-                default: false
-                description: |
-                  Enables HTTPS service. Requires `server.tls.enabled`.
-
               port:
                 $ref: "#/definitions/port"
                 default: 443
@@ -1372,7 +1360,7 @@ properties:
             type: boolean
             default: false
             description: |
-              Enables the [Ingress][k8s-ingress] for {product}. Requires `server.service.http.enabled` and `server.service.http.port`.
+              Enables the [Ingress][k8s-ingress] for {product}. Requires `server.http.enabled`; the Ingress targets the Service's `http` port (`server.service.http.port`).
 
           labels:
             $ref: "#/definitions/objectOrTemplate"

@@ -689,13 +689,10 @@ server:
     # Type: string
     loadBalancerIP: ""
 
-    # Enables or disables the Varnish HTTP service.
+    # Configures the `http` port of the Service. The port is exposed if and only if
+    # `server.http.enabled` is true.
     # Type: object
     http:
-      # Enables HTTP service. Requires `server.http.enabled`.
-      # Type: boolean
-      enabled: true
-
       # Sets the port to expose HTTP service.
       # Type: number
       port: 80
@@ -709,13 +706,10 @@ server:
       # Type: number
       #nodePort: 30080
 
-    # Enables or disables the Varnish HTTPS service.
+    # Configures the `https` port of the Service. The port is exposed if and only if
+    # `server.tls.enabled` is true.
     # Type: object
     https:
-      # Enables HTTPS service. Requires `server.tls.enabled`.
-      # Type: boolean
-      enabled: false
-
       # Sets the port to expose HTTPS service.
       # Type: number
       port: 443
@@ -759,8 +753,8 @@ server:
   ingress:
     # Enables the
     # [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) for
-    # Varnish Cache. Requires `server.service.http.enabled` and
-    # `server.service.http.port`.
+    # Varnish Cache. Requires `server.http.enabled`; the Ingress targets the Service's
+    # `http` port (`server.service.http.port`).
     # Type: boolean
     enabled: false
 

@@ -1,6 +1,6 @@
 {{- if .Values.server.ingress.enabled }}
-{{- if (not (and (.Values.server.service.http.enabled) (.Values.server.service.http.port))) }}
-{{ fail "HTTP service must be enabled in values to enable ingress: 'service.service.http.enabled'" }}
+{{- if not .Values.server.http.enabled }}
+{{ fail "HTTP must be enabled to enable ingress: 'server.http.enabled'" }}
 {{- end }}
 {{- $serviceName := include "varnish-common.fullname" . }}
 {{- $servicePort := .Values.server.service.http.port }}

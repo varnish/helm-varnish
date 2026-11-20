@@ -1164,14 +1164,7 @@ Sets a pre-allocated IP address for use in LoadBalancer.
 
 - Type: object
 
-Enables or disables the Varnish HTTP service.
-
-**server.service.http.enabled**
-
-- Type: boolean
-- Default: `true`
-
-Enables HTTP service. Requires `server.http.enabled`.
+Configures the `http` port of the Service. The port is exposed if and only if `server.http.enabled` is true.
 
 **server.service.http.port**
 
@@ -1192,14 +1185,7 @@ See also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varni
 
 - Type: object
 
-Enables or disables the Varnish HTTPS service.
-
-**server.service.https.enabled**
-
-- Type: boolean
-- Default: `false`
-
-Enables HTTPS service. Requires `server.tls.enabled`.
+Configures the `https` port of the Service. The port is exposed if and only if `server.tls.enabled` is true.
 
 **server.service.https.port**
 
@@ -1283,7 +1269,7 @@ An object for configuring [Ingress][k8s-ingress].
 - Type: boolean
 - Default: `false`
 
-Enables the [Ingress][k8s-ingress] for Varnish Cache. Requires `server.service.http.enabled` and `server.service.http.port`.
+Enables the [Ingress][k8s-ingress] for Varnish Cache. Requires `server.http.enabled`; the Ingress targets the Service's `http` port (`server.service.http.port`).
 
 **server.ingress.labels**
 

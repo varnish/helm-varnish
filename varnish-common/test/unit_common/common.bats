@@ -485,7 +485,6 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.startupProbe=' \
         --set 'server.readinessProbe=' \
         --set 'server.livenessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -526,7 +525,6 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.startupProbe.initialDelaySeconds=' \
         --set 'server.readinessProbe=' \
         --set 'server.livenessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         .
@@ -542,7 +540,6 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
         --set 'server.livenessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         .
@@ -558,29 +555,12 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
         --set 'server.readinessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         .
     echo "${output}" >&2
     [ "${status}" -ne 0 ]
     [[ "${output}" == *"HTTP support must be enabled to enable livenessProbe"* ]]
-}
-
-@test "${kind}/http: cannot be disabled without disabling http service" {
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.http.enabled=false' \
-        --set 'server.readinessProbe=' \
-        --set 'server.livenessProbe=' \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"HTTP support must be enabled"* ]]
 }
 
 @test "${kind}/tls: can be enabled" {
@@ -3015,7 +2995,6 @@ env: {
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
         --set 'server.http.enabled=false' \
-        --set 'server.service.http.enabled=false' \
         --set 'server.livenessProbe=' \
         --set 'server.readinessProbe=' \
         --namespace default \

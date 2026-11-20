@@ -273,6 +273,14 @@ EOT
   schema_rejects "additional properties 'delayedHaltSeconds' not allowed" --set server.delayedHaltSeconds=120
 }
 
+@test "Schema: rejects the removed server.service.http.enabled" {
+  schema_rejects "additional properties 'enabled' not allowed" --set server.service.http.enabled=false
+}
+
+@test "Schema: rejects the removed server.service.https.enabled" {
+  schema_rejects "additional properties 'enabled' not allowed" --set server.service.https.enabled=true
+}
+
 @test "Schema: rejects the removed server.tls.configFile" {
   schema_rejects "additional properties 'configFile' not allowed" --set server.tls.configFile=x
 }

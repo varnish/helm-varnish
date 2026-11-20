@@ -17,9 +17,6 @@ server:
         port = "{{ .Values.server.tls.port }}"
       }
       pem-file = "/etc/varnish/certs/example.pem"
-  service:
-    https:
-      enabled: true
   otel:
     enabled: true
     env:
