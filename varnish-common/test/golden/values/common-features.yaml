@@ -24,12 +24,9 @@ server:
   extraArgs:
     - -p
     - thread_pool_stack=96k
-  secret: s3cr3t
   vclConfig: |
     vcl 4.1;
     backend default { .host = "{{ .Release.Name }}-backend"; .port = "8080"; }
-  cmdfileConfig: |
-    vcl.list
   autoscaling:
     enabled: true
     maxReplicas: 5

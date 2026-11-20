@@ -26,11 +26,11 @@ spec:
   {{- if .Values.server.service.loadBalancerIP }}
   loadBalancerIP: {{ .Values.server.service.loadBalancerIP }}
   {{- end }}
+  {{- if not (or .Values.server.http.enabled .Values.server.tls.enabled) }}
+  {{- fail "The Service needs a port: enable 'server.http.enabled' or 'server.tls.enabled', or disable 'server.service.enabled'" }}
+  {{- end }}
   ports:
-  {{- if .Values.server.service.http.enabled }}
-  {{- if (not .Values.server.http.enabled) }}
-  {{ fail "HTTP support must be enabled in values to enable HTTP service: 'server.http.enabled'" }}
-  {{- else }}
+  {{- if .Values.server.http.enabled }}
     - name: http
       {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
       port: {{ .Values.server.http.port }}
@@ -42,11 +42,7 @@ spec:
       nodePort: {{ .Values.server.service.http.nodePort }}
       {{- end }}
   {{- end }}
-  {{- end }}
-  {{- if .Values.server.service.https.enabled }}
-  {{- if (not .Values.server.tls.enabled) }}
-  {{ fail "TLS support must be enabled in values to enable HTTPS service: 'server.tls.enabled'" }}
-  {{- else }}
+  {{- if .Values.server.tls.enabled }}
     - name: https
       {{- if and (eq $serviceType "ClusterIP") (eq $serviceClusterIP "None") }}
       port: {{ .Values.server.tls.port }}
@@ -57,7 +53,6 @@ spec:
       {{- if and (.Values.server.service.https.nodePort) (eq $serviceType "NodePort") }}
       nodePort: {{ .Values.server.service.https.nodePort }}
       {{- end }}
-  {{- end }}
   {{- end }}
   {{- range .Values.server.service.extraServices }}
   {{- if not .name }}

@@ -18,12 +18,12 @@
 env: {
   books = ( {
     id = "book";
-    filename = "{{ .Values.server.mse4.persistence.mountPath }}/book";
+    filename = "/var/lib/mse4/book";
     size = "{{ $bookSize }}";
 
     stores = ( {
       id = "store";
-      filename = "{{ .Values.server.mse4.persistence.mountPath }}/store";
+      filename = "/var/lib/mse4/store";
       size = "{{ $storeSize }}";
     } );
   } );
@@ -32,13 +32,7 @@ env: {
 
 {{- define "varnish-common.mse4Config" -}}
 {{- if include "varnish-common.mse4Enabled" . }}
-{{- if (not (eq .Values.server.mse4.configFile "")) -}}
-{{- $mse4ConfigFile := (.Files.Get .Values.server.mse4.configFile) }}
-{{- if (eq $mse4ConfigFile "") }}
-{{ fail "'server.mse4.configFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $mse4ConfigFile . }}
-{{- else if (not (eq .Values.server.mse4.config "")) -}}
+{{- if (not (eq .Values.server.mse4.config "")) -}}
 {{- tpl .Values.server.mse4.config . }}
 {{- else if .Values.server.mse4.persistence.enabled }}
 {{- include "varnish-common.mse4PersistenceConfig" . }}
@@ -47,35 +41,14 @@ env: {
 {{- end }}
 
 {{- define "varnish-common.tlsConfig" -}}
-{{- if (not (eq .Values.server.tls.configFile "")) -}}
-{{- $tlsConfigFile := (.Files.Get .Values.server.tls.configFile) }}
-{{- if (eq $tlsConfigFile "") }}
-{{ fail "'server.tls.configFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $tlsConfigFile . }}
-{{- else if (not (eq .Values.server.tls.config "")) -}}
+{{- if (not (eq .Values.server.tls.config "")) -}}
 {{- tpl .Values.server.tls.config . }}
 {{- end }}
 {{- end }}
 
 {{- define "varnish-common.vclConfig" -}}
 {{- include "varnish-common.vclBundleConflictCheck" . }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- if and (hasKey .Values.server.vclConfigs $defaultVcl) (not (eq (get .Values.server.vclConfigs $defaultVcl) "")) }}
 {{- if (not (eq .Values.server.vclConfig "")) }}
-{{ fail (print "Cannot enable both 'server.vclConfigs.\"" $defaultVcl "\"' and 'server.vclConfig'") }}
-{{- end }}
-{{- if (not (eq .Values.server.vclConfigFile "")) }}
-{{ fail (print "Cannot enable both 'server.vclConfigs.\"" $defaultVcl "\"' and 'server.vclConfigFile'") }}
-{{- end }}
-{{- tpl (get .Values.server.vclConfigs $defaultVcl) . }}
-{{- else if (not (eq .Values.server.vclConfigFile "")) -}}
-{{- $vclConfigFile := (.Files.Get .Values.server.vclConfigFile) }}
-{{- if (eq $vclConfigFile "") }}
-{{ fail "'server.vclConfigFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $vclConfigFile . }}
-{{- else if (not (eq .Values.server.vclConfig "")) }}
 {{- tpl .Values.server.vclConfig . }}
 {{- end }}
 {{- end }}
@@ -112,42 +85,26 @@ any
 {{- end -}}
 
 {{/*
-Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings.
+Fails if server.vcls.routes conflicts with other VCL settings, or if
+server.vcls.routes or server.vcls.includes are invalid.
 */}}
 {{- define "varnish-common.vclBundleConflictCheck" -}}
-  {{- if empty .Values.server.vcls.routes -}}
-    {{- if not (empty .Values.server.vcls.includes) -}}
-      {{- fail "'server.vcls.includes' requires 'server.vcls.routes' to be set" -}}
-    {{- end -}}
-  {{- else -}}
+  {{- $seenK8s := dict -}}
+  {{- $seenMountPaths := dict -}}
+  {{- if not (empty .Values.server.vcls.routes) -}}
     {{- if (include "varnish-common.agentEnabled" .) -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.agent.enabled'" -}}
     {{- end -}}
-    {{- if not (eq .Values.server.vclConfigPath "/etc/varnish/default.vcl") -}}
-      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigPath'" -}}
-    {{- end -}}
     {{- if not (eq .Values.server.vclConfig "") -}}
       {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfig'" -}}
-    {{- end -}}
-    {{- if not (eq .Values.server.vclConfigFile "") -}}
-      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigFile'" -}}
-    {{- end -}}
-    {{- if not (empty .Values.server.vclConfigs) -}}
-      {{- fail "Cannot use both 'server.vcls.routes' and 'server.vclConfigs'" -}}
-    {{- end -}}
-    {{- if not (eq (include "varnish-common.cmdfileConfig" .) "") -}}
-      {{- fail "Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'/'server.cmdfileConfigFile'" -}}
-    {{- end -}}
-    {{- if not (eq .Values.server.cmdfileConfigPath "/etc/varnish/cmds.cli") -}}
-      {{- fail "Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set" -}}
     {{- end -}}
     {{- $routerVolName := printf "%s-config-vcl-bundle-router" $.Release.Name -}}
     {{- if gt (len $routerVolName) 63 -}}
       {{- fail (printf "server.vcls.routes: volume name '%s' exceeds 63 characters, use a shorter release name" $routerVolName) -}}
     {{- end -}}
     {{- $seen := dict -}}
-    {{- $seenK8s := dict -}}
-    {{- $seenMountPaths := dict "router.vcl" "reserved" "cmds.cli" "reserved" -}}
+    {{- $_ := set $seenMountPaths "router.vcl" "reserved" -}}
+    {{- $_ := set $seenMountPaths "cmds.cli" "reserved" -}}
     {{- $catchAllSeen := false -}}
     {{- range .Values.server.vcls.routes -}}
       {{- if $catchAllSeen -}}
@@ -178,71 +135,45 @@ Fails if server.vcls.routes conflicts with legacy VCL or cmdfile config settings
       {{- $_ := set $seenK8s $k8sName true -}}
       {{- $_ := set $seenMountPaths (printf "%s.vcl" $name) "route" -}}
     {{- end -}}
-    {{- $seenIncludeK8s := dict -}}
-    {{- $seenIncludePaths := dict -}}
-    {{- range $filename, $_ := .Values.server.vcls.includes -}}
-      {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" $filename -}}
-        {{- fail (printf "server.vcls.includes: filename '%s' contains path traversal sequence" $filename) -}}
-      {{- end -}}
-      {{- /* Compare mount paths in canonical form, so that "./x" or "a//b" match "x" or "a/b" */ -}}
-      {{- $path := clean $filename -}}
-      {{- $k8sName := include "varnish-common.vclBundleK8sName" $filename -}}
-      {{- if eq $k8sName "" -}}
-        {{- fail (printf "server.vcls.includes: filename '%s' produces an empty k8s name" $filename) -}}
-      {{- end -}}
-      {{- $volName := printf "%s-config-vcl-bundle-include-%s" $.Release.Name $k8sName -}}
-      {{- if gt (len $volName) 63 -}}
-        {{- fail (printf "server.vcls.includes: volume name '%s' exceeds 63 characters, shorten the filename" $volName) -}}
-      {{- end -}}
-      {{- if hasKey $seenIncludeK8s $k8sName -}}
-        {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
-      {{- end -}}
-      {{- $_ := set $seenIncludeK8s $k8sName true -}}
-      {{- if hasKey $seenK8s (printf "include-%s" $k8sName) -}}
-        {{- fail (printf "server.vcls.includes: filename '%s' collides with the k8s name of route 'include-%s'" $filename $k8sName) -}}
-      {{- end -}}
-      {{- if hasKey $seenMountPaths $path -}}
-        {{- fail (printf "server.vcls.includes: filename '%s' collides with a route mounted at the same path" $filename) -}}
-      {{- end -}}
-      {{- if hasKey $seenIncludePaths $path -}}
-        {{- fail (printf "server.vcls.includes: filename '%s' collides with another include mounted at the same path" $filename) -}}
-      {{- end -}}
-      {{- $_ := set $seenIncludePaths $path true -}}
+  {{- end -}}
+  {{- $seenIncludeK8s := dict -}}
+  {{- $seenIncludePaths := dict -}}
+  {{- range $filename, $_ := .Values.server.vcls.includes -}}
+    {{- if regexMatch "(^/)|(^\\.\\./)|(/\\.\\.)" $filename -}}
+      {{- fail (printf "server.vcls.includes: filename '%s' contains path traversal sequence" $filename) -}}
     {{- end -}}
-    {{- /* A path cannot be mounted both as a file and as a directory containing another mount */ -}}
-    {{- $mountPaths := concat (keys $seenMountPaths) (keys $seenIncludePaths) | sortAlpha -}}
-    {{- range $path := keys $seenIncludePaths | sortAlpha -}}
-      {{- range $other := $mountPaths -}}
-        {{- if or (hasPrefix (printf "%s/" $other) $path) (hasPrefix (printf "%s/" $path) $other) -}}
-          {{- fail (printf "server.vcls.includes: '%s' and '%s' cannot both be mounted, as one is a directory of the other" $path $other) -}}
-        {{- end -}}
+    {{- /* Compare mount paths in canonical form, so that "./x" or "a//b" match "x" or "a/b" */ -}}
+    {{- $path := clean $filename -}}
+    {{- $k8sName := include "varnish-common.vclBundleK8sName" $filename -}}
+    {{- if eq $k8sName "" -}}
+      {{- fail (printf "server.vcls.includes: filename '%s' produces an empty k8s name" $filename) -}}
+    {{- end -}}
+    {{- $volName := printf "%s-config-vcl-bundle-include-%s" $.Release.Name $k8sName -}}
+    {{- if gt (len $volName) 63 -}}
+      {{- fail (printf "server.vcls.includes: volume name '%s' exceeds 63 characters, shorten the filename" $volName) -}}
+    {{- end -}}
+    {{- if hasKey $seenIncludeK8s $k8sName -}}
+      {{- fail (printf "server.vcls.includes: duplicate k8s name '%s' — include filenames must produce unique k8s-safe names" $k8sName) -}}
+    {{- end -}}
+    {{- $_ := set $seenIncludeK8s $k8sName true -}}
+    {{- if hasKey $seenK8s (printf "include-%s" $k8sName) -}}
+      {{- fail (printf "server.vcls.includes: filename '%s' collides with the k8s name of route 'include-%s'" $filename $k8sName) -}}
+    {{- end -}}
+    {{- if hasKey $seenMountPaths $path -}}
+      {{- fail (printf "server.vcls.includes: filename '%s' collides with a route mounted at the same path" $filename) -}}
+    {{- end -}}
+    {{- if hasKey $seenIncludePaths $path -}}
+      {{- fail (printf "server.vcls.includes: filename '%s' collides with another include mounted at the same path" $filename) -}}
+    {{- end -}}
+    {{- $_ := set $seenIncludePaths $path true -}}
+  {{- end -}}
+  {{- /* A path cannot be mounted both as a file and as a directory containing another mount */ -}}
+  {{- $mountPaths := concat (keys $seenMountPaths) (keys $seenIncludePaths) | sortAlpha -}}
+  {{- range $path := keys $seenIncludePaths | sortAlpha -}}
+    {{- range $other := $mountPaths -}}
+      {{- if or (hasPrefix (printf "%s/" $other) $path) (hasPrefix (printf "%s/" $path) $other) -}}
+        {{- fail (printf "server.vcls.includes: '%s' and '%s' cannot both be mounted, as one is a directory of the other" $path $other) -}}
       {{- end -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
-
-{{- define "varnish-common.cmdfileConfig" -}}
-{{- if (not (eq .Values.server.cmdfileConfigFile "")) -}}
-{{- $cmdfileConfigFile := (.Files.Get .Values.server.cmdfileConfigFile) }}
-{{- if (eq $cmdfileConfigFile "") }}
-{{ fail "'server.cmdfileConfigFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $cmdfileConfigFile . }}
-{{- else if (not (eq .Values.server.cmdfileConfig "")) }}
-{{- tpl .Values.server.cmdfileConfig . }}
-{{- end }}
-{{- end }}
-
-{{- define "varnish-common.secretConfig" -}}
-{{- if empty .Values.server.secretFrom }}
-{{- if (not (eq .Values.server.secretFile "")) -}}
-{{- $secretFile := (.Files.Get .Values.server.secretFile) }}
-{{- if (eq $secretFile "") }}
-{{ fail "'server.secretFile' was set but the file was empty or not found" }}
-{{- end }}
-{{- tpl $secretFile . }}
-{{- else if (not (eq .Values.server.secret "")) }}
-{{- tpl .Values.server.secret . }}
-{{- end }}
-{{- end }}
-{{- end }}

@@ -112,7 +112,6 @@ rollingUpdate:
     run helm template \
         --set "server.kind=DaemonSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/daemonset.yaml \
@@ -129,7 +128,6 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=DaemonSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/daemonset.yaml \

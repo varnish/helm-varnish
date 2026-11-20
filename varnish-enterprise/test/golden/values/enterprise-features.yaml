@@ -2,7 +2,6 @@
 server:
   kind: StatefulSet
   replicas: 3
-  workDir: /var/lib/varnish/golden
   parameters:
     default_ttl: 60
   terminationGracePeriodSeconds: 45
@@ -30,7 +29,6 @@ server:
         golden/agent-pvc: "true"
     autoRemove:
       method: vcli
-  secret: s3cr3t
 cluster:
   enabled: true
   secretName: cluster-token

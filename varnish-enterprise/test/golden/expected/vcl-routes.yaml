@@ -185,10 +185,6 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           env:
-            - name: VARNISH_WORKDIR
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
           command:
             - /usr/sbin/varnishd
             - -F
@@ -199,17 +195,13 @@ spec:
             - -f
             - ""
             - -p
-            - thread_pool_max=1000
-            - -p
             - thread_pool_min=50
             - -p
-            - thread_pool_timeout=120
-            - -n
-            - $(VARNISH_WORKDIR)
-            - -t
-            - "120"
+            - thread_pool_max=1000
             - -a
             - http=0.0.0.0:6081
+            - -S
+            - /etc/varnish/shared/secret
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
@@ -238,22 +230,16 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnishncsa"]
           args:
-            - -n
-            - $(VARNISH_WORKDIR)
             - -c
           env:
             - name: VSM_NOPID
               value: "1"
-            - name: VARNISH_WORKDIR
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
           readinessProbe:
             exec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -264,7 +250,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -273,6 +259,20 @@ spec:
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      initContainers:
+        - name: varnish-enterprise-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
       volumes:

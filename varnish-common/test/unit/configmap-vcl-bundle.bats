@@ -278,18 +278,6 @@ vcl.use router-0" ]
     [[ "${actual}" == *"Cannot use both 'server.vcls.routes' and 'server.agent.enabled'"* ]]
 }
 
-@test "vcl-bundle: error when server.vcls.routes and server.vclConfigPath both set" {
-    cd "$(chart_dir)"
-    run --separate-stderr helm template \
-        --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.vclConfigPath=/etc/varnish/custom.vcl" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigPath'"* ]]
-}
-
 @test "vcl-bundle: error when server.vcls.routes and server.vclConfig both set" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
@@ -302,63 +290,67 @@ vcl.use router-0" ]
     [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfig'"* ]]
 }
 
-@test "vcl-bundle: error when server.vcls.routes and server.vclConfigFile both set" {
+@test "vcl-bundle: includes work without routes" {
     cd "$(chart_dir)"
-    run --separate-stderr helm template \
+    local values=(
+        --set 'server.vclConfig=vcl 4.1; include "./vcls/helpers.vcl"; backend default none;'
+        --set-string 'server.vcls.includes.helpers\.vcl=sub x {}'
+    )
+    local configmaps=$( (helm template \
         --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.vclConfigFile=files/default.vcl" \
+        "${values[@]}" \
         --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigFile'"* ]]
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r '.metadata.name + " " + (.data | keys | join(","))' | grep -v '^---$' | tee -a /dev/stderr)
+    [ "${configmaps}" = "release-name-${chart}-vcl default.vcl
+release-name-${chart}-vcl-bundle-include-helpers-vcl helpers.vcl" ]
+
+    local deployment=$( (helm template \
+        --namespace default \
+        "${values[@]}" \
+        --show-only templates/deployment.yaml \
+        . || render_failed) | tee -a /dev/stderr)
+    local mounts=$(echo "${deployment}" |
+        yq -r '
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
+            .volumeMounts[] | select(.name | test("config-vcl")) |
+            .mountPath + ":" + .subPath' | tee -a /dev/stderr)
+    [ "${mounts}" = "/etc/varnish/default.vcl:default.vcl
+/etc/varnish/vcls/helpers.vcl:helpers.vcl" ]
+    local volumes=$(echo "${deployment}" |
+        yq -r '.spec.template.spec.volumes[] | select(.name | test("config-vcl")) | .name + ":" + .configMap.name' |
+        tee -a /dev/stderr)
+    [ "${volumes}" = "release-name-config-vcl:release-name-${chart}-vcl
+release-name-config-vcl-bundle-include-helpers-vcl:release-name-${chart}-vcl-bundle-include-helpers-vcl" ]
+    local command=$(echo "${deployment}" |
+        yq -r '
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") |
+            .command | join(" ")' | tee -a /dev/stderr)
+    [[ "${command}" == *" -f /etc/varnish/default.vcl"* ]]
+    [[ "${command}" != *" -I "* ]]
 }
 
-@test "vcl-bundle: error when server.vcls.routes and server.vclConfigs both set" {
+@test "vcl-bundle: includes without routes have a checksum annotation" {
     cd "$(chart_dir)"
-    run --separate-stderr helm template \
+    local actual=$( (helm template \
         --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.vclConfigs.default\\.vcl=vcl 4.1;" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.vclConfigs'"* ]]
+        --set 'server.vclConfig=vcl 4.1; include "./vcls/helpers.vcl"; backend default none;' \
+        --set-string 'server.vcls.includes.helpers\.vcl=sub x {}' \
+        --show-only templates/deployment.yaml \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r '.spec.template.metadata.annotations | has("checksum/release-name-vcl-bundle")' | tee -a /dev/stderr)
+    [ "${actual}" = "true" ]
 }
 
-@test "vcl-bundle: error when server.vcls.routes and server.cmdfileConfig both set" {
+@test "vcl-bundle: include filename checks apply without routes" {
     cd "$(chart_dir)"
     run --separate-stderr helm template \
         --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.cmdfileConfig=vcl.use boot;" \
+        --values <(printf 'server:\n  vcls:\n    includes:\n      "../x.vcl": content\n') \
         --show-only templates/configmap-vcl.yaml \
         .
     [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot use both 'server.vcls.routes' and 'server.cmdfileConfig'"* ]]
-}
-
-@test "vcl-bundle: error when server.vcls.routes and server.cmdfileConfigPath both set" {
-    cd "$(chart_dir)"
-    run --separate-stderr helm template \
-        --namespace default \
-        --set "server.vcls.routes[0].vclContent=${VCL_CONTENT}" \
-        --set "server.cmdfileConfigPath=/etc/varnish/custom.cli" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"Cannot customize 'server.cmdfileConfigPath' when 'server.vcls.routes' is set"* ]]
-}
-
-@test "vcl-bundle: error when server.vcls.includes set without server.vcls.routes" {
-    cd "$(chart_dir)"
-    run --separate-stderr helm template \
-        --namespace default \
-        --set "server.vcls.includes.helpers\\.vcl=sub common_recv {}" \
-        --show-only templates/configmap-vcl.yaml \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$stderr" == *"'server.vcls.includes' requires 'server.vcls.routes' to be set"* ]]
+    [[ "$stderr" == *"filename '../x.vcl' contains path traversal sequence"* ]]
 }
 
 @test "vcl-bundle: error when two routes produce the same normalized name" {

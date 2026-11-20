@@ -9,10 +9,6 @@ default_fsgroup=$(yq -r '.global.podSecurityContext.fsGroup' < "$(chart_dir)/val
 default_uid=$(yq -r '.global.securityContext.runAsUser' < "$(chart_dir)/values.yaml")
 
 teardown() {
-    # Set by tests that need a file inside the chart
-    if [ -n "${tls_file:-}" ]; then
-        rm -f "$(chart_dir)/${tls_file}"
-    fi
     check_render
 }
 
@@ -447,7 +443,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == 'http=127.0.0.2:8090' ]
 }
 
-
 @test "${kind}/http: listen address can be configured to podIP" {
    cd "$(chart_dir)"
 
@@ -487,10 +482,10 @@ release-namespace: {{ .Release.Namespace }}
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.startupProbe=' \
         --set 'server.readinessProbe=' \
         --set 'server.livenessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -528,10 +523,10 @@ release-namespace: {{ .Release.Namespace }}
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.startupProbe.initialDelaySeconds=' \
         --set 'server.readinessProbe=' \
         --set 'server.livenessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         .
@@ -546,8 +541,8 @@ release-namespace: {{ .Release.Namespace }}
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.livenessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         .
@@ -562,30 +557,14 @@ release-namespace: {{ .Release.Namespace }}
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.readinessProbe=' \
-        --set 'server.service.http.enabled=false' \
         --namespace default \
         --show-only ${template} \
         .
     echo "${output}" >&2
     [ "${status}" -ne 0 ]
     [[ "${output}" == *"HTTP support must be enabled to enable livenessProbe"* ]]
-}
-
-@test "${kind}/http: cannot be disabled without disabling http service" {
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.http.enabled=false' \
-        --set 'server.readinessProbe=' \
-        --set 'server.livenessProbe=' \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"HTTP support must be enabled"* ]]
 }
 
 @test "${kind}/tls: can be enabled" {
@@ -670,45 +649,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '{"name":"release-name-config-tls","mountPath":"/etc/varnish/tls.conf","subPath":"tls.conf"}' ]
 }
 
-@test "${kind}/tls: can be enabled with custom config file" {
-    cd "$(chart_dir)"
-
-    # .Files.Get only sees files inside the chart and outside of test/ (see
-    # .helmignore), the content is not validated by the chart
-    tls_file=$(mktemp files/bats-tls-XXXXXX.conf)
-    printf 'frontend = {\n  host = "*"\n  port = "443"\n}\n' >"${tls_file}"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.tls.enabled=true' \
-        --set "server.tls.configFile=${tls_file}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.command' |
-            tee -a /dev/stderr)
-    [[ "${actual}" == *'"-A","/etc/varnish/tls.conf"'* ]]
-    [[ "${actual}" != *'https='* ]]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/tls.conf" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-tls")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-tls","mountPath":"/etc/varnish/tls.conf","subPath":"tls.conf"}' ]
-}
-
 @test "${kind}/tls: not enabled by default" {
     cd "$(chart_dir)"
 
@@ -740,110 +680,89 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == "" ]
 }
 
-@test "${kind}/admin: enabled by default" {
+@test "${kind}/admin: -T and -S are hardcoded" {
     cd "$(chart_dir)"
 
-    local object=$((helm template \
+    local manifests=$((helm template \
         --set "server.kind=${kind}" \
         --namespace default \
-        --show-only ${template} \
         . || render_failed) |
         tee -a /dev/stderr)
 
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
+    local object=$(echo "$manifests" |
+        yq -o=json -I=0 'select(.kind == "'"${kind}"'")' |
+        tee -a /dev/stderr)
 
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-T", "127.0.0.1:6082"]) + 1]' |
-            tee -a /dev/stderr)
+    local command=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$command" |
+        jq -r -c '.[index(["-T", "127.0.0.1:6082"]) + 1]' |
+        tee -a /dev/stderr)
     [ "${actual}" == '127.0.0.1:6082' ]
+
+    local actual=$(echo "$command" |
+        jq -r -c '.[index(["-S", "/etc/varnish/shared/secret"]) + 1]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '/etc/varnish/shared/secret' ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '' ]
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-secret"' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+
+    local actual=$(echo "$manifests" |
+        yq -r 'select(.kind == "Secret") | .metadata.name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '' ]
 }
 
-@test "${kind}/admin: can be configured" {
+@test "${kind}/admin: secret init container" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.admin.address=0.0.0.0' \
-        --set 'server.admin.port=9999' \
+        --set 'server.securityContext.readOnlyRootFilesystem=true' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
         tee -a /dev/stderr)
 
-    local container=$(echo "$object" |
+    local server=$(echo "$object" |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-T", "0.0.0.0:9999"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '0.0.0.0:9999' ]
-}
-
-@test "${kind}/admin: omitted when port is null" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.admin.port=null' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-            jq -r -c 'if . == null then "no command" else index(["-T"]) end' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'null' ]
-}
-
-@test "${kind}/ttl: omitted when null" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.ttl=null' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
+    local init=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.template.spec.initContainers[0]' |
         tee -a /dev/stderr)
 
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-            jq -r -c 'if . == null then "no command" else index(["-t"]) end' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'null' ]
-}
+    local actual=$(echo "$init" | yq -r '.name' | tee -a /dev/stderr)
+    [ "${actual}" == "${chart}-secret" ]
 
-@test "${kind}/ttl: zero is kept" {
-    cd "$(chart_dir)"
+    local actual=$(echo "$init" | yq -r '.image' | tee -a /dev/stderr)
+    local expected=$(echo "$server" | yq -r '.image' | tee -a /dev/stderr)
+    [ -n "${expected}" ]
+    [ "${actual}" == "${expected}" ]
 
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.ttl=0' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
+    local actual=$(echo "$init" | yq -r -o=json -I=0 '.securityContext' | tee -a /dev/stderr)
+    local expected=$(echo "$server" | yq -r -o=json -I=0 '.securityContext' | tee -a /dev/stderr)
+    [[ "${actual}" == *'"readOnlyRootFilesystem":true'* ]]
+    [ "${actual}" == "${expected}" ]
 
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-            jq -r -c '.[index(["-t", "0"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '0' ]
+    local actual=$(echo "$init" | yq -r -o=json -I=0 '.volumeMounts' | tee -a /dev/stderr)
+    [ "${actual}" == '[{"name":"release-name-config-shared","mountPath":"/etc/varnish/shared"}]' ]
+
+    local actual=$(echo "$init" | yq -r -o=json -I=0 '.command' | tee -a /dev/stderr)
+    [ "${actual}" == '["sh","-c","umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret"]' ]
 }
 
 @test "${kind}/threads: omitted when null" {
@@ -853,7 +772,6 @@ release-namespace: {{ .Release.Namespace }}
         --set "server.kind=${kind}" \
         --set 'server.minThreads=null' \
         --set 'server.maxThreads=null' \
-        --set 'server.threadTimeout=null' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -868,136 +786,107 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '[]' ]
 }
 
-@test "${kind}/workDir: no -n when empty" {
+@test "${kind}/threads: min before max, before parameters" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.workDir=' \
+        --set 'server.minThreads=10' \
+        --set 'server.maxThreads=80' \
+        --set 'server.parameters.acceptorSleepMax=0.05' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
         tee -a /dev/stderr)
 
-    local container=$(echo "$object" |
+    local command=$(echo "$object" |
         yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
+    local actual=$(echo "$command" |
+        jq -r -c '[index("thread_pool_min=10"), index("thread_pool_max=80"), index("acceptor_sleep_max=0.05")] |
+            if all(. != null) and .[0] < .[1] and .[1] < .[2] then "ordered" else tostring end' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'ordered' ]
+
+    local actual=$(echo "$command" |
+        jq -r -c '[index(["-t"]), (.[] | select(startswith("thread_pool_timeout")))]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '[null]' ]
+}
+
+@test "${kind}/threads: defaults" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            jq -r -c '[.[] | select(startswith("thread_pool_"))]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["thread_pool_min=50","thread_pool_max=1000"]' ]
+}
+
+@test "${kind}/threads: rejected in parameters" {
+    cd "$(chart_dir)"
+
+    for key in threadPoolMin threadPoolMax thread_pool_min thread_pool_max ThreadPoolMin ThreadPoolMax; do
+        run helm template \
+            --set "server.kind=${kind}" \
+            --set "server.parameters.${key}=5" \
+            --namespace default \
+            --show-only ${template} \
+            .
+        echo "${output}" >&2
+        [ "${status}" -ne 0 ]
+        [[ "${output}" == *"Set thread pool sizes with 'server.minThreads'/'server.maxThreads', not 'server.parameters'"* ]]
+    done
+}
+
+@test "${kind}/workdir: no -n" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.enabled=true' \
+        --set-json 'server.varnishncsa.extraArgs=[]' \
+        --set 'server.otel.enabled=true' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
         jq -r -c 'if . == null then "no command" else index(["-n"]) end' |
         tee -a /dev/stderr)
     [ "${actual}" == 'null' ]
 
-    local actual=$(echo "$container" |
-        yq -r '.env[]? | select(.name == "VARNISH_WORKDIR") | .name' |
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .args' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+
+    local actual=$(echo "$object" |
+        yq -r '
+            (.spec.template.spec.containers[]?, .spec.template.spec.initContainers[]?) |
+            .env[]? | select(.name == "VARNISH_WORKDIR" or .name == "OTEL_VARNISH_WORKDIR") |
+            .name' |
         tee -a /dev/stderr)
     [ "${actual}" == '' ]
-}
-
-@test "${kind}/workDir: null is the same as empty" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.workDir=null' \
-        --set-json 'server.varnishncsa.extraArgs=[]' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '[.spec.template.spec.containers[]? | .command, .args, .env]' |
-        tee -a /dev/stderr)
-    [[ "${actual}" == '[["/usr/sbin/varnishd"'* ]]
-    [[ "${actual}" != *'"-n"'* ]]
-    [[ "${actual}" != *'nil'* ]]
-    [[ "${actual}" != *'VARNISH_WORKDIR'* ]]
-}
-
-@test "${kind}/workDir: numeric value is used as is" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.workDir=1' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-        jq -r -c '.[index(["-n"]) + 1]' |
-        tee -a /dev/stderr)
-    [ "${actual}" == '1' ]
-}
-
-@test "${kind}/workDir: pod name with -" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.workDir=-' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-        jq -r -c '.[index(["-n"]) + 1]' |
-        tee -a /dev/stderr)
-    [ "${actual}" == '$(VARNISH_WORKDIR)' ]
-
-    local actual=$(echo "$container" |
-        yq -r '.env[]? | select(.name == "VARNISH_WORKDIR") | .valueFrom.fieldRef.fieldPath' |
-        tee -a /dev/stderr)
-    [ "${actual}" == 'metadata.name' ]
-}
-
-@test "${kind}/workDir: Cache default has no -n" {
-    is_enterprise && skip "Varnish Cache only"
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-        jq -r -c 'if . == null then "no command" else index(["-n"]) end' |
-        tee -a /dev/stderr)
-    [ "${actual}" == 'null' ]
-}
-
-@test "${kind}/agent: fails with empty workDir" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.workDir=' \
-        --namespace default \
-        --show-only ${template} \
-        .
-    [ "$status" -ne 0 ]
-    [[ "$output" == *"'server.workDir' cannot be empty when 'server.agent.enabled' is set"* ]]
 }
 
 @test "${kind}/extraListens: not configured by default" {
@@ -1164,7 +1053,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '{"name":"RELEASE_NAMESPACE","value":"default"}' ]
 }
 
-
 @test "${kind}/extraEnvs: can be configured as a list" {
     cd "$(chart_dir)"
 
@@ -1242,12 +1130,6 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-t", "120"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '120' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
             jq -r -c '.[index(["-p", "thread_pool_min=50"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_min=50' ]
@@ -1257,13 +1139,6 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c '.[index(["-p", "thread_pool_max=1000"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_max=1000' ]
-
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_timeout=120"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_timeout=120' ]
 }
 
 @test "${kind}/settings: can be configured" {
@@ -1271,10 +1146,8 @@ release-namespace: {{ .Release.Namespace }}
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.ttl=240' \
         --set 'server.minThreads=300' \
         --set 'server.maxThreads=5000' \
-        --set 'server.threadTimeout=500' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -1287,12 +1160,6 @@ release-namespace: {{ .Release.Namespace }}
 
     local actual=$(echo "$container" |
         yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-t", "240"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '240' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
             jq -r -c '.[index(["-p", "thread_pool_min=300"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_min=300' ]
@@ -1302,13 +1169,6 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c '.[index(["-p", "thread_pool_max=5000"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'thread_pool_max=5000' ]
-
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_timeout=500"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_timeout=500' ]
 }
 
 @test "${kind}/command: can be configured" {
@@ -1661,198 +1521,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '{"name":"release-name-data","hostPath":{"path":"/data/varnish","type":"directory"}}' ]
 }
 
-@test "${kind}/secret: can be configured" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.secret=hello-varnish" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-secret"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '4ad139339508eb77f3875735b8415516f14f388e228071faa1d2b080429cdd9b' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-secret","secret":{"secretName":"release-name-'"${chart}"'-secret"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-S", "/etc/varnish/secret"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/secret' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-secret")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-secret","mountPath":"/etc/varnish/secret","subPath":"secret"}' ]
-}
-
-@test "${kind}/secret: can be configured with external secret" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.secret=" \
-        --set "server.secretFrom.name=external-secret" \
-        --set "server.secretFrom.key=varnish-password" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-secret"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'null' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-secret","secret":{"secretName":"external-secret"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-S", "/etc/varnish/secret"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/secret' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-secret")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-secret","mountPath":"/etc/varnish/secret","subPath":"varnish-password"}' ]
-}
-
-@test "${kind}/secret: cannot be configured with both value and external secret" {
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.secret=super-secure-secret" \
-        --set "server.secretFrom.name=external-secret" \
-        --set "server.secretFrom.key=varnish-password" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Either 'server.secret' or 'server.secretFrom' can be set"* ]]
-}
-
-@test "${kind}/secret: cannot be configured with external secret without name" {
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.secret=" \
-        --set "server.secretFrom.key=varnish-password" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"'server.secretFrom' must contain a 'name' key"* ]]
-}
-
-@test "${kind}/secret: cannot be configured with external secret with name set to empty string" {
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.secret=" \
-        --set "server.secretFrom.name=" \
-        --set "server.secretFrom.key=varnish-password" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"'server.secretFrom' must contain a 'name' key"* ]]
-}
-
-@test "${kind}/secret: cannot be configured with external secret without key" {
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.secret=" \
-        --set "server.secretFrom.name=external-secret" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"'server.secretFrom' must contain a 'key' key"* ]]
-}
-
-@test "${kind}/secret: cannot be configured with external secret with key set to empty string" {
-    cd "$(chart_dir)"
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.secret=" \
-        --set "server.secretFrom.name=external-secret" \
-        --set "server.secretFrom.key=" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"'server.secretFrom' must contain a 'key' key"* ]]
-}
-
-@test "${kind}/secret: not configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-secret"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'null' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_SECRET_FILE") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-secret")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-}
-
 @test "${kind}/vcl: use the bundled vcl by default" {
     cd "$(chart_dir)"
 
@@ -1964,508 +1632,11 @@ backend release-name {
     [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 }
 
-@test "${kind}/vcl: can be configured via vclConfigs" {
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local expectedVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=" \
-        --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-'"${chart}"'-vcl"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-f", "/etc/varnish/default.vcl"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/default.vcl' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","mountPath":"/etc/varnish/shared"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
-}
-
-@test "${kind}/vcl: can be configured via vclConfigs with extra vcls" {
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local extraVclConfig='
-vcl 4.1;
-
-default {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local expectedVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local expectedExtraVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=${vclConfig}" \
-        --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-'"${chart}"'-vcl"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","configMap":{"name":"release-name-'"${chart}"'-vcl-main-vcl"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-f", "/etc/varnish/default.vcl"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/default.vcl' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","mountPath":"/etc/varnish/shared"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
-}
-
-@test "${kind}/vcl: can be configured via vclConfigs with extra vcls with default.vcl" {
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local extraVclConfig='
-vcl 4.1;
-
-default {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local expectedVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local expectedExtraVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=" \
-        --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
-        --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-'"${chart}"'-vcl"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","configMap":{"name":"release-name-'"${chart}"'-vcl-main-vcl"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-f", "/etc/varnish/default.vcl"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/default.vcl' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","mountPath":"/etc/varnish/shared"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
-}
-
-@test "${kind}/vcl: can be configured via vclConfigs with extra vcls with alternative names" {
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local extraVclConfig='
-vcl 4.1;
-
-default {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local expectedVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local expectedExtraVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=" \
-        --set 'server.vclConfigPath=/etc/varnish/varnish.vcl' \
-        --set 'server.vclConfigs.varnish\.vcl='"${vclConfig}" \
-        --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-vcl-main-vcl"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-'"${chart}"'-vcl"}}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","configMap":{"name":"release-name-'"${chart}"'-vcl-main-vcl"}}' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-f", "/etc/varnish/varnish.vcl"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/varnish.vcl' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-shared")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-shared","mountPath":"/etc/varnish/shared"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
-}
-
-@test "${kind}/vcl: cannot be configured with both vclConfig and vclConfigs using default.vcl" {
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local expectedVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=${vclConfig}" \
-        --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Cannot enable both 'server.vclConfigs.\"default.vcl\""* ]]
-}
-
-@test "${kind}/vcl: cannot be configured with both vclConfig and vclConfigs using alternative names" {
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local expectedVclConfig='
-vcl 4.1
-
-backend release-name {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=${vclConfig}" \
-        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
-        --set 'server.vclConfigs.varnish\.vcl='"${vclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Cannot enable both 'server.vclConfigs.\"varnish.vcl\""* ]]
-}
-
-@test "${kind}/vcl: can be relocated" {
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend default {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=${vclConfig}" \
-        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-f", "/etc/varnish/varnish.vcl"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/varnish.vcl' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfig=${vclConfig}" \
-        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
-        --namespace default \
-        --show-only templates/configmap-vcl.yaml \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" | yq -r -o=json -I=0 '.data' | tee -a /dev/stderr)
-    [ "${actual}" == '{"varnish.vcl":"\nvcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8080\";\n}\n"}' ]
-}
-
-@test "${kind}/vcl: can be relocated without vclConfig" {
+@test "${kind}/vcl: extraVolumeMounts can add VCL files" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-f", "/etc/varnish/varnish.vcl"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/varnish.vcl' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-}
-
-@test "${kind}/vcl: can be relocated with extraVolumeMounts" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
         --set "server.extraVolumes[0].name=varnish-vcl-tenant1" \
         --set "server.extraVolumes[0].configMap.name=varnish-vcl-tenant1" \
         --set "server.extraVolumeMounts[0].name=varnish-vcl-tenant1" \
@@ -2488,9 +1659,9 @@ backend default {
 
     local actual=$(echo "$container" |
         yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-f", "/etc/varnish/varnish.vcl"]) + 1]' |
+            jq -r -c '.[index("-f") + 1]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/varnish.vcl' ]
+    [ "${actual}" == '/etc/varnish/default.vcl' ]
 
     local actual=$(echo "$container" |
         yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "varnish-vcl-tenant1")' |
@@ -2498,108 +1669,27 @@ backend default {
     [ "${actual}" == '{"mountPath":"/etc/varnish/tenant1.vcl","name":"varnish-vcl-tenant1","subpath":"tenant1.vcl"}' ]
 }
 
-@test "${kind}/cmdfile: can be configured" {
+@test "${kind}/cmdfile: no -I without agent or routes" {
     cd "$(chart_dir)"
 
-    local cmdfileConfig='
-vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-vcl.label label_tenant1 vcl_tenant1
-vcl.load vcl_main /etc/varnish/main.vcl
-vcl.use vcl_main
-'
-
-    local object=$((helm template \
+    local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set "server.cmdfileConfig=${cmdfileConfig}" \
+        --namespace default \
+        . || render_failed) |
+        yq -r 'select(.kind == "ConfigMap") | .metadata.name' |
+            tee -a /dev/stderr)
+    [[ "${actual}" != *-cmdfile* ]]
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.annotations."checksum/release-name-cmdfile"' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '624d35eb30614898dff2f0a0d0b877fb27f394debc7f8316605a9208ed5b1c6d' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-cmdfile")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-cmdfile","configMap":{"name":"release-name-'"${chart}"'-cmdfile"}}' ]
-
-    local container=$(echo "$object" |
         yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+            .spec.template.spec.containers[] | select(.name == "'"${chart}"'") | .command' |
             tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-I", "/etc/varnish/cmds.cli"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/cmds.cli' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-cmdfile","mountPath":"/etc/varnish/cmds.cli","subPath":"cmds.cli"}' ]
-}
-
-@test "${kind}/cmdfile: can be relocated" {
-    cd "$(chart_dir)"
-
-    local cmdfileConfig='
-vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-vcl.label label_tenant1 vcl_tenant1
-vcl.load vcl_main /etc/varnish/main.vcl
-vcl.use vcl_main
-'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.cmdfileConfig=${cmdfileConfig}" \
-        --set "server.cmdfileConfigPath=/etc/varnish/cmdfile" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-I", "/etc/varnish/cmdfile"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/cmdfile' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-cmdfile")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-cmdfile","mountPath":"/etc/varnish/cmdfile","subPath":"cmds.cli"}' ]
-}
-
-@test "${kind}/cmdfile: cannot be configured with agent" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local cmdfileConfig='
-vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-vcl.label label_tenant1 vcl_tenant1
-vcl.load vcl_main /etc/varnish/main.vcl
-vcl.use vcl_main
-'
-
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set "server.cmdfileConfig=${cmdfileConfig}" \
-        --set "server.agent.enabled=true" \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Cannot enable both cmdfile and agent"* ]]
+    [ -n "${actual}" ]
+    [[ "${actual}" != *'"-I"'* ]]
 }
 
 @test "${kind}/image: can be configured" {
@@ -2948,6 +2038,26 @@ vcl.use vcl_main
         . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .resources' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}' ]
+}
+
+@test "${kind}/resources: secret init container inherits server resources" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'global.resources.limits.cpu=100m' \
+        --set 'global.resources.requests.cpu=100m' \
+        --set 'server.resources.limits.cpu=500m' \
+        --set 'server.resources.limits.memory=512Mi' \
+        --set 'server.resources.requests.memory=128Mi' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.initContainers[]? | select(.name == "'"${chart}"'-secret") |
             .resources' | tee -a /dev/stderr)
 
     [ "${actual}" == '{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}' ]
@@ -3417,11 +2527,11 @@ podAntiAffinity:
 env: {
   books = ( {
     id = "book";
-    filename = "{{ .Values.server.mse4.persistence.mountPath }}/book";
+    filename = "/var/lib/mse4/book";
     size = "1G";
     stores = ( {
       id = "store";
-      filename = "{{ .Values.server.mse4.persistence.mountPath }}/store";
+      filename = "/var/lib/mse4/store";
       size = "9G";
     } );
   } );
@@ -3516,67 +2626,6 @@ env: {
     [ "${actual}" == '' ]
 }
 
-@test "${kind}/delayedHaltSeconds: not enabled by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
-    [ "${actual}" == "null" ]
-}
-
-@test "${kind}/delayedHaltSeconds: can be enabled" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.delayedHaltSeconds=120" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
-    [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
-}
-
-@test "${kind}/delayedHaltSeconds: takes priority over delayedShutdown" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.delayedHaltSeconds=120" \
-        --set "server.delayedShutdown.method=sleep" \
-        --set "server.delayedShutdown.sleep.seconds=90" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | yq -r -o=json -I=0 '.lifecycle' | tee -a /dev/stderr)
-    [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
-}
-
 @test "${kind}/delayedShutdown: not enabled by default" {
     cd "$(chart_dir)"
 
@@ -3622,7 +2671,6 @@ env: {
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set "server.workDir=-" \
         --set "server.delayedShutdown.method=mempool" \
         --set "server.delayedShutdown.mempool.pollSeconds=5" \
         --set "server.delayedShutdown.mempool.waitSeconds=30" \
@@ -3641,30 +2689,8 @@ env: {
     [[ "${actual}" == *"sleep 5"* ]]
     [[ "${actual}" == *"sleep 30"* ]]
 
-    # varnishstat must target the same instance as varnishd (-n)
+    # varnishstat finds varnishd's default working directory without -n
     local actual=$(echo "$container" | yq -r '.lifecycle.preStop.exec.command[2]' | tee -a /dev/stderr)
-    [[ "${actual}" == *'varnishstat -n "$VARNISH_WORKDIR" -1'* ]]
-    local actual=$(echo "$container" | yq -r '.env[] | select(.name == "VARNISH_WORKDIR") | .name' | tee -a /dev/stderr)
-    [ "${actual}" == "VARNISH_WORKDIR" ]
-}
-
-@test "${kind}/delayedShutdown/mempool: no -n when workDir empty" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.workDir=' \
-        --set "server.delayedShutdown.method=mempool" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .lifecycle.preStop.exec.command[2]' |
-            tee -a /dev/stderr)
     [[ "${actual}" == *'varnishstat -1'* ]]
 }
 
@@ -3735,43 +2761,6 @@ env: {
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "120" ]
-}
-
-@test "${kind}/terminationGracePeriodSeconds: can be enabled with delayedHaltSeconds" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.delayedHaltSeconds=60" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.terminationGracePeriodSeconds' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "120" ]
-}
-
-@test "${kind}/terminationGracePeriodSeconds: can be overriden by grace period seconds" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.terminationGracePeriodSeconds=180" \
-        --set "server.delayedHaltSeconds=60" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.terminationGracePeriodSeconds' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "180" ]
 }
 
 @test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown sleep seconds" {
@@ -3865,7 +2854,6 @@ env: {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set "server.agent.enabled=true" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -3910,7 +2898,6 @@ env: {
         --set "server.kind=${kind}" \
         --set "server.agent.enabled=true" \
         --set "server.initAgent.enabled=false" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -3957,7 +2944,6 @@ env: {
         --set "server.agent.enabled=true" \
         --set "server.initAgent.enabled=false" \
         --set "server.agent.useReleaseName=true" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -4001,7 +2987,6 @@ env: {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set "server.secret=hello-varnish" \
         --set 'server.http.enabled=true' \
         --set 'server.http.port=8090' \
         --namespace default \
@@ -4032,9 +3017,8 @@ env: {
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set "server.secret=hello-varnish" \
         --set 'server.http.enabled=false' \
-        --set 'server.service.http.enabled=false' \
+        --set 'server.service.enabled=false' \
         --set 'server.livenessProbe=' \
         --set 'server.readinessProbe=' \
         --namespace default \
@@ -4045,86 +3029,59 @@ env: {
     [[ "${output}" == *"HTTP support must be enabled to enable Varnish Controller Agent"* ]]
 }
 
-@test "${kind}/agent: can be enabled with custom admin port" {
+@test "${kind}/agent: uses the pod secret" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.secret=hello-varnish' \
-        --set 'server.agent.enabled=true' \
-        --set 'server.admin.address=0.0.0.0' \
-        --set 'server.admin.port=9999' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
+    for initAgent in true false; do
+        local object=$((helm template \
+            --set "server.kind=${kind}" \
+            --set 'server.agent.enabled=true' \
+            --set "server.initAgent.enabled=${initAgent}" \
+            --namespace default \
+            --show-only ${template} \
+            . || render_failed) |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_HOST") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "0.0.0.0" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_PORT") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == "9999" ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
+        local container=$(echo "$object" |
+            yq -r -o=json -I=0 '
+                .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
             tee -a /dev/stderr)
 
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index("-T") + 1]' |
+        local actual=$(echo "$container" |
+            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_SECRET") | .value' |
             tee -a /dev/stderr)
-    [ "${actual}" == "0.0.0.0:9999" ]
-}
+        [ "${actual}" == '/etc/varnish/shared/secret' ]
 
-@test "${kind}/agent: can be enabled with external secret" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.agent.enabled=true" \
-        --set "server.secretFrom.name=external-secret" \
-        --set "server.secretFrom.key=varnish-secret" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
+        local actual=$(echo "$container" |
+            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_HOST") | .value' |
             tee -a /dev/stderr)
+        [ "${actual}" == '127.0.0.1' ]
 
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.spec.volumes[]? | select(.name == "release-name-config-secret")' |
+        local actual=$(echo "$container" |
+            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_PORT") | .value' |
             tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config-secret","secret":{"secretName":"external-secret"}}' ]
-}
+        [ "${actual}" == '6082' ]
 
-@test "${kind}/agent: cannot be enabled without secret" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
+        local actual=$(echo "$container" |
+            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_NAME") | .name' |
+            tee -a /dev/stderr)
+        [ "${actual}" == '' ]
 
-    run helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        .
-    echo "${output}" >&2
-    [ "${status}" -ne 0 ]
-    [[ "${output}" == *"Secret must be set to enable Varnish Controller agent"* ]]
+        local actual=$(echo "$container" |
+            yq -r '.volumeMounts[] | select(.mountPath == "/etc/varnish/shared") | .name' |
+            tee -a /dev/stderr)
+        [ "${actual}" == 'release-name-config-shared' ]
+
+        local actual=$(echo "$object" |
+            yq -r -o=json -I=0 '[.spec.template.spec.initContainers[].name]' |
+            tee -a /dev/stderr)
+        if [ "${initAgent}" == "true" ]; then
+            [ "${actual}" == '["'"${chart}"'-secret","init-agent"]' ]
+        else
+            [ "${actual}" == '["'"${chart}"'-secret"]' ]
+        fi
+    done
 }
 
 @test "${kind}/agent: can be enabled with private token" {
@@ -4135,7 +3092,6 @@ env: {
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
         --set "server.agent.privateToken=private-token" \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr)
@@ -4155,7 +3111,6 @@ env: {
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.securityContext.hello=world' \
         --set 'server.securityContext.ignore-this=yes' \
         --set 'server.agent.securityContext.runAsUser=1001' \
@@ -4184,7 +3139,6 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "global.securityContext=${securityContext}" \
         --set 'server.securityContext.ignore-this=yes' \
         --set 'server.agent.securityContext.runAsUser=1001' \
@@ -4211,7 +3165,6 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.securityContext.hello=world' \
         --set 'server.securityContext.ignore-this=yes' \
         --set "server.agent.securityContext=${securityContext}" \
@@ -4239,7 +3192,6 @@ release-namespace: to-be-override
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "global.securityContext=${securityContext}" \
         --set 'server.securityContext.ignore-this=yes' \
         --set 'server.agent.securityContext=release-namespace: {{ .Release.Namespace }}' \
@@ -4262,7 +3214,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr)
@@ -4303,7 +3254,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.natsServer.internal.namespace=varnish-controller' \
         --set 'global.natsServer.internal.releaseName=test' \
         --set 'global.natsServer.internal.clusterDomain=remote.local' \
@@ -4347,7 +3297,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.natsServer.internal.namespace=varnish-controller' \
         --set 'global.natsServer.internal.releaseName=test' \
         --set 'global.natsServer.internal.clusterDomain=remote.local' \
@@ -4393,7 +3342,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.natsServer.externalAddress=nats.local:4222' \
         --set 'global.natsServer.internal.enabled=false' \
         --namespace default \
@@ -4436,7 +3384,6 @@ release-namespace: to-be-override
     run helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.natsServer.externalAddress=' \
         --set 'global.natsServer.internal.enabled=false' \
         --namespace default \
@@ -4454,7 +3401,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.logLevel=info' \
         --namespace default \
         --show-only ${template} \
@@ -4477,7 +3423,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.extraEnvs.FOO=bar' \
         --set 'server.agent.extraEnvs.BAZ=bax' \
         --namespace default \
@@ -4512,7 +3457,6 @@ release-namespace: to-be-override
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.enabled=true' \
         --set "server.agent.extraEnvs=${extraEnvs}" \
         --namespace default \
@@ -4541,7 +3485,6 @@ release-namespace: to-be-override
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.enabled=true' \
         --set 'server.agent.extraEnvs[0].name=FOO' \
         --set 'server.agent.extraEnvs[0].value=bar' \
@@ -4573,7 +3516,6 @@ release-namespace: to-be-override
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.enabled=true' \
         --set 'server.agent.extraEnvs[0].name=FROM_CONFIGMAP' \
         --set 'server.agent.extraEnvs[0].valueFrom.configMapKeyRef.name=my-configmap' \
@@ -4608,7 +3550,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -4629,7 +3570,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.tags[0]=tokyodc' \
         --set 'server.agent.tags[1]=highmem' \
         --namespace default \
@@ -4652,7 +3592,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -4680,7 +3619,6 @@ release-namespace: to-be-override
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.location.latitude=37.354107' \
         --set 'server.agent.location.longitude=-121.955238' \
         --namespace default \
@@ -4710,7 +3648,6 @@ release-namespace: to-be-override
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.resources.limits.cpu=100m' \
         --set 'global.resources.requests.cpu=100m' \
         --set 'server.resources.ignore-this=yes' \
@@ -4742,7 +3679,6 @@ requests:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.resources.limits.cpu=100m' \
         --set 'global.resources.requests.cpu=100m' \
         --set 'server.resources.ignore-this=yes' \
@@ -4771,7 +3707,6 @@ requests:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "global.resources=${resources}" \
         --set 'server.resources.ignore-this=yes' \
         --set 'server.agent.resources.limits.cpu=500m' \
@@ -4809,7 +3744,6 @@ requests:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "global.resources=${globalResources}" \
         --set 'server.resources.ignore-this=yes' \
         --set "server.agent.resources=${resources}" \
@@ -4830,7 +3764,6 @@ requests:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -4848,7 +3781,6 @@ requests:
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -4875,7 +3807,6 @@ requests:
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -4907,7 +3838,6 @@ backend {{ .Release.Name }} {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "server.vclConfig=${vclConfig}" \
         --namespace default \
         --show-only ${template} \
@@ -4925,216 +3855,27 @@ backend {{ .Release.Name }} {
     [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 }
 
-@test "${kind}/agent/vcl: included with controller agent when configured via vclConfigs" {
+@test "${kind}/agent/vcl: includes are mounted in the agent container" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local object=$((helm template \
+    local container=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
-        --set "server.vclConfig=" \
-        --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
+        --set 'server.vclConfig=vcl 4.1; include "./vcls/helpers.vcl"; backend default none;' \
+        --set-string 'server.vcls.includes.helpers\.vcl=sub x {}' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+        yq -r '.volumeMounts[] | select(.name | test("config-vcl")) | .mountPath + ":" + .subPath' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
-}
-
-@test "${kind}/agent/vcl: included with controller agent when configured via vclConfigs with extra vcls" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local extraVclConfig='
-vcl 4.1;
-
-default {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
-        --set "server.vclConfig=${vclConfig}" \
-        --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
-}
-
-@test "${kind}/agent/vcl: included with controller agent when configured via vclConfigs with extra vcls with default.vcl" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local extraVclConfig='
-vcl 4.1;
-
-default {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
-        --set "server.vclConfig=" \
-        --set 'server.vclConfigs.default\.vcl='"${vclConfig}" \
-        --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
-}
-
-@test "${kind}/agent/vcl: included with controller agent when configured via vclConfigs with extra vcls with alternative names" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local extraVclConfig='
-vcl 4.1;
-
-default {{ .Release.Name }} {
-  .host = "127.0.0.1";
-  .port = "8000";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
-        --set "server.vclConfig=" \
-        --set 'server.vclConfigPath=/etc/varnish/varnish.vcl' \
-        --set 'server.vclConfigs.varnish\.vcl='"${vclConfig}" \
-        --set 'server.vclConfigs.main\.vcl='"${extraVclConfig}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
-}
-
-@test "${kind}/agent/vcl: included with controller agent when relocated" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local vclConfig='
-vcl 4.1;
-
-backend default {
-  .host = "127.0.0.1";
-  .port = "8080";
-}'
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
-        --set "server.vclConfig=${vclConfig}" \
-        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
+    [ "${actual}" == "/etc/varnish/default.vcl:default.vcl
+/etc/varnish/vcls/helpers.vcl:helpers.vcl" ]
 }
 
 @test "${kind}/agent/extraArgs: not configured by default" {
@@ -5144,7 +3885,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5172,7 +3912,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "server.agent.extraArgs[0]=-help" \
         --namespace default \
         --show-only ${template} \
@@ -5201,7 +3940,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.extraVolumeMounts[0].name=varnish-data' \
         --set 'server.agent.extraVolumeMounts[0].mountPath=/var/data' \
         --namespace default \
@@ -5229,7 +3967,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "server.agent.extraVolumeMounts=${extraVolumeMounts}" \
         --namespace default \
         --show-only ${template} \
@@ -5253,7 +3990,6 @@ backend default {
         --set "server.kind=${kind}" \
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5274,7 +4010,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set "server.agent.autoRemove.method=vcli" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5297,7 +4032,6 @@ backend default {
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.username=guest" \
         --set "server.agent.autoRemove.vcli.password=passw0rd" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5329,7 +4063,6 @@ backend default {
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.passwordFrom.name=my-secret" \
         --set "server.agent.autoRemove.vcli.passwordFrom.key=password-key" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5355,7 +4088,6 @@ backend default {
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.insecure=true" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5380,7 +4112,6 @@ backend default {
         --set "server.kind=${kind}" \
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5406,7 +4137,6 @@ backend default {
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.internal.namespace=other-namespace" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5432,7 +4162,6 @@ backend default {
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.internal.releaseName=vc" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5458,7 +4187,6 @@ backend default {
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.internal.port=8888" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5484,7 +4212,6 @@ backend default {
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.internal.port=80" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5511,7 +4238,6 @@ backend default {
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.internal.https=true" \
         --set "server.agent.autoRemove.vcli.internal.port=443" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5538,7 +4264,6 @@ backend default {
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.internal.https=true" \
         --set "server.agent.autoRemove.vcli.internal.port=4444" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5565,7 +4290,6 @@ backend default {
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.externalAddress=https://varnish-controller.example.com" \
         --set "server.agent.autoRemove.vcli.internal.enabled=false" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5590,7 +4314,6 @@ backend default {
         --set "server.kind=${kind}" \
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
-        --set "server.secret=foobar" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5618,7 +4341,6 @@ backend default {
         --set "server.agent.autoRemove.method=vcli" \
         --set 'server.agent.autoRemove.vcli.extraEnvs.FOO=bar' \
         --set 'server.agent.autoRemove.vcli.extraEnvs.BAZ=bax' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5654,7 +4376,6 @@ backend default {
         --set 'server.agent.enabled=true' \
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.extraEnvs=${extraEnvs}" \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5687,7 +4408,6 @@ backend default {
         --set 'server.agent.autoRemove.vcli.extraEnvs[0].value=bar' \
         --set 'server.agent.autoRemove.vcli.extraEnvs[1].name=BAZ' \
         --set 'server.agent.autoRemove.vcli.extraEnvs[1].value=bax' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5722,7 +4442,6 @@ backend default {
         --set 'server.agent.autoRemove.vcli.extraEnvs[1].name=FROM_SECRET' \
         --set 'server.agent.autoRemove.vcli.extraEnvs[1].valueFrom.secretKeyRef.name=my-secret' \
         --set 'server.agent.autoRemove.vcli.extraEnvs[1].valueFrom.secretKeyRef.key=my-key' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5755,7 +4474,6 @@ backend default {
         --set 'server.agent.autoRemove.vcli.resources.limits.memory=512Mi' \
         --set 'server.agent.autoRemove.vcli.resources.requests.cpu=100m' \
         --set 'server.agent.autoRemove.vcli.resources.requests.memory=128Mi' \
-        --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -5774,7 +4492,6 @@ backend default {
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
         --set "server.agent.autoRemove.method=vcli" \
-        --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -5795,7 +4512,6 @@ backend default {
         --set "server.agent.autoRemove.method=vcli" \
         --set 'server.agent.autoRemove.vcli.extraVolumeMounts[0].name=varnish-data' \
         --set 'server.agent.autoRemove.vcli.extraVolumeMounts[0].mountPath=/var/data' \
-        --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5823,7 +4539,6 @@ backend default {
         --set 'server.agent.enabled=true' \
         --set "server.agent.autoRemove.method=vcli" \
         --set "server.agent.autoRemove.vcli.extraVolumeMounts=${extraVolumeMounts}" \
-        --set 'server.secret=foobar' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5845,7 +4560,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -5867,7 +4581,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.initAgent.extraVolumeMounts[0].name=varnish-data' \
         --set 'server.initAgent.extraVolumeMounts[0].mountPath=/var/data' \
         --namespace default \
@@ -5894,7 +4607,6 @@ backend default {
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "server.initAgent.extraVolumeMounts=${extraVolumeMounts}" \
         --namespace default \
         --show-only ${template} \
@@ -5958,7 +4670,6 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.varnishncsa.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "global.securityContext=${securityContext}" \
         --set 'server.securityContext.ignore-this=yes' \
         --set 'server.varnishncsa.securityContext.runAsUser=1001' \
@@ -5984,7 +4695,6 @@ release-namespace: {{ .Release.Namespace }}
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.varnishncsa.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.securityContext.hello=world' \
         --set 'server.securityContext.ignore-this=yes' \
         --set "server.varnishncsa.securityContext=${securityContext}" \
@@ -6011,7 +4721,6 @@ release-namespace: to-be-override
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.varnishncsa.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set "global.securityContext=${securityContext}" \
         --set 'server.securityContext.ignore-this=yes' \
         --set 'server.varnishncsa.securityContext=release-namespace: {{ .Release.Namespace }}' \
@@ -6053,7 +4762,6 @@ release-namespace: to-be-override
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.workDir=' \
         --set-json 'server.varnishncsa.extraArgs=["-F", "%h %r", "-t", 3]' \
         --namespace default \
         --show-only ${template} \
@@ -6088,32 +4796,11 @@ release-namespace: to-be-override
     [ "${actual}" != 'null' ]
 }
 
-@test "${kind}/varnishncsa: targets varnishd workdir without extraArgs" {
+@test "${kind}/varnishncsa: no -n" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.workDir=-' \
-        --set-json 'server.varnishncsa.extraArgs=[]' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .args' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '["-n","$(VARNISH_WORKDIR)"]' ]
-}
-
-@test "${kind}/varnishncsa: no -n when workDir empty" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.workDir=' \
         --set 'server.varnishncsa.startupProbe.periodSeconds=5' \
         --set-json 'server.varnishncsa.extraArgs=[]' \
         --namespace default \
@@ -6228,7 +4915,6 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.workDir=-' \
         --set 'server.varnishncsa.startupProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.startupProbe.periodSeconds=20' \
         --set 'server.varnishncsa.startupProbe.timeoutSeconds=2' \
@@ -6241,7 +4927,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .startupProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be configured" {
@@ -6249,7 +4935,6 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.workDir=-' \
         --set 'server.varnishncsa.readinessProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.readinessProbe.periodSeconds=20' \
         --set 'server.varnishncsa.readinessProbe.timeoutSeconds=2' \
@@ -6262,7 +4947,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .readinessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/readinessProbe: can be disabled" {
@@ -6286,7 +4971,6 @@ release-namespace: to-be-override
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.workDir=-' \
         --set 'server.varnishncsa.livenessProbe.initialDelaySeconds=10' \
         --set 'server.varnishncsa.livenessProbe.periodSeconds=20' \
         --set 'server.varnishncsa.livenessProbe.timeoutSeconds=2' \
@@ -6299,7 +4983,7 @@ release-namespace: to-be-override
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .livenessProbe' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
+    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
 }
 
 @test "${kind}/varnishncsa/livenessProbe: can be disabled" {

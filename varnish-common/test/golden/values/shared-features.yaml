@@ -2,7 +2,6 @@
 # share templates.
 server:
   kind: StatefulSet
-  workDir: golden
   parameters:
     backendIdleTimeout: "60"
     feature:
@@ -18,9 +17,6 @@ server:
         port = "{{ .Values.server.tls.port }}"
       }
       pem-file = "/etc/varnish/certs/example.pem"
-  service:
-    https:
-      enabled: true
   otel:
     enabled: true
     env:

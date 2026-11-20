@@ -200,15 +200,13 @@ spec:
             - -f
             - ""
             - -p
-            - thread_pool_max=1000
-            - -p
             - thread_pool_min=50
             - -p
-            - thread_pool_timeout=120
-            - -t
-            - "120"
+            - thread_pool_max=1000
             - -a
             - http=$(POD_IP):6081
+            - -S
+            - /etc/varnish/shared/secret
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
@@ -266,6 +264,20 @@ spec:
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      initContainers:
+        - name: varnish-cache-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "docker.io/varnish:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
       volumes:

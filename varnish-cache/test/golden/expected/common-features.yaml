@@ -30,35 +30,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     team: web
 ---
-# Source: varnish-cache/templates/secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: golden-secret
-  labels:
-    helm.sh/chart: varnish-cache-CHART_VERSION
-    app.kubernetes.io/name: golden
-    app.kubernetes.io/instance: golden
-    app.kubernetes.io/version: "APP_VERSION"
-    app.kubernetes.io/managed-by: Helm
-data:
-  secret: czNjcjN0
----
-# Source: varnish-cache/templates/configmap-cmdfile.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: golden-cmdfile
-  labels:
-    helm.sh/chart: varnish-cache-CHART_VERSION
-    app.kubernetes.io/name: golden
-    app.kubernetes.io/instance: golden
-    app.kubernetes.io/version: "APP_VERSION"
-    app.kubernetes.io/managed-by: Helm
-data:
-  cmds.cli: |
-    vcl.list
----
 # Source: varnish-cache/templates/configmap-vcl.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -132,9 +103,7 @@ spec:
         app.kubernetes.io/name: golden
         tier: edge
       annotations:
-        checksum/golden-cmdfile: 9ed82005a153fb8bd0f926b3bcf69eebda794f1c5e8ec764fea3f819c5c1e2a8
         checksum/golden-extra-extra-cm: 6d3fc6f0f003717c7e5188f3fcd9874f709ab7b0d8eaaa63f04e5e335fd4d868
-        checksum/golden-secret: 4e738ca5563c06cfd0018299933d58db1dd8bf97f6973dc99bf6cdc64b5550bd
         checksum/golden-vcl: efa6171b0848c327d81f850523aae1bc8d3a502564d77ccebc9e4c4cf930a49c
     spec:
       imagePullSecrets:
@@ -188,22 +157,16 @@ spec:
             - -F
             - -T
             - 127.0.0.1:6082
-            - -I
-            - /etc/varnish/cmds.cli
             - -f
             - /etc/varnish/default.vcl
             - -p
-            - thread_pool_max=1000
-            - -p
             - thread_pool_min=50
             - -p
-            - thread_pool_timeout=120
-            - -t
-            - "120"
+            - thread_pool_max=1000
             - -a
             - http=$(POD_IP):6081
             - -S
-            - /etc/varnish/secret
+            - /etc/varnish/shared/secret
             - -p
             - thread_pool_stack=96k
             - -a
@@ -213,15 +176,9 @@ spec:
               mountPath: /var/lib/varnish
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
-            - name: golden-config-secret
-              mountPath: /etc/varnish/secret
-              subPath: secret
             - name: golden-config-vcl
               mountPath: "/etc/varnish/default.vcl"
               subPath: default.vcl
-            - name: golden-config-cmdfile
-              mountPath: "/etc/varnish/cmds.cli"
-              subPath: cmds.cli
         - name: varnish-cache-ncsa
           securityContext:
             runAsNonRoot: true
@@ -262,6 +219,23 @@ spec:
               mountPath: /var/lib/varnish
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
+      initContainers:
+        - name: varnish-cache-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "docker.io/varnish:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: 1Gi
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
       volumes:
       - name: golden-varnish-vsm
         emptyDir:
@@ -269,15 +243,9 @@ spec:
       - name: golden-config-shared
         emptyDir:
           medium: "Memory"
-      - name: golden-config-secret
-        secret:
-          secretName: golden-secret
       - name: golden-config-vcl
         configMap:
           name: golden-vcl
-      - name: golden-config-cmdfile
-        configMap:
-          name: golden-cmdfile
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

@@ -147,18 +147,6 @@ load _helpers
     [ "${actual}" = "release-name-varnish-enterprise-peers:9999" ]
 }
 
-@test "Cluster: include path changes with vclConfigPath" {
-    cd "$(chart_dir)"
-    local actual=$((helm template \
-        --set 'cluster.enabled=true' \
-        --set 'server.vclConfigPath=/etc/varnish/non-default.vcl' \
-        --namespace default \
-        --show-only templates/configmap-vcl.yaml \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -o=json -I=0 -r '.data["wrapped-default.vcl"]' | tee -a /dev/stderr)
-    echo "${actual}" | grep 'include "/etc/varnish/non-default.vcl";'
-}
-
 @test "Cluster: no headless service if headlessServiceName is set" {
     cd "$(chart_dir)"
     local actual=$((helm template \

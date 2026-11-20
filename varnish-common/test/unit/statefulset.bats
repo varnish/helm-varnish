@@ -199,7 +199,6 @@ rollingUpdate:
         --set 'server.kind=StatefulSet' \
         --set 'server.mse4.enabled=true' \
         --set 'server.mse4.persistence.enabled=true' \
-        --set 'server.mse4.persistence.mountPath=/data1/mse4' \
         --set 'server.mse4.persistence.storageSize=100G' \
         --namespace default \
         --show-only templates/statefulset.yaml \
@@ -220,7 +219,7 @@ rollingUpdate:
     local actual=$(echo "$containerObject" |
         yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-mse4")' |
             tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-mse4","mountPath":"/data1/mse4"}' ]
+    [ "${actual}" = '{"name":"release-name-mse4","mountPath":"/var/lib/mse4"}' ]
 }
 
 @test "StatefulSet/agent/persistence: can be enabled" {
@@ -230,7 +229,6 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=StatefulSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --set 'server.agent.persistence.storageSize=1G' \
         --namespace default \
@@ -261,7 +259,6 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=StatefulSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/statefulset.yaml \
@@ -283,7 +280,6 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=StatefulSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/statefulset.yaml \
@@ -306,7 +302,6 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=StatefulSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --set 'server.agent.persistence.annotations.foo=bar' \
         --namespace default \
@@ -334,7 +329,6 @@ release-name: {{ .Release.Name }}
     local object=$((helm template \
         --set "server.kind=StatefulSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --set "server.agent.persistence.annotations=${annotations}" \
         --namespace default \
@@ -391,7 +385,6 @@ release-name: {{ .Release.Name }}
     local object=$((helm template \
         --set "server.kind=StatefulSet" \
         --set "server.agent.enabled=true" \
-        --set "server.secret=hello-varnish" \
         --set "server.mse4.persistence.enabled=true" \
         --set "server.agent.persistence.enabled=true" \
         --set "server.extraVolumeClaimTemplates[0].metadata.name=hello-pv" \
@@ -451,7 +444,6 @@ release-name: {{ .Release.Name }}
     local object=$((helm template \
         --set "server.kind=StatefulSet" \
         --set "server.agent.enabled=true" \
-        --set "server.secret=hello-varnish" \
         --set "server.mse4.persistence.enabled=true" \
         --set "server.agent.persistence.enabled=true" \
         --set "server.extraVolumeClaimTemplates=${volumeClaimTemplates}" \

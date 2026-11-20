@@ -50,7 +50,7 @@ load _helpers
 }
 
 @test "Schema: global.natsServer.internal.enabled accepts the varnish-controller '-'" {
-  schema_accepts --set server.secret=abc --set server.agent.enabled=true --set global.natsServer.internal.enabled=-
+  schema_accepts --set server.agent.enabled=true --set global.natsServer.internal.enabled=-
   [[ "$output" == *"varnish-controller-nats.default.svc.cluster.local:4222"* ]]
   schema_rejects "at '/global/natsServer/internal/enabled'" --set global.natsServer.internal.enabled=yes
 }
@@ -60,7 +60,7 @@ load _helpers
 }
 
 @test "Schema: agent credentials and tags accept numbers from --set" {
-  schema_accepts --set server.secret=abc --set server.agent.enabled=true \
+  schema_accepts --set server.agent.enabled=true \
     --set server.agent.privateToken=123456 --set 'server.agent.tags={1,2}' \
     --set server.agent.autoRemove.method=vcli --set server.agent.autoRemove.vcli.username=1000 \
     --set server.agent.autoRemove.vcli.password=123456 --set server.agent.autoRemove.vcli.externalAddress=https://c.example
@@ -85,4 +85,12 @@ server:
       latitude: 37.35
 EOT
   schema_rejects "at '/server/agent/location/latitude'" -f "${values}"
+}
+
+@test "Schema: rejects the removed server.mse4.configFile" {
+  schema_rejects "additional properties 'configFile' not allowed" --set server.mse4.configFile=x
+}
+
+@test "Schema: rejects the removed server.mse4.persistence.mountPath" {
+  schema_rejects "additional properties 'mountPath' not allowed" --set server.mse4.persistence.mountPath=/data1/mse4
 }

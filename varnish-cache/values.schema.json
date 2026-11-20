@@ -340,7 +340,6 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "vclConfigs",
         "vcls"
       ],
       "properties": {
@@ -392,15 +391,6 @@
           "type": "boolean",
           "default": false,
           "description": "Whether to enable shared PID namespace between all containers in a Pod. This is useful for a scenario where it is necessary to send a signal to a process across a container.\n"
-        },
-        "workDir": {
-          "type": [
-            "string",
-            "integer",
-            "null"
-          ],
-          "description": "Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to \"-\", the Pod name is used. When empty, varnishd runs without `-n` and uses the Varnish default, so `varnishstat`, `varnishadm` and `varnishlog` work without `-n` in `kubectl exec` and in extra containers.\n",
-          "default": ""
         },
         "http": {
           "type": "object",
@@ -467,7 +457,7 @@
             "address": {
               "type": "string",
               "default": "0.0.0.0",
-              "description": "Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when neither `server.tls.config` nor `server.tls.configFile` is set.\n"
+              "description": "Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when `server.tls.config` is not set.\n"
             },
             "config": {
               "type": "string",
@@ -476,30 +466,6 @@
               "examples": [
                 "frontend = {\n  host = \"\"\n  port = \"{{ .Values.server.tls.port }}\"\n}\n\npem-file = \"/etc/varnish/certs/example.pem\"\n"
               ]
-            },
-            "configFile": {
-              "type": "string",
-              "default": "",
-              "description": "Uses the content of the given file as `server.tls.config`. The file is parsed as a template string and must be placed inside the `files/` directory of the Helm chart. Overrides `server.tls.config` if set.\n",
-              "examples": [
-                "files/tls.cfg"
-              ]
-            }
-          }
-        },
-        "admin": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "address": {
-              "type": "string",
-              "default": "127.0.0.1",
-              "description": "Configures the address for Varnish management interface.\n"
-            },
-            "port": {
-              "$ref": "#/definitions/port",
-              "default": 6082,
-              "description": "Configures the port for Varnish management interface.\n"
             }
           }
         },
@@ -612,15 +578,6 @@
             "- name: RELEASE_NAMESPACE\n  value: {{ .Release.Namespace }}\n"
           ]
         },
-        "ttl": {
-          "type": [
-            "integer",
-            "number",
-            "string"
-          ],
-          "default": 120,
-          "description": "Sets the default Time To Live (in seconds) for a cached object.\n"
-        },
         "minThreads": {
           "anyOf": [
             {
@@ -632,7 +589,7 @@
             }
           ],
           "default": 50,
-          "description": "Sets the minimum number of worker threads in each pool. See also [varnishd documentation][varnishd].\n"
+          "description": "Sets the minimum number of worker threads in each pool. Passed as `-p thread_pool_min` before `server.parameters` (min first). See also [varnishd documentation][varnishd].\n"
         },
         "maxThreads": {
           "anyOf": [
@@ -645,16 +602,7 @@
             }
           ],
           "default": 1000,
-          "description": "Sets the maximum number of worker threads in each pool. See also [varnishd documentation][varnishd].\n"
-        },
-        "threadTimeout": {
-          "type": [
-            "integer",
-            "number",
-            "string"
-          ],
-          "default": 120,
-          "description": "Sets the number of seconds after which idle threads are destroyed.\n"
+          "description": "Sets the maximum number of worker threads in each pool. Passed as `-p thread_pool_max` after `thread_pool_min` and before `server.parameters`. See also [varnishd documentation][varnishd].\n"
         },
         "command": {
           "type": "array",
@@ -680,7 +628,7 @@
             ]
           },
           "default": {},
-          "description": "Sets Varnish Cache parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.\n",
+          "description": "Sets Varnish Cache parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Thread pool sizes are set with `server.minThreads` and `server.maxThreads`: setting `thread_pool_min` or `thread_pool_max` here, in any spelling, fails rendering.\n",
           "examples": [
             {
               "backendIdleTimeout": "60",
@@ -701,7 +649,7 @@
         "extraContainers": {
           "$ref": "#/definitions/arrayOrTemplate",
           "default": [],
-          "description": "An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string.\n",
+          "description": "An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string. A sidecar that mounts the `{{ .Release.Name }}-varnish-vsm` volume at `/var/lib/varnish` can run `varnishstat`, `varnishlog` and `varnishadm` without `-n`, as varnishd uses its default working directory. The varnishd admin interface listens on `127.0.0.1:6082` and its secret is `/etc/varnish/shared/secret` (mount the `{{ .Release.Name }}-config-shared` volume at `/etc/varnish/shared`).\n",
           "examples": [
             "- name: varnish-hello\n  securityContext:\n    {{- toYaml .Values.global.securityContext | nindent 4 }}\n  image: hello-world:latest\n  volumeMounts:\n    - name: {{ .Release.Name }}-varnish-vsm\n      mountPath: /var/lib/varnish\n"
           ]
@@ -734,85 +682,18 @@
           "type": "null",
           "description": "Varnish Enterprise only."
         },
-        "secret": {
-          "type": "string",
-          "default": "",
-          "description": "Sets the Varnish secret for accessing the varnishd admin interface. Either this value or `server.secretFrom` can be set. If unset, Varnish will generate one on every Pod start.\n"
-        },
-        "secretFrom": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": false,
-          "default": {},
-          "description": "Sets the Varnish secret from an external Kubernetes secret for accessing the varnishd admin interface. Either this value or `server.secret` can be set.\n",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "The name of the Kubernetes secret. Required when `server.secretFrom` is set.\n"
-            },
-            "key": {
-              "type": "string",
-              "description": "The key of the Kubernetes secret holding the Varnish secret. Required when `server.secretFrom` is set.\n"
-            }
-          },
-          "examples": [
-            {
-              "name": "secret-name",
-              "key": "varnish-secret"
-            }
-          ]
-        },
-        "secretFile": {
-          "type": "string",
-          "default": "",
-          "description": "Use the content of the given file path as Varnish secret. The file will be parsed as templated string. Will override `server.secret` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.\n",
-          "examples": [
-            "files/secret"
-          ]
-        },
-        "vclConfigPath": {
-          "type": "string",
-          "default": "/etc/varnish/default.vcl",
-          "description": "A path to the main VCL configuration. This configuration affects the location where `server.vclConfig` will be saved to, as well as the `VARNISH_VCL_CONF` environment variable in the Varnish Cache container.\n"
-        },
         "vclConfig": {
           "type": "string",
           "default": "",
-          "description": "A VCL configuration for Varnish Cache.\n",
+          "description": "The main VCL of Varnish Cache, mounted at `/etc/varnish/default.vcl`. It can load the files of `server.vcls.includes` with `include \"./vcls/<file>\";`. It must not be set together with `server.vcls.routes`.\n",
           "examples": [
             "vcl 4.1;\n\nbackend default {\n  .host = \"www.example.com\";\n  .port = \"80\";\n}\n\nsub vcl_backend_fetch {\n  set bereq.http.Host = \"www.example.com\";\n}\n"
-          ]
-        },
-        "vclConfigFile": {
-          "type": "string",
-          "default": "",
-          "description": "Use the content of the given file path as VCL configuration. The file will be parsed as templated string. Will override `server.vclConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.\n",
-          "examples": [
-            "files/default.vcl"
-          ]
-        },
-        "vclConfigs": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "default": {},
-          "description": "Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`.\n\nIf the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.\n",
-          "examples": [
-            {
-              "extra.vcl": "vcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8090\";\n}\n"
-            },
-            {
-              "default.vcl": "vcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8090\";\n}\n"
-            }
           ]
         },
         "vcls": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields. `server.cmdfileConfig` and `server.cmdfileConfigFile` must not be set when `server.vcls.routes` is non-empty.\n",
+          "description": "Per-domain VCL routing (multi-tenant) and shared VCL files. When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding `server.vclConfig`. `server.vcls.includes` works with or without routes.\n",
           "properties": {
             "routes": {
               "type": [
@@ -820,7 +701,7 @@
                 "null"
               ],
               "default": [],
-              "description": "Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig`, `server.vclConfigFile`, `server.vclConfigs` and `server.cmdfileConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.\n",
+              "description": "Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.\n",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -876,7 +757,7 @@
                 "type": "string"
               },
               "default": {},
-              "description": "Shared VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs. Each key is a filename and each value a template string. Requires `server.vcls.routes`. Route VCLs include them with a relative path (`include \"./helpers.vcl\";`), as plain filenames are looked up in `vcl_path` instead.\n",
+              "description": "Extra VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs if any. Each key is a filename (subdirectories allowed) and each value a template string. Load them with a path relative to the including file: `include \"./vcls/<file>\";` from `server.vclConfig`, and `include \"./<file>\";` from a route VCL. Plain filenames are looked up in `vcl_path` instead.\n",
               "examples": [
                 {
                   "helpers.vcl": "sub common_recv {\n}\n"
@@ -884,27 +765,6 @@
               ]
             }
           }
-        },
-        "cmdfileConfigPath": {
-          "type": "string",
-          "default": "/etc/varnish/cmds.cli",
-          "description": "A path to the [CLI command file][varnish-cmdfile]. This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the `-I` argument in the Varnish Cache container when `server.cmdfileConfig` is not empty.\n"
-        },
-        "cmdfileConfig": {
-          "type": "string",
-          "default": "",
-          "description": "A [CLI command file][varnish-cmdfile] for running management commands when `varnishd` is launched. For example, when loading extra VCL in multi-tenancy mode. See also [External VCL ConfigMap](https://docs.varnish-software.com/varnish-helm/guides/using-external-vcl-configmap/#configmap-for-multiple-vcl-files).\n",
-          "examples": [
-            "vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl\nvcl.label label_tenant1 vcl_tenant1\nvcl.load vcl_main /etc/varnish/main.vcl\nvcl.use vcl_main\n"
-          ]
-        },
-        "cmdfileConfigFile": {
-          "type": "string",
-          "default": "",
-          "description": "Use the content of the given file path as a cmdfile. The file will be parsed as templated string. Will override `server.cmdfileConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.\n",
-          "examples": [
-            "files/cmds.cli"
-          ]
         },
         "baseUrl": {
           "type": "null",
@@ -914,24 +774,6 @@
           "type": "integer",
           "default": 0,
           "description": "Sets the termination grace period seconds to wait for Varnish Cache to shut down. Once this number of seconds is reached without the Varnish Cache Pod shutting down, Kubernetes will send SIGKILL to the Pod. When `server.delayedShutdown` is used, this value should be set to a higher value than the **maximum** time (in seconds) it took for Varnish Cache to fully shut down after a delayed shutdown.\n\nThe value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.\n"
-        },
-        "delayedHaltSeconds": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^[0-9]+(\\.[0-9]+)?$"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Delays stopping of the Varnish Cache container by the given seconds.\n"
         },
         "delayedShutdown": {
           "type": "object",
@@ -1160,13 +1002,8 @@
             "http": {
               "type": "object",
               "additionalProperties": false,
-              "description": "Enables or disables the Varnish HTTP service.\n",
+              "description": "Configures the `http` port of the Service. The port is exposed if and only if `server.http.enabled` is true.\n",
               "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": true,
-                  "description": "Enables HTTP service. Requires `server.http.enabled`.\n"
-                },
                 "port": {
                   "$ref": "#/definitions/port",
                   "default": 80,
@@ -1188,13 +1025,8 @@
             "https": {
               "type": "object",
               "additionalProperties": false,
-              "description": "Enables or disables the Varnish HTTPS service.\n",
+              "description": "Configures the `https` port of the Service. The port is exposed if and only if `server.tls.enabled` is true.\n",
               "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enables HTTPS service. Requires `server.tls.enabled`.\n"
-                },
                 "port": {
                   "$ref": "#/definitions/port",
                   "default": 443,
@@ -1290,7 +1122,7 @@
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "Enables the [Ingress][k8s-ingress] for Varnish Cache. Requires `server.service.http.enabled` and `server.service.http.port`.\n"
+              "description": "Enables the [Ingress][k8s-ingress] for Varnish Cache. Requires `server.http.enabled`; the Ingress targets the Service's `http` port (`server.service.http.port`).\n"
             },
             "labels": {
               "$ref": "#/definitions/objectOrTemplate",

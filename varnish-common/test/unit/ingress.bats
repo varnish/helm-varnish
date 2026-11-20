@@ -34,3 +34,23 @@ load _helpers
 
   [ "${actual}" == "8080" ]
 }
+
+@test "Ingress: requires server.http.enabled" {
+  cd "$(chart_dir)"
+
+  run helm template \
+    --set 'server.http.enabled=false' \
+    --set 'server.startupProbe=' \
+    --set 'server.readinessProbe=' \
+    --set 'server.livenessProbe=' \
+    --set 'server.tls.enabled=true' \
+    --set 'server.tls.config=frontend = {}' \
+    --set 'server.ingress.enabled=true' \
+    --set 'server.ingress.hosts[0].host=example.com' \
+    --namespace default \
+    --show-only templates/ingress.yaml \
+    .
+  echo "${output}" >&2
+  [ "${status}" -ne 0 ]
+  [[ "${output}" == *"HTTP must be enabled to enable ingress: 'server.http.enabled'"* ]]
+}

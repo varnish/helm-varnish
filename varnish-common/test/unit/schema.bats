@@ -156,7 +156,8 @@ EOT
 server:
   http:
     hostPort: null
-  delayedHaltSeconds: null
+  tls:
+    hostPort: null
 EOT
   schema_accepts -f "${values}"
 }
@@ -183,24 +184,8 @@ EOT
 
 @test "Schema: accepts fractional seconds" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
-  printf 'server:\n  ttl: 0.5\n  threadTimeout: 1.5\n  delayedHaltSeconds: 2.5\n' > "${values}"
-  schema_accepts -f "${values}"
   printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: sleep\n    sleep:\n      seconds: 2.5\n' > "${values}"
   schema_accepts -f "${values}"
-}
-
-@test "Schema: accepts a fractional delayedHaltSeconds string, rounding the grace period up" {
-  # --set keeps 120.5 as a string
-  schema_accepts --set server.delayedHaltSeconds=120.5
-  [[ "$output" == *'command: ["/bin/sleep", "120.5"]'* ]]
-  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
-  schema_accepts --set-json server.delayedHaltSeconds=120.5
-  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
-}
-
-@test "Schema: rejects a nonnumeric delayedHaltSeconds string" {
-  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=soon
-  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=1.
 }
 
 @test "Schema: accepts a null nodePort on an extra service" {
@@ -238,16 +223,72 @@ EOT
   schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=wait
 }
 
-@test "Schema: rejects a string server.vclConfigs" {
-  schema_rejects "at '/server/vclConfigs'" --set server.vclConfigs=foo
+@test "Schema: rejects the removed server.vclConfigPath" {
+  schema_rejects "additional properties 'vclConfigPath' not allowed" --set server.vclConfigPath=x
 }
 
-@test "Schema: rejects a numeric server.secret" {
-  schema_rejects "at '/server/secret'" --set server.secret=1234
+@test "Schema: rejects the removed server.vclConfigs" {
+  schema_rejects "additional properties 'vclConfigs' not allowed" --set server.vclConfigs.x=y
 }
 
-@test "Schema: rejects unknown secretFrom keys" {
-  schema_rejects "additional properties 'nme' not allowed" --set server.secretFrom.nme=a
+@test "Schema: rejects the removed server.secret" {
+  schema_rejects "additional properties 'secret' not allowed" --set server.secret=x
+}
+
+@test "Schema: rejects the removed server.secretFrom" {
+  schema_rejects "additional properties 'secretFrom' not allowed" --set server.secretFrom.name=x
+}
+
+@test "Schema: rejects the removed server.secretFile" {
+  schema_rejects "additional properties 'secretFile' not allowed" --set server.secretFile=x
+}
+
+@test "Schema: rejects the removed server.admin" {
+  schema_rejects "additional properties 'admin' not allowed" --set server.admin.port=1
+}
+
+@test "Schema: rejects the removed server.workDir" {
+  schema_rejects "additional properties 'workDir' not allowed" --set server.workDir=x
+}
+
+@test "Schema: rejects the removed server.vclConfigFile" {
+  schema_rejects "additional properties 'vclConfigFile' not allowed" --set server.vclConfigFile=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfig" {
+  schema_rejects "additional properties 'cmdfileConfig' not allowed" --set server.cmdfileConfig=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfigFile" {
+  schema_rejects "additional properties 'cmdfileConfigFile' not allowed" --set server.cmdfileConfigFile=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfigPath" {
+  schema_rejects "additional properties 'cmdfileConfigPath' not allowed" --set server.cmdfileConfigPath=x
+}
+
+@test "Schema: rejects the removed server.delayedHaltSeconds" {
+  schema_rejects "additional properties 'delayedHaltSeconds' not allowed" --set server.delayedHaltSeconds=120
+}
+
+@test "Schema: rejects the removed server.service.http.enabled" {
+  schema_rejects "additional properties 'enabled' not allowed" --set server.service.http.enabled=false
+}
+
+@test "Schema: rejects the removed server.service.https.enabled" {
+  schema_rejects "additional properties 'enabled' not allowed" --set server.service.https.enabled=true
+}
+
+@test "Schema: rejects the removed server.tls.configFile" {
+  schema_rejects "additional properties 'configFile' not allowed" --set server.tls.configFile=x
+}
+
+@test "Schema: rejects the removed server.ttl" {
+  schema_rejects "additional properties 'ttl' not allowed" --set server.ttl=120
+}
+
+@test "Schema: rejects the removed server.threadTimeout" {
+  schema_rejects "additional properties 'threadTimeout' not allowed" --set server.threadTimeout=120
 }
 
 @test "Schema: vcls routes need vclContent" {

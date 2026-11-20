@@ -110,7 +110,6 @@ rollingUpdate:
     local actual=$((helm template \
         --set 'server.kind=Deployment' \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.initContainer.image=ubuntu' \
         --set 'global.initContainer.tag=24.04' \
         --namespace default \
@@ -128,7 +127,6 @@ rollingUpdate:
     local actual=$((helm template \
         --set 'server.kind=Deployment' \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --skip-schema-validation \
         --set 'global.initContainer.tag=0' \
         --namespace default \
@@ -146,7 +144,6 @@ rollingUpdate:
     local actual=$((helm template \
         --set 'server.kind=Deployment' \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --skip-schema-validation \
         --set-json 'global.initContainer.tag=20241129' \
         --namespace default \
@@ -164,7 +161,6 @@ rollingUpdate:
     run helm template \
         --set "server.kind=Deployment" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
@@ -181,7 +177,6 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=Deployment" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/deployment.yaml \

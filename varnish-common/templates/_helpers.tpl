@@ -318,29 +318,3 @@ consumed by cluster_auto_dns.vcl. Varnish Enterprise only.
   value: {{ $fallback | quote }}
 {{- end }}
 {{- end }}
-
-{{/*
-Returns server.workDir as a string, or "" when it is null or empty.
-*/}}
-{{- define "varnish-common.workDir" -}}
-{{- if include "varnish-common.isSet" .Values.server.workDir }}{{ toString .Values.server.workDir }}{{ end }}
-{{- end }}
-
-{{/*
-Declares the env var named .name holding the varnishd working directory
-(-n) for sidecars and scripts. "-" uses the pod name, an empty
-server.workDir declares nothing as varnishd then runs without -n.
-Takes a dict with "name" and "Values".
-*/}}
-{{- define "varnish-common.workDirEnv" -}}
-{{- $workDir := include "varnish-common.workDir" . }}
-{{- if eq $workDir "-" }}
-- name: {{ .name }}
-  valueFrom:
-    fieldRef:
-      fieldPath: metadata.name
-{{- else if not (eq $workDir "") }}
-- name: {{ .name }}
-  value: "{{ $workDir }}"
-{{- end }}
-{{- end }}

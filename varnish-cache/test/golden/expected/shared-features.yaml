@@ -123,8 +123,6 @@ spec:
                   fieldPath: status.podIP
             - name: VARNISH_TLS_CFG
               value: /etc/varnish/tls.conf
-            - name: VARNISH_WORKDIR
-              value: "golden"
           command:
             - /usr/sbin/varnishd
             - -F
@@ -133,21 +131,17 @@ spec:
             - -f
             - /etc/varnish/default.vcl
             - -p
-            - backend_idle_timeout=60
-            - -p
-            - feature=+http2
+            - thread_pool_min=50
             - -p
             - thread_pool_max=1000
             - -p
-            - thread_pool_min=50
+            - backend_idle_timeout=60
             - -p
-            - thread_pool_timeout=120
-            - -n
-            - golden
-            - -t
-            - "120"
+            - feature=+http2
             - -a
             - http=$(POD_IP):6081
+            - -S
+            - /etc/varnish/shared/secret
             - -A
             - /etc/varnish/tls.conf
           volumeMounts:
@@ -166,7 +160,7 @@ spec:
                 - -c
                 - |
                   set -e
-                  while [ "$(varnishstat -n "$VARNISH_WORKDIR" -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
+                  while [ "$(varnishstat -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
                     echo >&2 "Waiting for Varnish to drain connections..."
                     sleep 1
                   done
@@ -179,20 +173,16 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnishncsa"]
           args:
-            - -n
-            - $(VARNISH_WORKDIR)
             - -c
           env:
             - name: VSM_NOPID
               value: "1"
-            - name: VARNISH_WORKDIR
-              value: "golden"
           readinessProbe:
             exec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -203,7 +193,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -222,13 +212,25 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnish-otel"]
           env:
-            - name: OTEL_VARNISH_WORKDIR
-              value: "golden"
             - name: "OTEL_EXPORTER_OTLP_ENDPOINT"
               value: "http://otel-collector:4318"
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      initContainers:
+        - name: varnish-cache-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "docker.io/varnish:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
       volumes:

@@ -188,11 +188,10 @@ chart=$(chart_name)
     [ "${actual}" == "${chart}-otel" ]
 }
 
-@test "Deployment/otel: no OTEL_VARNISH_WORKDIR when workDir empty" {
+@test "Deployment/otel: no OTEL_VARNISH_WORKDIR" {
     cd "$(chart_dir)"
     local object=$((helm template \
         --set 'server.otel.enabled=true' \
-        --set 'server.workDir=' \
         --namespace default \
         --show-only templates/deployment.yaml \
         . || render_failed) | tee -a /dev/stderr)

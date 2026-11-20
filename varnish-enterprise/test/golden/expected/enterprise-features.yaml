@@ -11,20 +11,6 @@ metadata:
     app.kubernetes.io/version: "APP_VERSION"
     app.kubernetes.io/managed-by: Helm
 ---
-# Source: varnish-enterprise/templates/secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: golden-varnish-enterprise-secret
-  labels:
-    helm.sh/chart: varnish-enterprise-CHART_VERSION
-    app.kubernetes.io/name: varnish-enterprise
-    app.kubernetes.io/instance: golden
-    app.kubernetes.io/version: "APP_VERSION"
-    app.kubernetes.io/managed-by: Helm
-data:
-  secret: czNjcjN0
----
 # Source: varnish-enterprise/templates/configmap-mse4.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -105,6 +91,9 @@ spec:
     - name: http
       port: 80
       targetPort: 6081
+    - name: https
+      port: 443
+      targetPort: 6443
   selector:
     app.kubernetes.io/name: varnish-enterprise
     app.kubernetes.io/instance: golden
@@ -156,7 +145,6 @@ spec:
         app.kubernetes.io/name: varnish-enterprise
       annotations:
         checksum/golden-mse4: e868260f72f01987df6f24d0842897d58589a80a5f08ee0f06d0f2a7134d3a4c
-        checksum/golden-secret: 4e738ca5563c06cfd0018299933d58db1dd8bf97f6973dc99bf6cdc64b5550bd
         checksum/golden-tls: 50f7b62aaa3af5ec74b343ed5e0f9156f95fbdaded43ddb690f4f7711f1172bb
     spec:
       serviceAccountName: golden-varnish-enterprise
@@ -198,8 +186,6 @@ spec:
               value: /etc/varnish/mse4.conf
             - name: VARNISH_TLS_CFG
               value: /etc/varnish/tls.conf
-            - name: VARNISH_WORKDIR
-              value: "/var/lib/varnish/golden"
             - name: VARNISH_CLUSTER_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -223,21 +209,15 @@ spec:
             - -f
             - /etc/varnish/wrapped-default.vcl
             - -p
-            - default_ttl=60
+            - thread_pool_min=50
             - -p
             - thread_pool_max=1000
             - -p
-            - thread_pool_min=50
-            - -p
-            - thread_pool_timeout=120
-            - -n
-            - /var/lib/varnish/golden
-            - -t
-            - "120"
+            - default_ttl=60
             - -a
             - http=0.0.0.0:6081
             - -S
-            - /etc/varnish/secret
+            - /etc/varnish/shared/secret
             - -s
             - mse4,/etc/varnish/mse4.conf
             - -A
@@ -257,9 +237,6 @@ spec:
             - name: golden-config-tls
               mountPath: /etc/varnish/tls.conf
               subPath: tls.conf
-            - name: golden-config-secret
-              mountPath: /etc/varnish/secret
-              subPath: secret
             - name: golden-config-vcl-wrapped-default-vcl
               mountPath: "/etc/varnish/wrapped-default.vcl"
               subPath: "wrapped-default.vcl"
@@ -275,20 +252,16 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnishncsa"]
           args:
-            - -n
-            - $(VARNISH_WORKDIR)
             - -c
           env:
             - name: VSM_NOPID
               value: "1"
-            - name: VARNISH_WORKDIR
-              value: "/var/lib/varnish/golden"
           readinessProbe:
             exec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -299,7 +272,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - "/usr/bin/varnishncsa -d -t3 -n \"$VARNISH_WORKDIR\""
+                - "/usr/bin/varnishncsa -d -t3"
             failureThreshold: 3
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -317,9 +290,6 @@ spec:
           image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnish-otel"]
-          env:
-            - name: OTEL_VARNISH_WORKDIR
-              value: "/var/lib/varnish/golden"
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
@@ -340,12 +310,10 @@ spec:
               value: "127.0.0.1"
             - name: VARNISH_CONTROLLER_VARNISH_ADMIN_PORT
               value: "6082"
-            - name: VARNISH_CONTROLLER_VARNISH_NAME
-              value: "/var/lib/varnish/golden"
+            - name: VARNISH_CONTROLLER_VARNISH_SECRET
+              value: /etc/varnish/shared/secret
             - name: VARNISH_CONTROLLER_VARNISH_PORT
               value: "6081"
-            - name: VARNISH_CONTROLLER_VARNISH_SECRET
-              value: /etc/varnish/secret
             - name: VARNISH_CONTROLLER_AGENT_NAME
               valueFrom:
                 fieldRef:
@@ -371,9 +339,6 @@ spec:
               mountPath: /var/lib/varnish
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
-            - name: golden-config-secret
-              mountPath: /etc/varnish/secret
-              subPath: secret
             - name: golden-varnish-controller
               mountPath: /var/lib/varnish-controller
         - name: varnish-enterprise-vcli
@@ -424,6 +389,19 @@ spec:
                       sleep 1
                     done
       initContainers:
+        - name: varnish-enterprise-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
         - name: mse4-config
           image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
           imagePullPolicy: IfNotPresent
@@ -475,9 +453,6 @@ spec:
       - name: golden-config-tls
         configMap:
           name: golden-varnish-enterprise-tls
-      - name: golden-config-secret
-        secret:
-          secretName: golden-varnish-enterprise-secret
       - name: golden-config-vcl-wrapped-default-vcl
         configMap:
           name: golden-varnish-enterprise-vcl-wrapped-default-vcl
