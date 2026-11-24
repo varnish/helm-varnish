@@ -157,7 +157,6 @@ Sets up the NATS server
 {{- define "varnish-common.natsServer" }}
 {{- $natsAddress := "" }}
 {{- $internalNats := false }}
-{{- $tp := kindOf .Values.global.natsServer.internal.enabled }}
 {{- if .Values.global.natsServer.internal.enabled }}
 {{- $internalNats = true }}
 {{- $natsAddress = printf "%s:4222" (include "varnish-common.controllerHost" (merge (dict "service" "nats") .)) }}
