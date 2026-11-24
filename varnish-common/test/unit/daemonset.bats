@@ -121,6 +121,19 @@ rollingUpdate:
     [[ "${output}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
 }
 
+@test "DaemonSet/agent/persistence: ignored when agent disabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    helm template \
+        --set "server.kind=DaemonSet" \
+        --set 'server.agent.enabled=false' \
+        --set 'server.agent.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/daemonset.yaml \
+        . >/dev/null || render_failed
+}
+
 @test "DaemonSet/agent/persistence: can be enabled with volume name" {
     skip_unless_enterprise
     cd "$(chart_dir)"

@@ -140,6 +140,19 @@ rollingUpdate:
     [[ "${output}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
 }
 
+@test "Deployment/agent/persistence: ignored when agent disabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    helm template \
+        --set "server.kind=Deployment" \
+        --set 'server.agent.enabled=false' \
+        --set 'server.agent.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . >/dev/null || render_failed
+}
+
 @test "Deployment/agent/persistence: can be enabled with volume name" {
     skip_unless_enterprise
     cd "$(chart_dir)"

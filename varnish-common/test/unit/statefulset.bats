@@ -458,12 +458,10 @@ release-name: {{ .Release.Name }}
     [ "${actual}" == '{"metadata":{"name":"release-name-pv"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"10Gi"}}}}' ]
 }
 
-@test "StatefulSet/agent/persistence: PVC kept when agent disabled" {
+@test "StatefulSet/agent/persistence: no PVC when agent disabled" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    # volumeClaimTemplates cannot change on an existing StatefulSet, so
-    # disabling the agent must not drop its PVC.
     local object=$((helm template \
         --set 'server.kind=StatefulSet' \
         --set 'server.agent.enabled=false' \
@@ -474,7 +472,7 @@ release-name: {{ .Release.Name }}
         tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.volumeClaimTemplates[]? | select(.metadata.name == "release-name-varnish-controller") | .metadata.name' |
+        yq -r -o=json -I=0 '.spec.volumeClaimTemplates' |
             tee -a /dev/stderr)
-    [ "${actual}" = "release-name-varnish-controller" ]
+    [ "${actual}" = "null" ]
 }

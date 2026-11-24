@@ -1383,7 +1383,9 @@ server:
     # documentation for more information.
     # Type: object
     persistence:
-      # Enables Varnish Controller Agent state persistency using PersistentVolumes.
+      # Stores the Varnish Controller Agent state in a PersistentVolumeClaim created by
+      # the StatefulSet. Only available when `server.kind` is `StatefulSet`; ignored when
+      # `server.agent.enabled` is false.
       # Type: boolean
       enabled: false
 

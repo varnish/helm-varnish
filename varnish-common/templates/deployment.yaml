@@ -6,7 +6,7 @@
 {{- if .Values.server.mse4.persistence.enabled }}
 {{- fail "'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'" }}
 {{- end }}
-{{- if .Values.server.agent.persistence.enabled }}
+{{- if and (include "varnish-common.agentEnabled" .) .Values.server.agent.persistence.enabled }}
 {{- fail "'server.agent.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'" }}
 {{- end }}
 {{- end }}

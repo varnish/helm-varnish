@@ -1899,7 +1899,7 @@ Configures persistence for Varnish Controller Agent state using PersistentVolume
 - Type: boolean
 - Default: `false`
 
-Enables Varnish Controller Agent state persistency using PersistentVolumes.
+Stores the Varnish Controller Agent state in a PersistentVolumeClaim created by the StatefulSet. Only available when `server.kind` is `StatefulSet`; ignored when `server.agent.enabled` is false.
 
 **server.agent.persistence.enableWithVolumeName**
 
