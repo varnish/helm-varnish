@@ -650,12 +650,7 @@ An object for configuring the Massive Storage Engine 4 (MSE4).
 
 Enables Massive Storage Engine 4. When disabled, varnishd uses its default storage.
 
-**server.mse4.memoryTarget**
-
-- Type: string
-- Availability: v1.6.1
-
-Sets the amount of memory to use for MSE4. The value can be set as either a percentage (e.g., "80%"), or bytes ("512m"). If cgroups resource limits are used (i.e., `server.resources`), the percentage is calculated from the resource limit that is assigned to the container.
+To set the amount of memory MSE4 uses, set the `memory_target` parameter with `server.parameters.memoryTarget`, as a percentage (e.g., "80%") or in bytes ("512m"). If `server.resources` sets a memory limit, the percentage is of that limit.
 
 **server.mse4.config**
 

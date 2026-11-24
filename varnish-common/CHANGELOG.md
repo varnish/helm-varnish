@@ -36,6 +36,7 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - (Enterprise) `server.agent.privateToken` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_PRIVATE_TOKEN`, preferably read from a Secret with `valueFrom.secretKeyRef`.
 - (Enterprise) `server.agent.useReleaseName` → none, the agent name is always the Pod name. An agent that was registered under the release name shows up as a new agent.
 - (Enterprise) `server.agent.autoRemove.vcli.internal.namespace`, `releaseName`, `clusterDomain` → `global.natsServer.internal.namespace`, `releaseName`, `clusterDomain`. The VCLI container now finds the APIGW with the same values the agent uses for NATS, so the APIGW and NATS can no longer be in different releases or namespaces.
+- (Enterprise) `server.mse4.memoryTarget: X` → `server.parameters.memoryTarget: X`, which renders as `-p memory_target=X`.
 
 ### Changed
 

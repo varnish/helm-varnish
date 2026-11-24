@@ -716,12 +716,7 @@
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "Enables Massive Storage Engine 4. When disabled, varnishd uses its default storage.\n"
-            },
-            "memoryTarget": {
-              "type": "string",
-              "default": "",
-              "description": "Sets the amount of memory to use for MSE4. The value can be set as either a percentage (e.g., \"80%\"), or bytes (\"512m\"). If cgroups resource limits are used (i.e., `server.resources`), the percentage is calculated from the resource limit that is assigned to the container.\n"
+              "description": "Enables Massive Storage Engine 4. When disabled, varnishd uses its default storage.\n\nTo set the amount of memory MSE4 uses, set the `memory_target` parameter with `server.parameters.memoryTarget`, as a percentage (e.g., \"80%\") or in bytes (\"512m\"). If `server.resources` sets a memory limit, the percentage is of that limit.\n"
             },
             "config": {
               "type": "string",

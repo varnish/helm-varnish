@@ -2485,14 +2485,14 @@ podAntiAffinity:
     [ "${actual}" == "mse4" ]
 }
 
-@test "${kind}/mse4/memoryTarget: can be configured" {
+@test "${kind}/mse4/memoryTarget: set with server.parameters" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.mse4.enabled=true' \
-        --set 'server.mse4.memoryTarget=80%' \
+        --set 'server.parameters.memoryTarget=80%' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -2501,10 +2501,10 @@ podAntiAffinity:
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command[] | select(match("memory_target")) | split("=")[1]' |
+            .command[] | select(test("memory_target"))' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "80%" ]
+    [ "${actual}" == "memory_target=80%" ]
 }
 
 @test "${kind}/mse4/memoryTarget: not configured by default" {
@@ -2522,7 +2522,7 @@ podAntiAffinity:
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command[] | select(match("memory_target")) | split("=")[1]' |
+            .command[] | select(test("memory_target"))' |
             tee -a /dev/stderr)
 
     [ "${actual}" == "" ]

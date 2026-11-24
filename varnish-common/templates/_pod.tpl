@@ -304,9 +304,6 @@ Composing the $varnishArgs list or arguments
     MSE4
 */}}
 {{- if include "varnish-common.mse4Enabled" . }}
-  {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse4.memoryTarget))) }}
-  {{- end }}
   {{- if (not (empty $mse4Config)) }}
     {{- $varnishArgs = concat $varnishArgs (list "-s" (print "mse4,/etc/varnish/mse4.conf")) }}
   {{- else }}
@@ -412,10 +409,6 @@ Composing the $varnishArgs list or arguments
           fieldPath: status.podIP
     {{- end }}
     {{- if include "varnish-common.mse4Enabled" . }}
-    {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
-    - name: MSE_MEMORY_TARGET
-      value: {{ .Values.server.mse4.memoryTarget | quote }}
-    {{- end }}
     {{- if (not (empty $mse4Config)) }}
     - name: MSE4_CONFIG
       value: /etc/varnish/mse4.conf
