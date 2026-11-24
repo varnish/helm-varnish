@@ -77,6 +77,8 @@ properties:
           cache: /cache
           enterprise: /enterprise
         description: A key whose default differs between flavors.
+        x-flavor-note:
+          cache: A note for {product} only.
       hostPort:
         $ref: "#/definitions/port"
         x-values-example: 8080

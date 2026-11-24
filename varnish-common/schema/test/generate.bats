@@ -137,6 +137,28 @@ enterprise_docs() {
   [[ "$(cat "$(enterprise_docs)")" == *$'**a.mode**\n\n- Type: string, one of `x` or `y`\n'* ]]
 }
 
+@test "generate: x-flavor-note is added for its flavor only" {
+  generate
+  [ "$status" -eq 0 ]
+
+  local actual=$(jq -c '.properties.a.properties.dir.description' "$(cache_schema)")
+  [ "${actual}" == '"A key whose default differs between flavors.\n\nA note for Varnish Cache only."' ]
+  actual=$(jq -c '.properties.a.properties.dir.description' "$(enterprise_schema)")
+  [ "${actual}" == '"A key whose default differs between flavors."' ]
+
+  grep -qzF $'A key whose default differs between flavors.\n\nA note for Varnish Cache only.' "$(cache_docs)"
+  run ! grep -qF 'A note for' "$(enterprise_docs)"
+  grep -qzF $'  # A key whose default differs between flavors.\n  #\n  # A note for Varnish Cache only.\n' "${ROOT}/varnish-cache/values.yaml"
+  run ! grep -qF 'A note for' "${ROOT}/varnish-enterprise/values.yaml"
+}
+
+@test "generate: rejects a malformed x-flavor-note" {
+  yq -i '.properties.a.properties.dir.x-flavor-note = "text"' "${SOURCE}"
+  generate
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"x-flavor-note must map flavors to text"* ]]
+}
+
 @test "generate: --check detects drift" {
   generate
   [ "$status" -eq 0 ]

@@ -50,6 +50,7 @@ NODE_KEYWORDS = {
     "x-default-text",
     "x-since",
     "x-deprecated",
+    "x-flavor-note",
     "x-docs-skip",
 }
 PROPERTY_KEYWORDS = {"x-flavor", "x-docs-section"}
@@ -125,6 +126,10 @@ def validate(node, path, kind):
             raise SourceError(f"{path}: x-default must map flavors to a value")
     if "x-since" in node and (not isinstance(node["x-since"], dict) or not set(node["x-since"]) <= set(FLAVORS)):
         raise SourceError(f"{path}: x-since must map flavors to a version")
+    if "x-flavor-note" in node and (
+        not isinstance(node["x-flavor-note"], dict) or not set(node["x-flavor-note"]) <= set(FLAVORS)
+    ):
+        raise SourceError(f"{path}: x-flavor-note must map flavors to text")
     if "x-default-comments" in node and not isinstance(node["x-default-comments"], dict):
         raise SourceError(f"{path}: x-default-comments must map relative paths to text")
     if "x-links" in node and not isinstance(node["x-links"], dict):
@@ -237,6 +242,9 @@ def schema_for(node, flavor, under_global=False, root=False):
             result[key] = enum_values(node, flavor)
         elif key == "description":
             result[key] = substitute(value, flavor)
+            note = node.get("x-flavor-note", {}).get(flavor)
+            if note:
+                result[key] = result[key].rstrip("\n") + "\n\n" + substitute(note, flavor)
         elif key in SCHEMA_KEYWORDS:
             result[key] = schema_for(value, flavor, under_global)
         elif key in SCHEMA_LIST_KEYWORDS:
@@ -491,11 +499,16 @@ def comment_lines(node, name, indent, definitions, flavor, links):
 
 
 def description_text(node, flavor):
+    """The description for the flavor: the x-deprecated prefix, the
+    description, then the flavor's x-flavor-note."""
     parts = []
     if "x-deprecated" in node:
         parts.append("Deprecated: " + substitute(node["x-deprecated"], flavor).strip())
     if "description" in node:
         parts.append(substitute(node["description"], flavor).strip())
+    note = node.get("x-flavor-note", {}).get(flavor)
+    if note:
+        parts.append(substitute(note, flavor).strip())
     return "\n\n".join(parts)
 
 
