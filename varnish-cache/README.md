@@ -632,7 +632,7 @@ The port to expose this listen directly on the node the Pod runs on, as the cont
 
 - Type: string
 
-The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets.
+The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets. A listen with a path gets no container port.
 
 **server.extraListens[].user**
 

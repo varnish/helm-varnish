@@ -953,6 +953,12 @@ release-namespace: {{ .Release.Namespace }}
             jq -r -c '.[index(["-a", "proxy-sock=/tmp/varnish-proxy.sock,user=www,group=www,mode=0700,PROXY"]) + 1]' |
             tee -a /dev/stderr)
     [ "${actual}" == 'proxy-sock=/tmp/varnish-proxy.sock,user=www,group=www,mode=0700,PROXY' ]
+
+    # Only the TCP listen gets a container port
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '[.ports[] | select(.name | test("^extra-"))]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '[{"name":"extra-proxy","containerPort":8088,"protocol":"TCP"}]' ]
 }
 
 @test "${kind}/extraListens: port can be configured partially" {

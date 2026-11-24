@@ -411,12 +411,14 @@ Composing the $varnishArgs list or arguments
     {{- if not .name }}
     {{- fail "Name must be set in extraListens: 'server.extraListens[].name'" }}
     {{- end }}
+    {{- if .port }}
     - name: extra-{{ .name }}
       containerPort: {{ .port }}
       protocol: TCP
       {{- if and .hostPort (not (empty .hostPort)) }}
       hostPort: {{ .hostPort }}
       {{- end }}
+    {{- end }}
     {{- end }}
   {{- include "varnish-common.varnishPodProbe" (merge (dict "probeName" "startupProbe") .) | nindent 2 }}
   {{- include "varnish-common.varnishPodProbe" (merge (dict "probeName" "livenessProbe") .) | nindent 2 }}

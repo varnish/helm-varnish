@@ -483,7 +483,7 @@
               },
               "path": {
                 "type": "string",
-                "description": "The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets.\n"
+                "description": "The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets. A listen with a path gets no container port.\n"
               },
               "user": {
                 "type": [

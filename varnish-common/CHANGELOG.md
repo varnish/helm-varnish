@@ -54,3 +54,4 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 
 - (Enterprise) On a Deployment or DaemonSet, `server.agent.persistence.enableWithVolumeName` now overrides `server.agent.persistence.enabled`, as on a StatefulSet. Before, rendering failed when both were set.
 - (Enterprise) The `mse4-config` init container gets `server.securityContext` and `server.resources`, merged with `global.securityContext` and `global.resources`, like the secret init container.
+- An entry of `server.extraListens` with `path` and no `port` no longer gets a container port without a number, which the API server rejected.
