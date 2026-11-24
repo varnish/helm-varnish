@@ -179,13 +179,13 @@ Configures Varnish Agent to use the internal NATS server. `"-"`, the Varnish Con
 
 - Type: string
 
-Discovers the internal NATS server within the given namespace. By default, the current namespace is used.
+Discovers the internal NATS server within the given namespace. By default, the current namespace is used. Also used to find the Varnish Controller APIGW when `server.agent.autoRemove.vcli.internal.enabled` is true.
 
 **global.natsServer.internal.releaseName**
 
 - Type: string
 
-Overrides the full name of the internal NATS server. Required if `nameOverride` or `fullnameOverride` is used in the Varnish Controller Helm Chart. By default, "varnish-controller" is used.
+Overrides the full name of the internal NATS server. Required if `nameOverride` or `fullnameOverride` is used in the Varnish Controller Helm Chart. By default, "varnish-controller" is used. Also used to find the Varnish Controller APIGW when `server.agent.autoRemove.vcli.internal.enabled` is true.
 
 **global.natsServer.internal.passwordFrom**
 
@@ -2048,19 +2048,7 @@ Configures internal settings for Varnish Controller CLI container.
 - Type: boolean
 - Default: `true`
 
-Configures Varnish Controller CLI container to use an internal Varnish Controller endpoint.
-
-**server.agent.autoRemove.vcli.internal.namespace**
-
-- Type: string
-
-Configures the namespace Varnish Controller is deployed to. If left blank, the current namespace is used.
-
-**server.agent.autoRemove.vcli.internal.releaseName**
-
-- Type: string
-
-Configures the release name Varnish Controller is deployed to. Use "varnish-controller" if left blank.
+Configures Varnish Controller CLI container to use the APIGW of the Varnish Controller deployed in the cluster. It is found with `global.natsServer.internal.releaseName`, `global.natsServer.internal.namespace` and `global.natsServer.internal.clusterDomain`, like the internal NATS server.
 
 **server.agent.autoRemove.vcli.internal.port**
 
@@ -2075,13 +2063,6 @@ Configures the port of the Varnish Controller APIGW.
 - Default: `false`
 
 Configures Varnish Controller CLI container to use HTTPS instead of HTTP to communicate with the in-cluster Varnish Controller instance.
-
-**server.agent.autoRemove.vcli.internal.clusterDomain**
-
-- Type: string
-- Default: `cluster.local`
-
-Configures the NATS internal cluster domain name. Only change if NATS is deployed on a separate cluster.
 
 **server.agent.autoRemove.vcli.resources**
 

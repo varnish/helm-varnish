@@ -302,13 +302,13 @@ properties:
                 type: string
                 default: ""
                 description: |
-                  Discovers the internal NATS server within the given namespace. By default, the current namespace is used.
+                  Discovers the internal NATS server within the given namespace. By default, the current namespace is used. Also used to find the Varnish Controller APIGW when `server.agent.autoRemove.vcli.internal.enabled` is true.
 
               releaseName:
                 type: string
                 default: ""
                 description: |
-                  Overrides the full name of the internal NATS server. Required if `nameOverride` or `fullnameOverride` is used in the Varnish Controller Helm Chart. By default, "varnish-controller" is used.
+                  Overrides the full name of the internal NATS server. Required if `nameOverride` or `fullnameOverride` is used in the Varnish Controller Helm Chart. By default, "varnish-controller" is used. Also used to find the Varnish Controller APIGW when `server.agent.autoRemove.vcli.internal.enabled` is true.
 
               passwordFrom:
                 type: object
@@ -2070,19 +2070,7 @@ properties:
                               type: boolean
                               default: true
                               description: |
-                                Configures Varnish Controller CLI container to use an internal Varnish Controller endpoint.
-
-                            namespace:
-                              type: string
-                              default: ""
-                              description: |
-                                Configures the namespace Varnish Controller is deployed to. If left blank, the current namespace is used.
-
-                            releaseName:
-                              type: string
-                              default: ""
-                              description: |
-                                Configures the release name Varnish Controller is deployed to. Use "varnish-controller" if left blank.
+                                Configures Varnish Controller CLI container to use the APIGW of the Varnish Controller deployed in the cluster. It is found with `global.natsServer.internal.releaseName`, `global.natsServer.internal.namespace` and `global.natsServer.internal.clusterDomain`, like the internal NATS server.
 
                             port:
                               $ref: "#/definitions/port"
@@ -2095,12 +2083,6 @@ properties:
                               default: false
                               description: |
                                 Configures Varnish Controller CLI container to use HTTPS instead of HTTP to communicate with the in-cluster Varnish Controller instance.
-
-                            clusterDomain:
-                              type: string
-                              default: cluster.local
-                              description: |
-                                Configures the NATS internal cluster domain name. Only change if NATS is deployed on a separate cluster.
 
                         resources:
                           $ref: "#/definitions/objectOrTemplate"

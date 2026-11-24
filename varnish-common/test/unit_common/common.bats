@@ -3963,7 +3963,7 @@ backend {{ .Release.Name }} {
         --set "server.kind=${kind}" \
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
-        --set "server.agent.autoRemove.vcli.internal.namespace=other-namespace" \
+        --set "global.natsServer.internal.namespace=other-namespace" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -3988,7 +3988,7 @@ backend {{ .Release.Name }} {
         --set "server.kind=${kind}" \
         --set "server.agent.enabled=true" \
         --set "server.agent.autoRemove.method=vcli" \
-        --set "server.agent.autoRemove.vcli.internal.releaseName=vc" \
+        --set "global.natsServer.internal.releaseName=vc" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -4003,6 +4003,31 @@ backend {{ .Release.Name }} {
         yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_CLI_ENDPOINT")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"VARNISH_CONTROLLER_CLI_ENDPOINT","value":"http://vc-apigw.default.svc.cluster.local:8080"}' ]
+}
+
+@test "${kind}/agent/autoRemove/vcli: can be configured to use internal controller with a different cluster domain" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.agent.enabled=true" \
+        --set "server.agent.autoRemove.method=vcli" \
+        --set "global.natsServer.internal.clusterDomain=remote.local" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-vcli")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_CLI_ENDPOINT")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_CLI_ENDPOINT","value":"http://varnish-controller-apigw.default.svc.remote.local:8080"}' ]
 }
 
 @test "${kind}/agent/autoRemove/vcli: sets the agent name from the Pod name" {

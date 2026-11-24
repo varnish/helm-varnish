@@ -139,6 +139,17 @@ Converts size string (e.g. 10Mi or 10M) or a percentage to a number.
 {{- end }}
 
 {{/*
+The in-cluster host name of a Varnish Controller service ("nats", "apigw"),
+located with global.natsServer.internal.{releaseName,namespace,clusterDomain}.
+*/}}
+{{- define "varnish-common.controllerHost" -}}
+{{- $internal := .Values.global.natsServer.internal }}
+{{- $releaseName := $internal.releaseName | default "varnish-controller" }}
+{{- $namespace := $internal.namespace | default .Release.Namespace }}
+{{- printf "%s-%s.%s.svc.%s" $releaseName .service $namespace $internal.clusterDomain }}
+{{- end }}
+
+{{/*
 Sets up the NATS server
 */}}
 {{- define "varnish-common.natsServer" }}
@@ -146,16 +157,8 @@ Sets up the NATS server
 {{- $internalNats := false }}
 {{- $tp := kindOf .Values.global.natsServer.internal.enabled }}
 {{- if .Values.global.natsServer.internal.enabled }}
-{{- $natsNamespace := .Release.Namespace }}
-{{- $natsReleaseName := "varnish-controller" }}
 {{- $internalNats = true }}
-{{- if not (eq .Values.global.natsServer.internal.namespace "") }}
-{{- $natsNamespace = .Values.global.natsServer.internal.namespace }}
-{{- end }}
-{{- if not (eq .Values.global.natsServer.internal.releaseName "") }}
-{{- $natsReleaseName = .Values.global.natsServer.internal.releaseName }}
-{{- end }}
-{{- $natsAddress = printf "%s-nats.%s.svc.%s:4222" $natsReleaseName $natsNamespace .Values.global.natsServer.internal.clusterDomain }}
+{{- $natsAddress = printf "%s:4222" (include "varnish-common.controllerHost" (merge (dict "service" "nats") .)) }}
 {{- else }}
 {{- $natsAddress = .Values.global.natsServer.externalAddress }}
 {{- end }}

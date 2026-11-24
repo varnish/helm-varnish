@@ -704,17 +704,9 @@ Declares the Varnish Controller VCLI container for agent auto-removal
       sleep inf
   env:
     {{- if .Values.server.agent.autoRemove.vcli.internal.enabled }}
-    {{- $vcNamespace := .Release.Namespace }}
-    {{- $vcReleaseName := "varnish-controller" }}
-    {{- $vcClusterDomain := .Values.server.agent.autoRemove.vcli.internal.clusterDomain }}
-    {{- if not (empty .Values.server.agent.autoRemove.vcli.internal.namespace) }}
-    {{- $vcNamespace = .Values.server.agent.autoRemove.vcli.internal.namespace }}
-    {{- end }}
-    {{- if not (empty .Values.server.agent.autoRemove.vcli.internal.releaseName) }}
-    {{- $vcReleaseName = .Values.server.agent.autoRemove.vcli.internal.releaseName }}
-    {{- end }}
+    {{- $vcliInternal := .Values.server.agent.autoRemove.vcli.internal }}
     - name: VARNISH_CONTROLLER_CLI_ENDPOINT
-      value: "http{{ if .Values.server.agent.autoRemove.vcli.internal.https }}s{{ end }}://{{ $vcReleaseName }}-apigw.{{ $vcNamespace }}.svc.{{ $vcClusterDomain }}{{ if or (and .Values.server.agent.autoRemove.vcli.internal.https (not (eq (toString .Values.server.agent.autoRemove.vcli.internal.port) "443"))) (and (not .Values.server.agent.autoRemove.vcli.internal.https) (not (eq (toString .Values.server.agent.autoRemove.vcli.internal.port) "80"))) }}:{{ .Values.server.agent.autoRemove.vcli.internal.port }}{{ end }}"
+      value: "http{{ if $vcliInternal.https }}s{{ end }}://{{ include "varnish-common.controllerHost" (merge (dict "service" "apigw") .) }}{{ if or (and $vcliInternal.https (not (eq (toString $vcliInternal.port) "443"))) (and (not $vcliInternal.https) (not (eq (toString $vcliInternal.port) "80"))) }}:{{ $vcliInternal.port }}{{ end }}"
     {{- else if and (not .Values.server.agent.autoRemove.vcli.internal.enabled) (not (empty .Values.server.agent.autoRemove.vcli.externalAddress)) }}
     - name: VARNISH_CONTROLLER_CLI_ENDPOINT
       value: {{ .Values.server.agent.autoRemove.vcli.externalAddress | quote }}

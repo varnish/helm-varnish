@@ -82,6 +82,13 @@ load _helpers
   done
 }
 
+@test "Schema: rejects the removed vcli.internal location keys" {
+  local key
+  for key in namespace releaseName clusterDomain; do
+    schema_rejects "additional properties '${key}' not allowed" --set "server.agent.autoRemove.vcli.internal.${key}=x"
+  done
+}
+
 @test "Schema: rejects the removed server.mse4.configFile" {
   schema_rejects "additional properties 'configFile' not allowed" --set server.mse4.configFile=x
 }

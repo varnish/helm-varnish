@@ -133,13 +133,15 @@ global:
       enabled: true
 
       # Discovers the internal NATS server within the given namespace. By default, the
-      # current namespace is used.
+      # current namespace is used. Also used to find the Varnish Controller APIGW when
+      # `server.agent.autoRemove.vcli.internal.enabled` is true.
       # Type: string
       namespace: ""
 
       # Overrides the full name of the internal NATS server. Required if `nameOverride` or
       # `fullnameOverride` is used in the Varnish Controller Helm Chart. By default,
-      # "varnish-controller" is used.
+      # "varnish-controller" is used. Also used to find the Varnish Controller APIGW when
+      # `server.agent.autoRemove.vcli.internal.enabled` is true.
       # Type: string
       releaseName: ""
 
@@ -1487,20 +1489,13 @@ server:
         # Configures internal settings for Varnish Controller CLI container.
         # Type: object
         internal:
-          # Configures Varnish Controller CLI container to use an internal Varnish
-          # Controller endpoint.
+          # Configures Varnish Controller CLI container to use the APIGW of the Varnish
+          # Controller deployed in the cluster. It is found with
+          # `global.natsServer.internal.releaseName`,
+          # `global.natsServer.internal.namespace` and
+          # `global.natsServer.internal.clusterDomain`, like the internal NATS server.
           # Type: boolean
           enabled: true
-
-          # Configures the namespace Varnish Controller is deployed to. If left blank, the
-          # current namespace is used.
-          # Type: string
-          namespace: ""
-
-          # Configures the release name Varnish Controller is deployed to. Use
-          # "varnish-controller" if left blank.
-          # Type: string
-          releaseName: ""
 
           # Configures the port of the Varnish Controller APIGW.
           # Type: number
@@ -1510,11 +1505,6 @@ server:
           # communicate with the in-cluster Varnish Controller instance.
           # Type: boolean
           https: false
-
-          # Configures the NATS internal cluster domain name. Only change if NATS is
-          # deployed on a separate cluster.
-          # Type: string
-          clusterDomain: "cluster.local"
 
         # An object that conforms to the Kubernetes
         # [resources](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
