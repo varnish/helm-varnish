@@ -1287,31 +1287,11 @@ server:
   # Type: object
   otel:
     # Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and
-    # metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in
-    # the official `varnish` image since 9.0.3.
+    # metrics to an OTLP (OpenTelemetry Protocol) endpoint. The sidecar uses
+    # `server.image`.
     # Type: boolean
     # Availability: v1.7.0
     enabled: false
-
-    # Sets the image and tag to use to deploy the Varnish OTEL sidecar. Setting a field to
-    # "-" inherits it from `server.image`.
-    # Type: object
-    image:
-      # Sets the image repository of the OTEL sidecar. The image must be the same Varnish
-      # version as the server. When set to "-", `server.image.repository` is used.
-      # Availability: v1.7.0
-      repository: "-"
-
-      # Sets the
-      # [imagePullPolicy](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-      # of the OTEL sidecar. When set to "-", `server.image.pullPolicy` is used.
-      # Availability: v1.7.0
-      pullPolicy: "-"
-
-      # Sets the image tag of the OTEL sidecar. When set to "-", `server.image.tag` is
-      # used.
-      # Availability: v1.7.0
-      tag: "-"
 
     # An object that conforms to the Kubernetes
     # [securityContext](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
@@ -1415,8 +1395,7 @@ server:
     # Type: object
     image:
       # Sets the repository for Varnish Controller Agent image. The Varnish Controller
-      # image used here must be the same version as the Varnish Controller. Since this is
-      # a different image from Varnish Enterprise, using "-" is unsupported.
+      # image used here must be the same version as the Varnish Controller.
       repository: "quay.io/varnish-software/varnish-controller-agent"
 
       # Sets the
@@ -1426,8 +1405,7 @@ server:
       pullPolicy: "IfNotPresent"
 
       # Sets the tag for the Varnish Controller image. The Varnish Controller image used
-      # here must be the same version as the Varnish Controller. Since this is a different
-      # image from Varnish Enterprise, using "-" is unsupported.
+      # here must be the same version as the Varnish Controller.
       tag: "7.5.1-6.0.16r13"
 
     # An object that conforms to the Kubernetes

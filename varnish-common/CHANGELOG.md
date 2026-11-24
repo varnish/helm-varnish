@@ -25,6 +25,7 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - `server.varnishncsa.image` → none, varnishncsa always runs `server.image`, as it must match the varnishd version.
 - `server.varnishncsa.securityContext` → none, the varnishncsa container gets `global.securityContext`.
 - `server.varnishncsa.startupProbe`, `server.varnishncsa.readinessProbe`, `server.varnishncsa.livenessProbe` → none, the varnishncsa container has no probes. They ran a separate `varnishncsa -d -t3`, which only checked that the varnishd shared memory log was readable, not that the logging varnishncsa process was healthy; a varnishncsa that exits is still restarted by Kubernetes.
+- `server.otel.image` → none, the OTEL sidecar always runs `server.image`, like varnishncsa. To run `varnish-otel` from another image, add a container to `server.extraContainers`.
 
 ### Changed
 

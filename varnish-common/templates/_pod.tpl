@@ -613,7 +613,7 @@ Declares the Varnish Otel container
 {{- if .Values.server.otel.enabled }}
 - name: {{ .Chart.Name }}-otel
   {{- include "varnish-common.securityContext" (merge (dict "section" "server.otel") .) | nindent 2 }}
-  {{- include "varnish-common.image" (merge (dict "base" .Values.server.image "image" .Values.server.otel.image) .) | nindent 2 }}
+  {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
   command: ["/usr/bin/varnish-otel"]
   {{- if .Values.server.otel.env }}

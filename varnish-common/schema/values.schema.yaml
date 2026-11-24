@@ -128,21 +128,6 @@ definitions:
         type: string
       pullPolicy:
         $ref: "#/definitions/pullPolicy"
-  sidecarImage:
-    x-type-label: object
-    type: object
-    additionalProperties: false
-    properties:
-      repository:
-        anyOf:
-          - type: string
-          - const: "-"
-      tag:
-        type: string
-      pullPolicy:
-        anyOf:
-          - $ref: "#/definitions/pullPolicy"
-          - const: "-"
 
 properties:
   nameOverride:
@@ -1836,34 +1821,10 @@ properties:
             x-since:
               enterprise: v1.7.0
             description: |
-              Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in the official `varnish` image since 9.0.3.
-
-          image:
-            allOf:
-              - $ref: "#/definitions/sidecarImage"
-            description: |
-              Sets the image and tag to use to deploy the Varnish OTEL sidecar. Setting a field to "-" inherits it from `server.image`.
-            properties:
-              repository:
-                default: "-"
-                x-since:
-                  enterprise: v1.7.0
-                description: |
-                  Sets the image repository of the OTEL sidecar. The image must be the same Varnish version as the server. When set to "-", `server.image.repository` is used.
-
-              pullPolicy:
-                default: "-"
-                x-since:
-                  enterprise: v1.7.0
-                description: |
-                  Sets the [imagePullPolicy][k8s-pod-v1-containers] of the OTEL sidecar. When set to "-", `server.image.pullPolicy` is used.
-
-              tag:
-                default: "-"
-                x-since:
-                  enterprise: v1.7.0
-                description: |
-                  Sets the image tag of the OTEL sidecar. When set to "-", `server.image.tag` is used.
+              Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. The sidecar uses `server.image`.
+            x-flavor-note:
+              cache: |
+                `varnish-otel` is included in the official `varnish` image since 9.0.3.
 
           securityContext:
             $ref: "#/definitions/objectOrTemplate"
@@ -1976,7 +1937,7 @@ properties:
               repository:
                 default: quay.io/varnish-software/varnish-controller-agent
                 description: |
-                  Sets the repository for Varnish Controller Agent image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+                  Sets the repository for Varnish Controller Agent image. The Varnish Controller image used here must be the same version as the Varnish Controller.
 
               pullPolicy:
                 default: IfNotPresent
@@ -1986,7 +1947,7 @@ properties:
               tag:
                 default: 7.5.1-6.0.16r13
                 description: |
-                  Sets the tag for the Varnish Controller image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+                  Sets the tag for the Varnish Controller image. The Varnish Controller image used here must be the same version as the Varnish Controller.
 
           securityContext:
             $ref: "#/definitions/objectOrTemplate"

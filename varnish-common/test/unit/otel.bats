@@ -100,38 +100,22 @@ chart=$(chart_name)
     [ "${actual}" = "/etc/varnish/shared" ]
 }
 
-@test "Deployment/otel: can configure custom image" {
-    cd "$(chart_dir)"
-    local object=$((helm template \
-        --set 'server.otel.enabled=true' \
-        --set 'server.otel.image.repository=custom/varnish-otel' \
-        --set 'server.otel.image.tag=custom-tag' \
-        --namespace default \
-        --show-only templates/deployment.yaml \
-        . || render_failed) | tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .image' |
-        tee -a /dev/stderr)
-
-    [ "${actual}" == "custom/varnish-otel:custom-tag" ]
-}
-
-@test "Deployment/otel: inherits image from server by default" {
+@test "Deployment/otel: uses the server image" {
     cd "$(chart_dir)"
     local object=$((helm template \
         --set 'server.otel.enabled=true' \
         --set 'server.image.repository=quay.io/varnish-software/varnish-plus' \
         --set 'server.image.tag=6.0.16r3' \
+        --set 'server.image.pullPolicy=Always' \
         --namespace default \
         --show-only templates/deployment.yaml \
         . || render_failed) | tee -a /dev/stderr)
 
     local actual=$(echo "$object" |
-        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .image' |
+        yq -r '.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-otel") | .image + " " + .imagePullPolicy' |
         tee -a /dev/stderr)
 
-    [ "${actual}" == "quay.io/varnish-software/varnish-plus:6.0.16r3" ]
+    [ "${actual}" == "quay.io/varnish-software/varnish-plus:6.0.16r3 Always" ]
 }
 
 @test "Deployment/otel: can configure resources" {

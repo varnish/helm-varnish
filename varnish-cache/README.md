@@ -1821,31 +1821,9 @@ An object for configuring the Varnish OTEL sidecar.
 - Type: boolean
 - Default: `false`
 
-Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in the official `varnish` image since 9.0.3.
+Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. The sidecar uses `server.image`.
 
-**server.otel.image**
-
-- Type: object
-
-Sets the image and tag to use to deploy the Varnish OTEL sidecar. Setting a field to "-" inherits it from `server.image`.
-
-**server.otel.image.repository**
-
-- Default: `-`
-
-Sets the image repository of the OTEL sidecar. The image must be the same Varnish version as the server. When set to "-", `server.image.repository` is used.
-
-**server.otel.image.pullPolicy**
-
-- Default: `-`
-
-Sets the [imagePullPolicy][k8s-pod-v1-containers] of the OTEL sidecar. When set to "-", `server.image.pullPolicy` is used.
-
-**server.otel.image.tag**
-
-- Default: `-`
-
-Sets the image tag of the OTEL sidecar. When set to "-", `server.image.tag` is used.
+`varnish-otel` is included in the official `varnish` image since 9.0.3.
 
 **server.otel.securityContext**
 

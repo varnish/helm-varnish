@@ -1768,34 +1768,7 @@ An object for configuring the Varnish OTEL sidecar.
 - Default: `false`
 - Availability: v1.7.0
 
-Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in the official `varnish` image since 9.0.3.
-
-**server.otel.image**
-
-- Type: object
-
-Sets the image and tag to use to deploy the Varnish OTEL sidecar. Setting a field to "-" inherits it from `server.image`.
-
-**server.otel.image.repository**
-
-- Default: `-`
-- Availability: v1.7.0
-
-Sets the image repository of the OTEL sidecar. The image must be the same Varnish version as the server. When set to "-", `server.image.repository` is used.
-
-**server.otel.image.pullPolicy**
-
-- Default: `-`
-- Availability: v1.7.0
-
-Sets the [imagePullPolicy][k8s-pod-v1-containers] of the OTEL sidecar. When set to "-", `server.image.pullPolicy` is used.
-
-**server.otel.image.tag**
-
-- Default: `-`
-- Availability: v1.7.0
-
-Sets the image tag of the OTEL sidecar. When set to "-", `server.image.tag` is used.
+Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. The sidecar uses `server.image`.
 
 **server.otel.securityContext**
 
@@ -1919,7 +1892,7 @@ Sets the image and tag to use to deploy Varnish Controller Agent sidecar. The im
 
 - Default: `quay.io/varnish-software/varnish-controller-agent`
 
-Sets the repository for Varnish Controller Agent image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+Sets the repository for Varnish Controller Agent image. The Varnish Controller image used here must be the same version as the Varnish Controller.
 
 **server.agent.image.pullPolicy**
 
@@ -1931,7 +1904,7 @@ Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Controller ima
 
 - Default: `7.5.1-6.0.16r13`
 
-Sets the tag for the Varnish Controller image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+Sets the tag for the Varnish Controller image. The Varnish Controller image used here must be the same version as the Varnish Controller.
 
 **server.agent.securityContext**
 

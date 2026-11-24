@@ -73,17 +73,16 @@ toString prints in scientific notation (2.0241129e+07); toJson does not.
 {{- end }}
 
 {{/*
-Sets up the Varnish image and its overrides (if any)
+Renders the image and imagePullPolicy of a container. An empty tag falls back
+to the chart's appVersion.
 */}}
 {{- define "varnish-common.image" }}
-{{- $base := .base | default dict }}
 {{- $image := .image | default dict }}
 {{- $tag := $image.tag }}
-{{- if eq (toString $tag) "-" }}{{ $tag = $base.tag }}{{ end }}
 {{- /* not "default": it would also replace a numeric tag 0 */}}
 {{- if or (kindIs "invalid" $tag) (eq (toString $tag) "") }}{{ $tag = .Chart.AppVersion }}{{ end }}
-image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{ include "varnish-common.imageTag" $tag }}"
-imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else }}{{ $image.pullPolicy }}{{ end }}
+image: "{{ $image.repository }}:{{ include "varnish-common.imageTag" $tag }}"
+imagePullPolicy: {{ $image.pullPolicy }}
 {{- end }}
 
 {{/*

@@ -413,6 +413,10 @@ EOT
   schema_accepts --set server.varnishncsa.extraEnvs[0].name=A --set server.varnishncsa.extraEnvs[0].value=b
 }
 
+@test "Schema: rejects the removed server.otel.image" {
+  schema_rejects "additional properties 'image' not allowed" --set server.otel.image.tag=-
+}
+
 @test "Schema: rejects unknown otel keys" {
   schema_rejects "additional properties 'envs' not allowed" --set server.otel.envs.A=b
 }
