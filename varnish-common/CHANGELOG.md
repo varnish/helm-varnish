@@ -58,3 +58,4 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - (Enterprise) The `mse4-config` init container gets `server.securityContext` and `server.resources`, merged with `global.securityContext` and `global.resources`, like the secret init container.
 - An `exec` or `grpc` handler in `server.startupProbe`, `server.readinessProbe` or `server.livenessProbe` is rendered as given, and no longer needs `server.http.enabled`. Before, the chart added a `tcpSocket` handler next to it, and the API server rejected the probe.
 - An entry of `server.extraListens` with `path` and no `port` no longer gets a container port without a number, which the API server rejected.
+- With `server.networkPolicy.allowIngress` (or `allowEgress`) false and an empty `extraIngress` (or `extraEgress`), the NetworkPolicy renders as valid YAML, and denies all ingress (or egress).

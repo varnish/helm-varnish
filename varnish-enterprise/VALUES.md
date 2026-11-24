@@ -1579,7 +1579,7 @@ Allows all connections to any destination. Set to false when using `server.netwo
 
 - Type: array of objects
 
-An array of ingress rules that conforms to the Kubernetes [NetworkPolicyIngressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowIngress` is false.
+An array of ingress rules that conforms to the Kubernetes [NetworkPolicyIngressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowIngress` is false. When empty, all ingress is denied.
 
 For example:
 
@@ -1600,7 +1600,7 @@ server:
 
 - Type: array of objects
 
-An array of egress rules that conforms to the Kubernetes [NetworkPolicyEgressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowEgress` is false.
+An array of egress rules that conforms to the Kubernetes [NetworkPolicyEgressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowEgress` is false. When empty, all egress is denied.
 
 For example:
 

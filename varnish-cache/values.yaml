@@ -1000,7 +1000,8 @@ server:
 
     # An array of ingress rules that conforms to the Kubernetes
     # [NetworkPolicyIngressRule](https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/network-policy-v1/#NetworkPolicySpec)
-    # definition. Only used when `server.networkPolicy.allowIngress` is false.
+    # definition. Only used when `server.networkPolicy.allowIngress` is false. When empty,
+    # all ingress is denied.
     # Type: array of objects
     # Example:
     #   extraIngress:
@@ -1015,7 +1016,8 @@ server:
 
     # An array of egress rules that conforms to the Kubernetes
     # [NetworkPolicyEgressRule](https://kubernetes.io/docs/reference/kubernetes-api/policy-resources/network-policy-v1/#NetworkPolicySpec)
-    # definition. Only used when `server.networkPolicy.allowEgress` is false.
+    # definition. Only used when `server.networkPolicy.allowEgress` is false. When empty,
+    # all egress is denied.
     # Type: array of objects
     # Example:
     #   extraEgress:

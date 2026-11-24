@@ -68,3 +68,21 @@ load _helpers
         tee -a /dev/stderr)
     [ "${actual}" == '[{"ports":[{"port":80}],"to":[{"podSelector":{"matchLabels":{"component":"backend"}}}]}]' ]
 }
+
+@test "NetworkPolicy: denies all ingress and egress with empty extraIngress and extraEgress" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.networkPolicy.enabled=true' \
+        --set 'server.networkPolicy.allowIngress=false' \
+        --set 'server.networkPolicy.allowEgress=false' \
+        --namespace default \
+        --show-only templates/networkpolicy.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '[.spec.ingress, .spec.egress]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '[[],[]]' ]
+}
