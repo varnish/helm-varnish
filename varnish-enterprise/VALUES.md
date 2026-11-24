@@ -19,7 +19,7 @@ fix the values instead.
 - Type: string
 - Default: name of the chart
 
-Overrides the name of the chart (without the release name). For example, setting `nameOverride` to "hello" would produce a workload named "release-name-hello". Containers within a pod derive their name from this setting.
+Overrides the name of the chart (without the release name). For example, setting `nameOverride` to "hello" would produce a workload named "release-name-hello". Container names are not affected: they are always based on the chart name (`varnish-cache` or `varnish-enterprise`).
 
 By default, the name of the chart is used.
 
@@ -46,26 +46,6 @@ global:
     - name: registry-quay-k7c2f4m2d5
 ```
 
-**global.initContainer**
-
-- Type: object
-
-Overrides the default busybox initContainer image.
-
-**global.initContainer.image**
-
-- Type: string
-- Default: `busybox`
-
-The image to use for the initContainer.
-
-**global.initContainer.tag**
-
-- Type: string
-- Default: `1.36`
-
-The tag to use for the initContainer image.
-
 **global.podSecurityContext**
 
 - Type: object
@@ -73,7 +53,7 @@ The tag to use for the initContainer image.
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-pods] definition of a Pod.
 
-This securityContext will be set on all Pods within this chart. For setting securityContext on all containers, see `global.securityContext`.
+This securityContext will be set on all Pods within this chart. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 For example:
 
@@ -90,7 +70,7 @@ global:
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
 
-This securityContext will be set on all containers within this chart. For setting securityContext on the Pod itself, see `global.podSecurityContext`.
+This securityContext is set on every container the chart creates, merged with the container's own securityContext (e.g., `server.securityContext`), which takes precedence. The chart's init containers get the same securityContext as the Varnish Enterprise container. Containers from `server.extraContainers` and `server.extraInitContainers` don't get it. For setting securityContext on the Pod itself, see `global.podSecurityContext`.
 
 For example:
 
@@ -106,43 +86,62 @@ global:
 - Type: object or template string
 - Availability: v1.5.0
 
-Applies extra annotations to all workloads. The value can be set as either an object or a template string. Workload annotations can be used for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the workload itself.
+Applies extra annotations to the Varnish Enterprise workload (the Deployment, StatefulSet or DaemonSet). The value can be set as either an object or a template string.
 
-To apply annotations on a Pod, use `global.podAnnotations`. To apply annotations on a specific workload, use `server.annotations`.
+To apply annotations on the Pods, use `global.podAnnotations`.
 
 **global.podAnnotations**
 
 - Type: object or template string
 - Availability: v1.5.0
 
-Applies extra annotations to all Pods. The value can be set as either an object or a template string. Pod annotations can be used for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to a Pod itself.
+Applies extra annotations to the Varnish Enterprise Pods. The value can be set as either an object or a template string.
 
-To apply annotations on a workload, use `global.annotations`. To apply annotations on a specific Pod, use `server.podAnnotations`.
+To apply annotations on the workload, use `global.annotations`.
+
+For example:
+
+```yaml
+global:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9273"
+    prometheus.io/scheme: http
+```
 
 **global.labels**
 
 - Type: object or template string
 - Availability: v1.5.0
 
-Applies extra labels to all workloads. The value can be set as either an object or a template string. Workload labels can be used for applying additional metadata or for integrating with external tooling. The labels specified here will be applied to the workload itself.
+Applies extra labels to the Varnish Enterprise workload (the Deployment, StatefulSet or DaemonSet). The value can be set as either an object or a template string.
 
-To apply labels on a Pod, use `global.podLabels`. To apply labels on a specific workload, use `server.labels`.
+To apply labels on the Pods, use `global.podLabels`.
 
 **global.podLabels**
 
 - Type: object or template string
 - Availability: v1.5.0
 
-Applies extra labels to all Pods. The value can be set as either an object or a template string. Pod labels can be used for applying additional metadata or for integrating with external tooling. Labels specified here will be applied to a Pod itself.
+Applies extra labels to the Varnish Enterprise Pods. The value can be set as either an object or a template string.
 
-To apply labels on a workload, use `global.labels`. To apply labels on a specific Pod, use `server.podLabels`.
+To apply labels on the workload, use `global.labels`.
+
+For example:
+
+```yaml
+global:
+  podLabels:
+    varnish-software.com/tier: edge
+```
 
 **global.resources**
 
 - Type: object or template string
 - Availability: v1.5.0
 
-An object that conforms to the Kubernetes resources definition of a Container. This configuration will apply resource constraints to all containers. To specify resources on a single container, use `server.resources`, `server.varnishncsa.resources`, and `server.otel.resources`.
+An object that conforms to the Kubernetes resources definition of a Container. These resources are set on every container the chart creates, merged with the container's own resources (e.g., `server.resources`, `server.varnishncsa.resources`, `server.otel.resources`), which take precedence. The chart's init containers get the same resources as the Varnish Enterprise container. Containers from `server.extraContainers` and `server.extraInitContainers` don't get them.
 
 For example:
 
@@ -180,13 +179,13 @@ Configures Varnish Agent to use the internal NATS server. `"-"`, the Varnish Con
 
 - Type: string
 
-Discovers the internal NATS server within the given namespace. By default, the current namespace is used.
+Discovers the internal NATS server within the given namespace. By default, the current namespace is used. Also used to find the Varnish Controller APIGW when `server.agent.autoRemove.vcli.internal.enabled` is true.
 
 **global.natsServer.internal.releaseName**
 
 - Type: string
 
-Overrides the full name of the internal NATS server. Required if `nameOverride` or `fullnameOverride` is used in the Varnish Controller Helm Chart. By default, "varnish-controller" is used.
+Overrides the full name of the internal NATS server. Required if `nameOverride` or `fullnameOverride` is used in the Varnish Controller Helm Chart. By default, "varnish-controller" is used. Also used to find the Varnish Controller APIGW when `server.agent.autoRemove.vcli.internal.enabled` is true.
 
 **global.natsServer.internal.passwordFrom**
 
@@ -263,23 +262,11 @@ When `server.autoscaling.enabled` is set to `true`, and `server.autoscaling.minR
 
 Specifies the type of workload to deploy Varnish Enterprise server. The value can be one of `Deployment`, `DaemonSet`, or `StatefulSet` depending on usage scenarios.
 
-**server.labels**
-
-- Type: object or template string
-
-Applies extra labels to the workload. The value can be set as either an object or a template string. Labels specified here will be applied to the workload itself. To apply labels on the Pod, use `server.podLabels`.
-
 **server.licenseSecret**
 
 - Type: string
 
 Sets the secret for using a varnish-enterprise.lic file. See [Varnish Enterprise installation](https://docs.varnish-software.com/varnish-helm/varnish-enterprise/installation/).
-
-**server.annotations**
-
-- Type: object or template string
-
-Applies extra annotations to the workload. The value can be set as either an object or a template string. Workload annotations can be used for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the workload itself. To apply annotations on the Pod, use `server.podAnnotations`.
 
 **server.strategy**
 
@@ -313,13 +300,6 @@ Setting this will also set the DNS policy to `ClusterFirstWithHostNet` to allow 
 - Availability: v1.2.1
 
 Whether to enable shared PID namespace between all containers in a Pod. This is useful for a scenario where it is necessary to send a signal to a process across a container.
-
-**server.workDir**
-
-- Type: string or number
-- Default: `-`
-
-Sets the Varnish working directory (the `-n` argument of varnishd), relative to `/var/lib/varnish`. When set to "-", the Pod name is used. When empty, varnishd runs without `-n` and uses the Varnish default, so `varnishstat`, `varnishadm` and `varnishlog` work without `-n` in `kubectl exec` and in extra containers.
 
 **server.http.enabled**
 
@@ -384,7 +364,7 @@ Sets the port to expose HTTPS traffic directly on the node the Pod runs on, as t
 - Type: string
 - Default: `0.0.0.0`
 
-Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when neither `server.tls.config` nor `server.tls.configFile` is set.
+Configures the address on which Varnish will listen for HTTPS traffic. Only applicable when `server.tls.config` is not set.
 
 **server.tls.config**
 
@@ -405,34 +385,6 @@ server:
 
       pem-file = "/etc/varnish/certs/example.pem"
 ```
-
-**server.tls.configFile**
-
-- Type: string
-
-Uses the content of the given file as `server.tls.config`. The file is parsed as a template string and must be placed inside the `files/` directory of the Helm chart. Overrides `server.tls.config` if set.
-
-For example:
-
-```yaml
-server:
-  tls:
-    configFile: files/tls.cfg
-```
-
-**server.admin.address**
-
-- Type: string
-- Default: `127.0.0.1`
-
-Configures the address for Varnish management interface.
-
-**server.admin.port**
-
-- Type: number
-- Default: `6082`
-
-Configures the port for Varnish management interface.
 
 **server.extraListens**
 
@@ -491,7 +443,7 @@ The port to expose this listen directly on the node the Pod runs on, as the cont
 
 - Type: string
 
-The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets.
+The path of the UNIX domain socket to listen to. Required unless `server.extraListens[].port` is set. Only applicable for UNIX domain sockets. A listen with a path gets no container port.
 
 **server.extraListens[].user**
 
@@ -550,51 +502,17 @@ server:
       value: {{ .Release.Namespace }}
 ```
 
-**server.ttl**
-
-- Type: number or string
-- Default: `120`
-
-Sets the default Time To Live (in seconds) for a cached object.
-
-**server.minThreads**
-
-- Type: number
-- Default: `50`
-
-Sets the minimum number of worker threads in each pool. See also [varnishd documentation][varnishd].
-
-**server.maxThreads**
-
-- Type: number
-- Default: `1000`
-
-Sets the maximum number of worker threads in each pool. See also [varnishd documentation][varnishd].
-
-**server.threadTimeout**
-
-- Type: number or string
-- Default: `120`
-
-Sets the number of seconds after which idle threads are destroyed.
-
 **server.command**
 
 - Type: array of strings
 
-Sets the command for Varnish Enterprise. Note that by overriding this, you will also override parameters, listening ports, etc. See also [varnishd documentation][varnishd].
-
-**server.extraArgs**
-
-- Type: string or array of strings
-
-Sets the extra arguments to varnishd. A string is split on whitespace into separate arguments, while each item of a list is passed as a single argument, so use a list for values containing spaces.
+Sets the command for Varnish Enterprise. This replaces the whole command line built by the chart, including parameters, listening addresses, VCL and storage arguments. See also [varnishd documentation][varnishd].
 
 **server.parameters**
 
 - Type: object
 
-Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma.
+Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Parameters are passed in alphabetical order of their snake_case names, so `thread_pool_max` comes before `thread_pool_min`. Setting the same parameter twice with different spellings (e.g., `threadPoolMin` and `thread_pool_min`) fails rendering.
 
 For example, the following results in `-p backend_idle_timeout=60 -p feature=+http2`:
 
@@ -610,7 +528,7 @@ server:
 
 - Type: array or template string
 
-An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Note that `initContainers` cannot be changed once it is applied. To update this value after the initial deploy, uninstall Varnish Enterprise Helm Chart from the cluster and reinstall. The value can be set as either an array of objects or a template string.
+An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Like any change to the Pod template, changing this value replaces the Pods. The value can be set as either an array of objects or a template string.
 
 For example:
 
@@ -629,7 +547,7 @@ server:
 
 - Type: array or template string
 
-An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string.
+An array of objects that conforms to the Kubernetes [containers][k8s-pod-v1-pods] definition of a Pod. This can be used to add a sidecar container to varnishd. The value can be set as either an array of objects or a template string. A sidecar that mounts the `{{ .Release.Name }}-varnish-vsm` volume at `/var/lib/varnish` can run `varnishstat`, `varnishlog` and `varnishadm` without `-n`, as varnishd uses its default working directory. The varnishd admin interface listens on `127.0.0.1:6082` and its secret is `/etc/varnish/shared/secret` (mount the `{{ .Release.Name }}-config-shared` volume at `/etc/varnish/shared`).
 
 For example:
 
@@ -712,12 +630,7 @@ An object for configuring the Massive Storage Engine 4 (MSE4).
 
 Enables Massive Storage Engine 4. When disabled, varnishd uses its default storage.
 
-**server.mse4.memoryTarget**
-
-- Type: string
-- Availability: v1.6.1
-
-Sets the amount of memory to use for MSE4. The value can be set as either a percentage (e.g., "80%"), or bytes ("512m"). If cgroups resource limits are used (i.e., `server.resources`), the percentage is calculated from the resource limit that is assigned to the container.
+To set the amount of memory MSE4 uses, set the `memory_target` parameter with `server.parameters.memoryTarget`, as a percentage (e.g., "80%") or in bytes ("512m"). If `server.resources` sets a memory limit, the percentage is of that limit.
 
 **server.mse4.config**
 
@@ -726,21 +639,7 @@ Sets the amount of memory to use for MSE4. The value can be set as either a perc
 
 An MSE4 configuration. By default, the value is unset and MSE4 is run in a memory-only mode.
 
-If `server.mse4.persistence.enabled` is true, it is recommended to reference to MSE path using `{{ .Values.server.mse4.persistence.mountPath }}` template string in the configuration.
-
-**server.mse4.configFile**
-
-- Type: string
-
-Use the content of the given file path as MSE4 configuration. The file will be parsed as templated string. Will override `server.mse4.config` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
-
-For example:
-
-```yaml
-server:
-  mse4:
-    configFile: files/mse4.cfg
-```
+If `server.mse4.persistence.enabled` is true, the persistent volume is mounted at `/var/lib/mse4`; use that path for the books and stores in the configuration.
 
 **server.mse4.persistence.enabled**
 
@@ -766,13 +665,6 @@ Database size relative to `server.mse4.persistence.storageSize`, for auto-config
 Store size relative to `server.mse4.persistence.storageSize`, for auto-configuring MSE4. Can be set as a percentage or a value.
 
 `server.mse4.persistence.bookSize` and `server.mse4.persistence.storeSize` must add up to 100% or `server.mse4.persistence.storageSize`. Only applicable if `server.mse4.config` is empty.
-
-**server.mse4.persistence.mountPath**
-
-- Type: string
-- Default: `/var/lib/mse4`
-
-Sets the mount path for the PersistentVolumeClaim for MSE4.
 
 **server.mse4.persistence.labels**
 
@@ -806,66 +698,11 @@ Sets the storage class for the PersistentVolumeClaim for MSE4.
 
 Sets the storage size for the PersistentVolumeClaim for MSE4.
 
-**server.secret**
-
-- Type: string
-
-Sets the Varnish secret for accessing the varnishd admin interface. Either this value or `server.secretFrom` can be set. If unset, Varnish will generate one on every Pod start.
-
-**server.secretFrom**
-
-- Type: object
-- Availability: v1.3.0
-
-Sets the Varnish secret from an external Kubernetes secret for accessing the varnishd admin interface. Either this value or `server.secret` can be set.
-
-For example:
-
-```yaml
-server:
-  secretFrom:
-    name: secret-name
-    key: varnish-secret
-```
-
-**server.secretFrom.name**
-
-- Type: string
-
-The name of the Kubernetes secret. Required when `server.secretFrom` is set.
-
-**server.secretFrom.key**
-
-- Type: string
-
-The key of the Kubernetes secret holding the Varnish secret. Required when `server.secretFrom` is set.
-
-**server.secretFile**
-
-- Type: string
-
-Use the content of the given file path as Varnish secret. The file will be parsed as templated string. Will override `server.secret` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
-
-For example:
-
-```yaml
-server:
-  secretFile: files/secret
-```
-
-**server.vclConfigPath**
-
-- Type: string
-- Default: `/etc/varnish/default.vcl`
-- Availability: v1.2.0
-
-A path to the main VCL configuration. This configuration affects the location where `server.vclConfig` will be saved to, as well as the `VARNISH_VCL_CONF` environment variable in the Varnish Enterprise container.
-
 **server.vclConfig**
 
 - Type: template string
 
-A VCL configuration for Varnish Enterprise.
+The main VCL of Varnish Enterprise, mounted at `/etc/varnish/default.vcl`. It can load the files of `server.vcls.includes` with `include "./vcls/<file>";`. It must not be set together with `server.vcls.routes`.
 
 For example:
 
@@ -884,68 +721,18 @@ server:
     }
 ```
 
-**server.vclConfigFile**
-
-- Type: string
-
-Use the content of the given file path as VCL configuration. The file will be parsed as templated string. Will override `server.vclConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
-
-For example:
-
-```yaml
-server:
-  vclConfigFile: files/default.vcl
-```
-
-**server.vclConfigs**
-
-- Type: object of template strings
-- Availability: v1.2.0
-
-Extra VCL configuration where a filename as a key and template string as a value. The path to store `server.vclConfigs` will be relative to that of `server.vclConfigPath`.
-
-If the filename in `server.vclConfigs` matches the name in `server.vclConfigPath`, it will be treated in the same way as `server.vclConfig`. In this case, `server.vclConfig` must not be set.
-
-For example, with `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following configuration saves the file as `/etc/varnish/extra.vcl`:
-
-```yaml
-server:
-  vclConfigs:
-    extra.vcl: |
-      vcl 4.1;
-
-      backend default {
-        .host = "127.0.0.1";
-        .port = "8090";
-      }
-```
-
-With `server.vclConfigPath` set to `/etc/varnish/default.vcl`, the following is effectively the same as setting `server.vclConfig`, which must then be unset:
-
-```yaml
-server:
-  vclConfigs:
-    default.vcl: |
-      vcl 4.1;
-
-      backend default {
-        .host = "127.0.0.1";
-        .port = "8090";
-      }
-```
-
 **server.vcls**
 
 - Type: object
 - Availability: v1.8.0
 
-Per-domain VCL routing (multi-tenant). When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding the `server.vclConfig*` fields. `server.cmdfileConfig` and `server.cmdfileConfigFile` must not be set when `server.vcls.routes` is non-empty.
+Per-domain VCL routing (multi-tenant) and shared VCL files. When `server.vcls.routes` is set, the chart generates a routing VCL and a cmdfile from these settings, superseding `server.vclConfig`. `server.vcls.includes` works with or without routes.
 
 **server.vcls.routes**
 
 - Type: array of objects
 
-Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig`, `server.vclConfigFile`, `server.vclConfigs` and `server.cmdfileConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
+Per-domain VCL routing. When set, the chart generates a routing VCL and a cmdfile that load each route as a separate VCL and select it based on the Host header, superseding `server.vclConfig` (which must not be set). Each route must set `vclContent`, and can set `name` (defaults to the first hostname, prefixed with `route_` if it does not start with a letter) and `hostnames`. As it is used as a VCL label, `name` must start with a letter. A route without hostnames is a catch-all and must be the last one.
 
 For example:
 
@@ -988,9 +775,9 @@ The VCL of the route. Required.
 
 - Type: object of template strings
 
-Shared VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs. Each key is a filename and each value a template string. Requires `server.vcls.routes`. Route VCLs include them with a relative path (`include "./helpers.vcl";`), as plain filenames are looked up in `vcl_path` instead.
+Extra VCL files placed in `/etc/varnish/vcls/`, next to the route VCLs if any. Each key is a filename (subdirectories allowed) and each value a template string. Load them with a path relative to the including file: `include "./vcls/<file>";` from `server.vclConfig`, and `include "./<file>";` from a route VCL. Plain filenames are looked up in `vcl_path` instead.
 
-For example, a route VCL can use the following with `include "./helpers.vcl";` and `call common_recv;`:
+For example, `server.vclConfig` can use the following with `include "./vcls/helpers.vcl";` and `call common_recv;` (a route VCL would use `include "./helpers.vcl";`):
 
 ```yaml
 server:
@@ -999,45 +786,6 @@ server:
       helpers.vcl: |
         sub common_recv {
         }
-```
-
-**server.cmdfileConfigPath**
-
-- Type: string
-- Default: `/etc/varnish/cmds.cli`
-- Availability: v1.2.0
-
-A path to the [CLI command file][varnish-cmdfile]. This configuration affects the location where `server.cmdfileConfig` will be saved to, as well as the `-I` argument in the Varnish Enterprise container when `server.cmdfileConfig` is not empty.
-
-**server.cmdfileConfig**
-
-- Type: template string
-- Availability: v1.2.0
-
-A [CLI command file][varnish-cmdfile] for running management commands when `varnishd` is launched. For example, when loading extra VCL in multi-tenancy mode. See also [External VCL ConfigMap](https://docs.varnish-software.com/varnish-helm/guides/using-external-vcl-configmap/#configmap-for-multiple-vcl-files).
-
-For example:
-
-```yaml
-server:
-  cmdfileConfig: |
-    vcl.load vcl_tenant1 /etc/varnish/tenant1.vcl
-    vcl.label label_tenant1 vcl_tenant1
-    vcl.load vcl_main /etc/varnish/main.vcl
-    vcl.use vcl_main
-```
-
-**server.cmdfileConfigFile**
-
-- Type: string
-
-Use the content of the given file path as a cmdfile. The file will be parsed as templated string. Will override `server.cmdfileConfig` if set. Note that the file must be placed inside the files/ directory in the Helm chart itself.
-
-For example:
-
-```yaml
-server:
-  cmdfileConfigFile: files/cmds.cli
 ```
 
 **server.baseUrl**
@@ -1050,20 +798,13 @@ Sets a base URL for Varnish Controller and Varnish Controller Router when perfor
 **server.terminationGracePeriodSeconds**
 
 - Type: number
-- Default: `0`
 - Availability: v1.6.0
 
-Sets the termination grace period seconds to wait for Varnish Enterprise to shut down. Once this number of seconds is reached without the Varnish Enterprise Pod shutting down, Kubernetes will send SIGKILL to the Pod. When `server.delayedShutdown` is used, this value should be set to a higher value than the **maximum** time (in seconds) it took for Varnish Enterprise to fully shut down after a delayed shutdown.
+Sets the termination grace period seconds to wait for Varnish Enterprise to shut down. Once this number of seconds is reached without the Varnish Enterprise Pod shutting down, Kubernetes will send SIGKILL to the Pod. When unset, the Kubernetes default (30 seconds) applies; `0` is rendered as is.
+
+When `server.delayedShutdown.method` is not "none", this value must be set, and rendering fails if it is shorter than the delay: `server.delayedShutdown.sleep.seconds`, `server.delayedShutdown.mempool.waitSeconds` or `server.delayedShutdown.shutdownDelay.seconds`. Set it higher than the **maximum** time (in seconds) it takes Varnish Enterprise to fully shut down after a delayed shutdown. With "mempool", that includes the time to drain connections.
 
 The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
-
-**server.delayedHaltSeconds**
-
-- Type: number
-
-Deprecated: use `server.delayedShutdown` instead.
-
-Delays stopping of the Varnish Enterprise container by the given seconds.
 
 **server.delayedShutdown**
 
@@ -1084,7 +825,7 @@ Multiple methods are provided here:
 - `sleep` will simply sleep in the `preStop` for `server.delayedShutdown.sleep.seconds` seconds. This is the simplest way to delay the shutdown of Varnish Enterprise when the time taken for the load balancer component to stop forwarding traffic to Varnish Enterprise is largely fixed.
 - `mempool` polls varnishstat for `MEMPOOL.sess` to go down to zero. This allows for the quickest shutdown but requires tuning `server.delayedShutdown.mempool.pollSeconds` to traffic patterns (as `MEMPOOL.sess` may become 0 momentarily, resulting in an early shutdown).
 
-When `server.delayedShutdown.method` is set to a value other than "none", `server.terminationGracePeriodSeconds` **must** also be set.
+When `server.delayedShutdown.method` is set to a value other than "none", `server.terminationGracePeriodSeconds` **must** also be set, to at least the delay. Rendering fails otherwise.
 
 **server.delayedShutdown.sleep**
 
@@ -1172,7 +913,7 @@ An object for configuring [HorizontalPodAutoscaling][k8s-hpa].
 - Type: boolean
 - Default: `false`
 
-Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Enterprise Pod. `server.replicas` is ignored if autoscaling is enabled.
+Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Enterprise Pod. `server.replicas` is ignored if autoscaling is enabled. Rendering fails when `server.kind` is `DaemonSet`, which has no replicas to scale.
 
 **server.autoscaling.minReplicas**
 
@@ -1319,14 +1060,7 @@ Sets a pre-allocated IP address for use in LoadBalancer.
 
 - Type: object
 
-Enables or disables the Varnish HTTP service.
-
-**server.service.http.enabled**
-
-- Type: boolean
-- Default: `true`
-
-Enables HTTP service. Requires `server.http.enabled`.
+Configures the `http` port of the Service. The port is exposed if and only if `server.http.enabled` is true.
 
 **server.service.http.port**
 
@@ -1347,14 +1081,7 @@ See also [Accessing Varnish Enterprise in Kubernetes Cluster](https://docs.varni
 
 - Type: object
 
-Enables or disables the Varnish HTTPS service.
-
-**server.service.https.enabled**
-
-- Type: boolean
-- Default: `false`
-
-Enables HTTPS service. Requires `server.tls.enabled`.
+Configures the `https` port of the Service. The port is exposed if and only if `server.tls.enabled` is true.
 
 **server.service.https.port**
 
@@ -1425,7 +1152,7 @@ Sets the internal traffic policy for this service. InternalTrafficPolicy describ
 - Type: string
 - Default: `Cluster`
 
-Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). Can be set to `Local` or `Cluster`.
+Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). Can be set to `Local` or `Cluster`. Only rendered when `server.service.type` is NodePort or LoadBalancer, the only types Kubernetes accepts it for.
 
 **server.ingress**
 
@@ -1438,7 +1165,7 @@ An object for configuring [Ingress][k8s-ingress].
 - Type: boolean
 - Default: `false`
 
-Enables the [Ingress][k8s-ingress] for Varnish Enterprise. Requires `server.service.http.enabled` and `server.service.http.port`.
+Enables the [Ingress][k8s-ingress] for Varnish Enterprise. Requires `server.http.enabled`; the Ingress targets the Service's `http` port (`server.service.http.port`).
 
 **server.ingress.labels**
 
@@ -1510,44 +1237,13 @@ server:
           - chart-example.local
 ```
 
-**server.podAnnotations**
-
-- Type: object or template string
-
-Applies extra annotations to the Pod. The value can be set as either an object or a template string. Pod annotations can be used for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to the Pod. To apply annotations on the workload, use `server.annotations`.
-
-For example:
-
-```yaml
-server:
-  podAnnotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/path: /metrics
-    prometheus.io/port: "9273"
-    prometheus.io/scheme: http
-```
-
-**server.podLabels**
-
-- Type: object or template string
-
-Applies extra labels to the Pod. The value can be set as either an object or a template string. Labels specified here will be applied to the Pod itself. To apply labels on the workload, use `server.labels`.
-
-For example:
-
-```yaml
-server:
-  podLabels:
-    varnish-software.com/tier: edge
-```
-
 **server.securityContext**
 
 - Type: object or template string
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
 
-This securityContext will be set on the Varnish Enterprise container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+This securityContext will be set on the Varnish Enterprise container and the chart's init containers. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 For example:
 
@@ -1563,6 +1259,8 @@ server:
 - Availability: v1.1.0
 
 An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container.
+
+Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An `exec`, `grpc` or `tcpSocket` handler is rendered as given.
 
 For example:
 
@@ -1634,6 +1332,8 @@ server:
 
 An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
 
+Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An `exec`, `grpc` or `tcpSocket` handler is rendered as given.
+
 For example:
 
 ```yaml
@@ -1695,6 +1395,8 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
 
+Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An `exec`, `grpc` or `tcpSocket` handler is rendered as given.
+
 For example:
 
 ```yaml
@@ -1754,7 +1456,7 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 - Type: object or template string
 
-An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Enterprise container.
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Enterprise container. The chart's init containers get the same resources.
 
 For example:
 
@@ -1857,7 +1559,7 @@ Allows all connections to any destination. Set to false when using `server.netwo
 
 - Type: array of objects
 
-An array of ingress rules that conforms to the Kubernetes [NetworkPolicyIngressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowIngress` is false.
+An array of ingress rules that conforms to the Kubernetes [NetworkPolicyIngressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowIngress` is false. When empty, all ingress is denied.
 
 For example:
 
@@ -1878,7 +1580,7 @@ server:
 
 - Type: array of objects
 
-An array of egress rules that conforms to the Kubernetes [NetworkPolicyEgressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowEgress` is false.
+An array of egress rules that conforms to the Kubernetes [NetworkPolicyEgressRule][k8s-networkpolicy-v1] definition. Only used when `server.networkPolicy.allowEgress` is false. When empty, all egress is denied.
 
 For example:
 
@@ -1908,53 +1610,11 @@ An object for configuring [varnishncsa][varnishncsa].
 
 Enables HTTP request logging via [varnishncsa][varnishncsa].
 
-**server.varnishncsa.image**
-
-- Type: object
-
-Sets the image and tag to use to deploy the varnishncsa sidecar. Setting a field to "-" inherits it from `server.image`.
-
-**server.varnishncsa.image.repository**
-
-- Default: `-`
-
-Sets the repository for Varnish Enterprise image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Enterprise server. Set this to "-" to inherit the value of `server.image.repository`.
-
-**server.varnishncsa.image.pullPolicy**
-
-- Default: `-`
-
-Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Enterprise image for use with varnishncsa. This can be one of Always, Never, or IfNotPresent. Set this to "-" to inherit the value of `server.image.pullPolicy`.
-
-**server.varnishncsa.image.tag**
-
-- Default: `-`
-
-Sets the tag for the Varnish Enterprise image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Enterprise server. Set this to "-" to inherit the value of `server.image.tag`.
-
-**server.varnishncsa.securityContext**
-
-- Type: object or template string
-
-An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
-
-This securityContext will be set on the varnishncsa container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
-
-For example:
-
-```yaml
-server:
-  varnishncsa:
-    securityContext:
-      runAsUser: 1000
-```
-
 **server.varnishncsa.extraArgs**
 
 - Type: string or array of strings
-- Default: `["-c"]`
 
-Sets the extra arguments to varnishncsa.
+Sets the extra arguments to varnishncsa. Without `-b` or `-c`, varnishncsa logs client requests.
 
 **server.varnishncsa.extraEnvs**
 
@@ -1996,104 +1656,6 @@ server:
       - name: RELEASE_NAMESPACE
         value: {{ .Release.Namespace }}
 ```
-
-**server.varnishncsa.startupProbe**
-
-- Type: object or false
-
-An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container. The probe is disabled when empty. The probe command is set by the chart.
-
-For example:
-
-```yaml
-server:
-  varnishncsa:
-    startupProbe:
-      periodSeconds: 5
-      failureThreshold: 10
-```
-
-**server.varnishncsa.readinessProbe**
-
-- Type: object or false
-
-An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
-
-**server.varnishncsa.readinessProbe.initialDelaySeconds**
-
-- Type: number
-- Default: `5`
-
-Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is ready to handle the logs.
-
-**server.varnishncsa.readinessProbe.periodSeconds**
-
-- Type: number
-- Default: `10`
-
-Sets the delay between each probe to determine if the varnishncsa Pod is ready to handle the logs after the initial probe.
-
-**server.varnishncsa.readinessProbe.timeoutSeconds**
-
-- Type: number
-- Default: `1`
-
-Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
-
-**server.varnishncsa.readinessProbe.successThreshold**
-
-- Type: number
-- Default: `1`
-
-Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered ready to handle the logs.
-
-**server.varnishncsa.readinessProbe.failureThreshold**
-
-- Type: number
-- Default: `3`
-
-Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.
-
-**server.varnishncsa.livenessProbe**
-
-- Type: object or false
-
-An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
-
-**server.varnishncsa.livenessProbe.initialDelaySeconds**
-
-- Type: number
-- Default: `30`
-
-Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is still ready to handle the logs.
-
-**server.varnishncsa.livenessProbe.periodSeconds**
-
-- Type: number
-- Default: `10`
-
-Sets the delay between each probe to determine if the varnishncsa Pod is still ready to handle the logs after the initial probe.
-
-**server.varnishncsa.livenessProbe.timeoutSeconds**
-
-- Type: number
-- Default: `5`
-
-Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
-
-**server.varnishncsa.livenessProbe.successThreshold**
-
-- Type: number
-- Default: `1`
-
-Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered still ready to handle the logs.
-
-**server.varnishncsa.livenessProbe.failureThreshold**
-
-- Type: number
-- Default: `3`
-
-Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.
 
 **server.varnishncsa.resources**
 
@@ -2143,41 +1705,14 @@ An object for configuring the Varnish OTEL sidecar.
 - Default: `false`
 - Availability: v1.7.0
 
-Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. `varnish-otel` is included in the official `varnish` image since 9.0.3.
-
-**server.otel.image**
-
-- Type: object
-
-Sets the image and tag to use to deploy the Varnish OTEL sidecar. Setting a field to "-" inherits it from `server.image`.
-
-**server.otel.image.repository**
-
-- Default: `-`
-- Availability: v1.7.0
-
-Sets the image repository of the OTEL sidecar. The image must be the same Varnish version as the server. When set to "-", `server.image.repository` is used.
-
-**server.otel.image.pullPolicy**
-
-- Default: `-`
-- Availability: v1.7.0
-
-Sets the [imagePullPolicy][k8s-pod-v1-containers] of the OTEL sidecar. When set to "-", `server.image.pullPolicy` is used.
-
-**server.otel.image.tag**
-
-- Default: `-`
-- Availability: v1.7.0
-
-Sets the image tag of the OTEL sidecar. When set to "-", `server.image.tag` is used.
+Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and metrics to an OTLP (OpenTelemetry Protocol) endpoint. The sidecar uses `server.image`.
 
 **server.otel.securityContext**
 
 - Type: object or template string
 - Availability: v1.7.0
 
-An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container. This securityContext will be set on the OTEL container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container. This securityContext will be set on the OTEL container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 **server.otel.resources**
 
@@ -2200,71 +1735,6 @@ server:
   otel:
     env:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
-```
-
-**server.initAgent**
-
-- Type: object
-
-Configures the init container for Varnish Controller Agent.
-
-**server.initAgent.enabled**
-
-- Type: boolean
-- Default: `true`
-- Availability: v1.6.0
-
-Configures whether to use init container to initialize Varnish Controller Agent state directory symbolic link. This is to allow Varnish Enterprise Pod to have a static path for accessing Varnish Controller Agent state files. When `server.initAgent.enabled` is `false`, the Varnish Controller Agent state directory will be discovered using a dynamic environment variable based on Pod name.
-
-Before v1.6.0, the state directory symbolic link is created at `/etc/varnish/agent`.
-
-From v1.6.0, the state directory symbolic link is created at `/etc/varnish/shared/agent`.
-
-From v1.8.0, the default will be changed to `false`.
-
-**server.initAgent.securityContext**
-
-- Type: object or template string
-- Availability: v1.5.0
-
-An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
-
-This securityContext will be set on the Varnish Controller Agent's init container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
-
-**server.initAgent.extraVolumeMounts**
-
-- Type: array or template string
-
-Declares the extra volumes to mount with Varnish Controller Agent init container. Can be set as either a YAML list or a template string.
-
-For example:
-
-```yaml
-server:
-  initAgent:
-    extraVolumeMounts: |
-      - name: {{ .Release.Name }}-extra
-        mountPath: /etc/varnish/extra
-```
-
-**server.initAgent.resources**
-
-- Type: object or template string
-
-An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Controller Agent init container.
-
-For example:
-
-```yaml
-server:
-  initAgent:
-    resources:
-      limits:
-        cpu: "100m"
-        memory: "128Mi"
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
 ```
 
 **server.agent**
@@ -2294,7 +1764,7 @@ Sets the image and tag to use to deploy Varnish Controller Agent sidecar. The im
 
 - Default: `quay.io/varnish-software/varnish-controller-agent`
 
-Sets the repository for Varnish Controller Agent image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+Sets the repository for Varnish Controller Agent image. The Varnish Controller image used here must be the same version as the Varnish Controller.
 
 **server.agent.image.pullPolicy**
 
@@ -2306,7 +1776,7 @@ Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Controller ima
 
 - Default: `7.5.1-6.0.16r13`
 
-Sets the tag for the Varnish Controller image. The Varnish Controller image used here must be the same version as the Varnish Controller. Since this is a different image from Varnish Enterprise, using "-" is unsupported.
+Sets the tag for the Varnish Controller image. The Varnish Controller image used here must be the same version as the Varnish Controller.
 
 **server.agent.securityContext**
 
@@ -2314,21 +1784,7 @@ Sets the tag for the Varnish Controller image. The Varnish Controller image used
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
 
-This securityContext will be set on the Varnish Controller container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
-
-**server.agent.logLevel**
-
-- Type: string
-- Default: `debug`
-
-Sets the log level for the Varnish Controller Agent. The value can be one of `debug`, `info`, `warning`, `error`, or `quiet`.
-
-**server.agent.privateToken**
-
-- Type: string or number
-- Availability: v1.5.0
-
-Sets a Varnish Controller private token.
+This securityContext will be set on the Varnish Controller container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 **server.agent.extraEnvs**
 
@@ -2336,29 +1792,29 @@ Sets a Varnish Controller private token.
 
 Sets the extra environment variables for Varnish Controller Agent. Can be set as either an object, an array of objects, or a template string.
 
+The agent is configured through environment variables, listed in the [Varnish Controller Agent documentation](https://docs.varnish-software.com/varnish-controller/installation/agents/). Use this key for the ones the chart doesn't set, such as `VARNISH_CONTROLLER_LOG` (log level), `VARNISH_CONTROLLER_TAGS` (comma-separated tags), `VARNISH_CONTROLLER_LATITUDE`, `VARNISH_CONTROLLER_LONGITUDE` and `VARNISH_CONTROLLER_PRIVATE_TOKEN`.
+
 For example, as an object:
 
 ```yaml
 server:
   agent:
     extraEnvs:
-      MY_ENV_VAR: value
-      MY_OTHER_ENV_VAR: other_value
+      VARNISH_CONTROLLER_LOG: info
+      VARNISH_CONTROLLER_TAGS: "tokyodc,highmem"
 ```
 
-As an array of objects:
+As an array of objects, reading the private token from a Secret:
 
 ```yaml
 server:
   agent:
     extraEnvs:
-      - name: MY_ENV_VAR
-        value: value
-      - name: MY_OTHER_ENV_VAR
+      - name: VARNISH_CONTROLLER_PRIVATE_TOKEN
         valueFrom:
-          configMapKeyRef:
-            name: my-config-map
-            key: my-key
+          secretKeyRef:
+            name: varnish-controller-agent
+            key: private-token
 ```
 
 As a template string:
@@ -2376,52 +1832,6 @@ server:
 - Type: array of strings
 
 Sets the extra configuration args for Varnish Controller Agent.
-
-**server.agent.tags**
-
-- Type: array of strings
-
-Sets the tags for the Varnish Controller Agent.
-
-For example:
-
-```yaml
-server:
-  agent:
-    tags:
-      - tag1
-      - tag2
-```
-
-**server.agent.location**
-
-- Type: object
-
-Sets the location for this Varnish Controller Agent instance for use within Varnish Controller Router.
-
-The location object can contain `latitude` and `longitude` keys to specify the geographic location of the server.
-
-For example:
-
-```yaml
-server:
-  agent:
-    location:
-      longitude: "-121.955238"
-      latitude: "37.354107"
-```
-
-**server.agent.location.latitude**
-
-- Type: string
-
-The latitude of the server, as a string.
-
-**server.agent.location.longitude**
-
-- Type: string
-
-The longitude of the server, as a string.
 
 **server.agent.resources**
 
@@ -2459,32 +1869,24 @@ server:
         mountPath: /etc/varnish/extra
 ```
 
-**server.agent.useReleaseName**
-
-- Type: boolean
-- Default: `false`
-- Availability: v1.4.0
-
-When `server.replicas` is set to 1, use Helm Chart release name as Varnish Enterprise server name.
-
 **server.agent.persistence**
 
 - Type: object
 
-Configures persistence for Varnish Controller Agent state using PersistentVolumes. This configuration is only available when `server.kind` is set to StatefulSet. See the [Integration with Varnish Controller Agent](https://docs.varnish-software.com/varnish-helm/guides/setting-up-varnish-controller-agent/) documentation for more information.
+Configures persistence for Varnish Controller Agent state, which is stored in `/var/lib/varnish-controller`. Without it, the state is kept in an emptyDir volume and lost when the Pod is deleted. See the [Integration with Varnish Controller Agent](https://docs.varnish-software.com/varnish-helm/guides/setting-up-varnish-controller-agent/) documentation for more information.
 
 **server.agent.persistence.enabled**
 
 - Type: boolean
 - Default: `false`
 
-Enables Varnish Controller Agent state persistency using PersistentVolumes.
+Stores the Varnish Controller Agent state in a PersistentVolumeClaim created by the StatefulSet. Only available when `server.kind` is `StatefulSet`; ignored when `server.agent.enabled` is false.
 
 **server.agent.persistence.enableWithVolumeName**
 
 - Type: string
 
-Enables Varnish Controller Agent state persistency using a custom volume mounts. This configuration overrides `server.agent.persistence.enabled`.
+Mounts the volume with this name on `/var/lib/varnish-controller` to store the Varnish Controller Agent state. Works with every `server.kind`. The volume must be declared with `server.extraVolumes` or, for a StatefulSet, `server.extraVolumeClaimTemplates`. This configuration overrides `server.agent.persistence.enabled`.
 
 **server.agent.persistence.labels**
 
@@ -2568,13 +1970,13 @@ Sets the tag for the Varnish Controller VCLI image.
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
 
-This securityContext will be set on the Varnish Controller VCLI container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+This securityContext will be set on the Varnish Controller VCLI container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 **server.agent.autoRemove.vcli.externalAddress**
 
 - Type: string
 
-Configures Varnish Controller Agent to use external Varnish Controller endpoint. Ignored if `server.agent.autoRemove.vcli.internal.enabled` is set to `true`.
+The URL of the Varnish Controller API (APIGW) used by the VCLI container, for example `https://varnish-controller.example.com`. Required when `server.agent.autoRemove.vcli.internal.enabled` is false; ignored otherwise.
 
 **server.agent.autoRemove.vcli.username**
 
@@ -2587,13 +1989,13 @@ Configures the username to connect to Varnish Controller API.
 
 - Type: string or number
 
-Configures NATS password as a string.
+The password of `server.agent.autoRemove.vcli.username` for the Varnish Controller API. When empty, `server.agent.autoRemove.vcli.passwordFrom` is used.
 
 **server.agent.autoRemove.vcli.passwordFrom**
 
 - Type: object
 
-Configures NATS password from a Kubernetes secret. By default, it uses an auto-generated password from a "varnish-controller-credentials" secret.
+Reads the Varnish Controller API password from a Kubernetes secret. Used when `server.agent.autoRemove.vcli.password` is empty. By default, it reads the admin password generated by the Varnish Controller Helm Chart in the "varnish-controller-credentials" secret.
 
 **server.agent.autoRemove.vcli.passwordFrom.name**
 
@@ -2627,19 +2029,7 @@ Configures internal settings for Varnish Controller CLI container.
 - Type: boolean
 - Default: `true`
 
-Configures Varnish Controller CLI container to use an internal Varnish Controller endpoint.
-
-**server.agent.autoRemove.vcli.internal.namespace**
-
-- Type: string
-
-Configures the namespace Varnish Controller is deployed to. If left blank, the current namespace is used.
-
-**server.agent.autoRemove.vcli.internal.releaseName**
-
-- Type: string
-
-Configures the release name Varnish Controller is deployed to. Use "varnish-controller" if left blank.
+Configures Varnish Controller CLI container to use the APIGW of the Varnish Controller deployed in the cluster. It is found with `global.natsServer.internal.releaseName`, `global.natsServer.internal.namespace` and `global.natsServer.internal.clusterDomain`, like the internal NATS server.
 
 **server.agent.autoRemove.vcli.internal.port**
 
@@ -2654,13 +2044,6 @@ Configures the port of the Varnish Controller APIGW.
 - Default: `false`
 
 Configures Varnish Controller CLI container to use HTTPS instead of HTTP to communicate with the in-cluster Varnish Controller instance.
-
-**server.agent.autoRemove.vcli.internal.clusterDomain**
-
-- Type: string
-- Default: `cluster.local`
-
-Configures the NATS internal cluster domain name. Only change if NATS is deployed on a separate cluster.
 
 **server.agent.autoRemove.vcli.resources**
 
@@ -2861,6 +2244,5 @@ Sets the [fallback](https://docs.varnish-software.com/varnish-enterprise/feature
 [k8s-service-clusterip]: https://kubernetes.io/docs/concepts/services-networking/service/#type-clusterip
 [k8s-statefulset-updatestrategy]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 [k8s-volume-claim-templates]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#volume-claim-templates
-[varnish-cmdfile]: https://varnish-cache.org/docs/trunk/reference/varnishd.html#cli-command-file
 [varnishd]: https://varnish-cache.org/docs/6.0/reference/varnishd.html
 [varnishncsa]: https://varnish-cache.org/docs/6.0/reference/varnishncsa.html

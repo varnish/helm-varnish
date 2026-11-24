@@ -32,37 +32,34 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Sets up the common server extra annotations
+Renders `<name>: <map>` for workload and Pod metadata: the defaults merged with
+global.<key> (an object or a template string), global winning. Renders nothing
+when the result is empty.
+Usage: include "varnish-common.globalMetadata" (dict "context" $ "name" "labels" "key" "podLabels" "defaults" $map)
 */}}
-{{- define "varnish-common.serverAnnotations" -}}
-{{- $section := default "server" .section }}
-{{- include "varnish-common.toYamlField"
-  (merge
-    (dict
-      "section" $section
-      "fieldName" "annotations"
-      "extraFieldValues" .extraAnnotations)
-    .) }}
+{{- define "varnish-common.globalMetadata" }}
+{{- $value := get .context.Values.global .key }}
+{{- if kindIs "string" $value }}
+{{- $value = fromYaml (tpl $value .context) }}
+{{- end }}
+{{- $value = merge (deepCopy (default dict $value)) (default dict .defaults) }}
+{{- if $value }}
+{{- dict .name $value | toYaml }}
+{{- end }}
 {{- end }}
 
 {{/*
-Sets up the common server extra labels
+Sets up the workload annotations
+*/}}
+{{- define "varnish-common.serverAnnotations" -}}
+{{- include "varnish-common.globalMetadata" (dict "context" . "name" "annotations" "key" "annotations") }}
+{{- end }}
+
+{{/*
+Sets up the workload labels
 */}}
 {{- define "varnish-common.serverLabels" -}}
-{{- $section := default "server" .section }}
-{{- $nameSuffix := .nameSuffix }}
-{{- if not (eq $nameSuffix "") }}
-{{- $nameSuffix = .section }}
-{{- end }}
-{{- $defaultLabel := (fromYaml (include "varnish-common.labels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
-{{- $extraLabels := default dict .extraLabels }}
-{{- include "varnish-common.toYamlField"
-  (merge
-    (dict
-      "section" $section
-      "fieldName" "labels"
-      "extraFieldValues" (merge $extraLabels $defaultLabel))
-    .) }}
+{{- include "varnish-common.globalMetadata" (dict "context" . "name" "labels" "key" "labels" "defaults" (include "varnish-common.labels" . | fromYaml)) }}
 {{- end }}
 
 {{/*
@@ -237,21 +234,7 @@ securityContext:
 Sets up Pod labels
 */}}
 {{- define "varnish-common.podLabels" }}
-{{- $section := default "server" .section }}
-{{- $nameSuffix := .nameSuffix }}
-{{- if not (eq $nameSuffix "") }}
-{{- $nameSuffix = .section }}
-{{- end }}
-{{- $defaultLabel := (fromYaml (include "varnish-common.selectorLabels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
-{{- $extraLabels := default dict .extraLabels }}
-{{- include "varnish-common.toYamlField"
-  (merge
-    (dict
-      "section" $section
-      "fieldName" "labels"
-      "fieldKey" "podLabels"
-      "extraFieldValues" (merge $extraLabels $defaultLabel))
-    .) }}
+{{- include "varnish-common.globalMetadata" (dict "context" . "name" "labels" "key" "podLabels" "defaults" (include "varnish-common.selectorLabels" . | fromYaml)) }}
 {{- end }}
 
 {{/*

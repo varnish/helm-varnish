@@ -45,6 +45,22 @@ load _helpers
     [ "${actual}" == "!!int" ]
 }
 
+@test "HorizontalPodAutoscaler: minReplicas defaults to replicas" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.autoscaling.enabled=true' \
+        --set 'server.replicas=3' \
+        --namespace default \
+        --show-only templates/hpa.yaml \
+        . || render_failed) | tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.minReplicas' |
+        tee -a /dev/stderr)
+    [ "${actual}" == "3" ]
+}
+
 @test "HorizontalPodAutoscaler: can be enabled with minReplicas and maxReplicas" {
     cd "$(chart_dir)"
 

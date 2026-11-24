@@ -1,6 +1,5 @@
 {{- include "varnish-common.vclBundleConflictCheck" . }}
 {{- $vclConfig := include "varnish-common.vclConfig" . }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- if not (eq $vclConfig "") }}
 apiVersion: v1
 kind: ConfigMap
@@ -9,23 +8,8 @@ metadata:
   labels:
     {{- include "varnish-common.labels" . | nindent 4 }}
 data:
-  {{ $defaultVcl }}: |
+  default.vcl: |
     {{- $vclConfig | nindent 4 }}
-{{- end }}
-{{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- if not (empty $vclConfigs) }}
-{{- range $k, $v := $vclConfigs }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "varnish-common.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-  labels:
-    {{- include "varnish-common.labels" $ | nindent 4 }}
-data:
-  {{ $k }}: |
-    {{- tpl $v $ | nindent 4 }}
-{{- end }}
 {{- end }}
 
 {{- if (include "varnish-common.clusterEnabled" .) }}
@@ -45,7 +29,7 @@ data:
 
     include "cluster_auto_dns.vcl";
 
-    include {{ .Values.server.vclConfigPath | quote }};
+    include "/etc/varnish/default.vcl";
 {{- end }}
 {{- if not (empty .Values.server.vcls.routes) }}
 ---
@@ -118,6 +102,7 @@ data:
   {{ $name }}.vcl: |
     {{- tpl .vclContent $ | nindent 4 }}
 {{- end }}
+{{- end }}
 {{- range $filename, $content := .Values.server.vcls.includes }}
 {{- if not (regexMatch "^[-._a-zA-Z0-9/]+$" $filename) }}
 {{- fail (printf "server.vcls.includes: filename '%s' contains invalid characters (allowed: [-._/a-zA-Z0-9])" $filename) }}
@@ -132,5 +117,4 @@ metadata:
 data:
   {{ base $filename }}: |
     {{- tpl $content $ | nindent 4 }}
-{{- end }}
 {{- end }}

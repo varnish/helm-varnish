@@ -42,6 +42,20 @@ chart=$(chart_name)
     [[ "${output}" == *"'server.strategy' cannot be enabled"* ]]
 }
 
+@test "DaemonSet/autoscaling: cannot be enabled" {
+    cd "$(chart_dir)"
+
+    run helm template \
+        --set 'server.kind=DaemonSet' \
+        --set 'server.autoscaling.enabled=true' \
+        --namespace default \
+        --show-only templates/daemonset.yaml \
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.autoscaling.enabled' cannot be enabled"* ]]
+}
+
 @test "DaemonSet/updateStrategy: can be disabled" {
     cd "$(chart_dir)"
 
@@ -112,7 +126,6 @@ rollingUpdate:
     run helm template \
         --set "server.kind=DaemonSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/daemonset.yaml \
@@ -122,6 +135,19 @@ rollingUpdate:
     [[ "${output}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
 }
 
+@test "DaemonSet/agent/persistence: ignored when agent disabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    helm template \
+        --set "server.kind=DaemonSet" \
+        --set 'server.agent.enabled=false' \
+        --set 'server.agent.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/daemonset.yaml \
+        . >/dev/null || render_failed
+}
+
 @test "DaemonSet/agent/persistence: can be enabled with volume name" {
     skip_unless_enterprise
     cd "$(chart_dir)"
@@ -129,7 +155,28 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=DaemonSet" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
+        --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
+        --namespace default \
+        --show-only templates/daemonset.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
+            .volumeMounts[]? | select(.name == "my-varnish-controller-volume")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"my-varnish-controller-volume","mountPath":"/var/lib/varnish-controller"}' ]
+}
+
+@test "DaemonSet/agent/persistence: volume name overrides enabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=DaemonSet" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.agent.persistence.enabled=true' \
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/daemonset.yaml \

@@ -9,27 +9,23 @@ global:
     - name: pull-secret
   podLabels:
     tier: edge
-server:
-  replicas: 2
   labels:
     deploy-label: x
   annotations:
     deploy-annotation: y
+server:
+  replicas: 2
   extraListens:
     - name: proxy
       proto: PROXY
       port: 8088
   extraEnvs:
     FOO: bar
-  extraArgs:
-    - -p
-    - thread_pool_stack=96k
-  secret: s3cr3t
+  parameters:
+    threadPoolStack: 96k
   vclConfig: |
     vcl 4.1;
     backend default { .host = "{{ .Release.Name }}-backend"; .port = "8080"; }
-  cmdfileConfig: |
-    vcl.list
   autoscaling:
     enabled: true
     maxReplicas: 5

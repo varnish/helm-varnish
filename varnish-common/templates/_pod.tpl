@@ -2,14 +2,9 @@
 Sets up Pod annotations
 */}}
 {{- define "varnish-common.podAnnotations" }}
-{{- $section := default "server" .section }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
 {{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- $vclConfig := include "varnish-common.vclConfig" . }}
-{{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- $cmdfileConfig := include "varnish-common.cmdfileConfig" . }}
-{{- $secretConfig := include "varnish-common.secretConfig" . }}
 {{- $extraManifests := .Values.extraManifests }}
 {{- $checksum := dict }}
 {{- if not (eq $mse4Config "") }}
@@ -21,18 +16,7 @@ Sets up Pod annotations
 {{- if not (eq $vclConfig "") }}
 {{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl") (sha256sum $vclConfig)) $checksum) }}
 {{- end }}
-{{- if not (empty $vclConfigs) }}
-{{- range $k, $v := $vclConfigs }}
-{{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-vcl-" (regexReplaceAll "\\W+" $k "-")) (sha256sum (tpl $v $))) $checksum) }}
-{{- end }}
-{{- end }}
-{{- if not (eq $cmdfileConfig "") }}
-{{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-cmdfile") (sha256sum $cmdfileConfig)) $checksum) }}
-{{- end }}
-{{- if not (eq $secretConfig "") }}
-{{- $checksum = (merge (dict (print "checksum/" $.Release.Name "-secret") (sha256sum $secretConfig)) $checksum) }}
-{{- end }}
-{{- if not (empty .Values.server.vcls.routes) }}
+{{- if or (not (empty .Values.server.vcls.routes)) (not (empty .Values.server.vcls.includes)) }}
 {{- $bundleData := dict
     "routes" .Values.server.vcls.routes
     "includes" .Values.server.vcls.includes
@@ -54,14 +38,7 @@ Sets up Pod annotations
 {{- end }}
 {{- end }}
 {{- end }}
-{{- include "varnish-common.toYamlField"
-  (merge
-    (dict
-      "section" $section
-      "fieldName" "annotations"
-      "fieldKey" "podAnnotations"
-      "extraFieldValues" $checksum)
-    .) }}
+{{- include "varnish-common.globalMetadata" (dict "context" . "name" "annotations" "key" "podAnnotations" "defaults" $checksum) }}
 {{- end }}
 
 {{/*
@@ -127,15 +104,32 @@ topologySpreadConstraints:
 {{- end }}
 
 {{/*
-Sets up terminationGracePeriodSeconds based on whether there's an explicit
-terminationGracePeriodSeconds, or 60 seconds after delayedHaltSeconds
-(rounded up) if present.
+Sets up terminationGracePeriodSeconds if set explicitly (0 included). Fails when
+a delayed shutdown is configured and the grace period is unset or shorter than
+the delay: the sleep, the mempool wait after draining, or shutdown_delay.
 */}}
 {{- define "varnish-common.terminationGracePeriodSeconds" -}}
-{{- if not (empty .Values.server.terminationGracePeriodSeconds) }}
-terminationGracePeriodSeconds: {{ .Values.server.terminationGracePeriodSeconds }}
-{{- else if not (empty .Values.server.delayedHaltSeconds) }}
-terminationGracePeriodSeconds: {{ add (ceil .Values.server.delayedHaltSeconds | int64) 60 }}
+{{- $grace := .Values.server.terminationGracePeriodSeconds }}
+{{- $ds := .Values.server.delayedShutdown }}
+{{- if ne $ds.method "none" }}
+  {{- $delayKey := "" }}
+  {{- $delay := 0 }}
+  {{- if eq $ds.method "sleep" }}
+    {{- $delayKey = "server.delayedShutdown.sleep.seconds" }}
+    {{- $delay = $ds.sleep.seconds }}
+  {{- else if eq $ds.method "mempool" }}
+    {{- $delayKey = "server.delayedShutdown.mempool.waitSeconds" }}
+    {{- $delay = $ds.mempool.waitSeconds }}
+  {{- else if eq $ds.method "shutdown_delay" }}
+    {{- $delayKey = "server.delayedShutdown.shutdownDelay.seconds" }}
+    {{- $delay = $ds.shutdownDelay.seconds }}
+  {{- end }}
+  {{- if or (not (include "varnish-common.isSet" $grace)) (lt (float64 $grace) (float64 $delay)) }}
+    {{- fail (printf "'server.delayedShutdown.method' %q needs 'server.terminationGracePeriodSeconds' set to at least '%s' (%v), or Kubernetes kills the Pod before the delay ends" $ds.method $delayKey $delay) }}
+  {{- end }}
+{{- end }}
+{{- if include "varnish-common.isSet" $grace }}
+terminationGracePeriodSeconds: {{ $grace }}
 {{- end }}
 {{- end }}
 
@@ -153,8 +147,6 @@ imagePullSecrets:
 Declares the Pod's volume mounts.
 */}}
 {{- define "varnish-common.podVolumes" }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
 volumes:
 - name: {{ .Release.Name }}-varnish-vsm
   emptyDir:
@@ -177,23 +169,6 @@ volumes:
   configMap:
     name: {{ include "varnish-common.fullname" . }}-tls
 {{- end }}
-{{- if and (not (empty .Values.server.secretFrom)) (not (eq .Values.server.secret "")) }}
-{{- fail "Either 'server.secret' or 'server.secretFrom' can be set." }}
-{{- else if and (not (empty .Values.server.secretFrom)) }}
-{{- if or (not (hasKey .Values.server.secretFrom "name")) (eq .Values.server.secretFrom.name "") }}
-{{- fail "'server.secretFrom' must contain a 'name' key." }}
-{{- end }}
-{{- if or (not (hasKey .Values.server.secretFrom "key")) (eq .Values.server.secretFrom.key "") }}
-{{- fail "'server.secretFrom' must contain a 'key' key." }}
-{{- end }}
-- name: {{ .Release.Name }}-config-secret
-  secret:
-    secretName: {{ .Values.server.secretFrom.name | quote }}
-{{- else if not (eq (include "varnish-common.secretConfig" .) "") }}
-- name: {{ .Release.Name }}-config-secret
-  secret:
-    secretName: {{ include "varnish-common.fullname" . }}-secret
-{{- end }}
 {{- if not (empty .Values.server.vcls.routes) }}
 - name: {{ .Release.Name }}-config-vcl-bundle-router
   configMap:
@@ -207,35 +182,22 @@ volumes:
   configMap:
     name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-{{ include "varnish-common.vclBundleK8sName" $name }}
 {{- end }}
-{{- range $filename, $_ := .Values.server.vcls.includes }}
-- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
-  configMap:
-    name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
-{{- end }}
 {{- else }}
 {{- if not (eq (include "varnish-common.vclConfig" .) "") }}
 - name: {{ .Release.Name }}-config-vcl
   configMap:
     name: {{ include "varnish-common.fullname" . }}-vcl
 {{- end }}
-{{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-{{- if not (empty $vclConfigs) }}
-{{- range $k, $v := $vclConfigs }}
-- name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-  configMap:
-    name: {{ include "varnish-common.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-{{- end }}
-{{- end }}
 {{- if (include "varnish-common.clusterEnabled" .) }}
-- name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
+- name: {{ .Release.Name }}-config-vcl-wrapped-default-vcl
   configMap:
-    name: {{ include "varnish-common.fullname" $ }}-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
+    name: {{ include "varnish-common.fullname" . }}-vcl-wrapped-default-vcl
 {{- end }}
-{{- if not (eq (include "varnish-common.cmdfileConfig" .) "") }}
-- name: {{ .Release.Name }}-config-cmdfile
+{{- end }}
+{{- range $filename, $_ := .Values.server.vcls.includes }}
+- name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
   configMap:
-    name: {{ include "varnish-common.fullname" . }}-cmdfile
-{{- end }}
+    name: {{ include "varnish-common.fullname" $ }}-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
 {{- end }}
 {{- if and (include "varnish-common.agentEnabled" .) (not .Values.server.agent.persistence.enabled) (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
 - name: {{ .Release.Name }}-varnish-controller
@@ -252,21 +214,32 @@ volumes:
 {{- end }}
 
 {{/*
-Declares the probe for Varnish pod
+Declares a probe of the Varnish container. An exec, grpc or tcpSocket handler
+is rendered as given. Otherwise the probe targets server.http.port: with
+httpGet (whose port is replaced), or with an added tcpSocket.
 */}}
 {{- define "varnish-common.varnishPodProbe" }}
-{{- $section := default "server" .section }}
 {{- $probeName := .probeName }}
-{{- $probe := (get (get .Values $section) $probeName) }}
-{{- if and $probe (not (empty $probe)) }}
+{{- $probe := get .Values.server $probeName }}
+{{- if $probe }}
+{{- $ownHandler := false }}
+{{- range list "exec" "grpc" "tcpSocket" }}
+  {{- if hasKey $probe . }}
+    {{- $ownHandler = true }}
+  {{- end }}
+{{- end }}
+{{- if $ownHandler }}
+{{- $probeName }}:
+  {{- toYaml $probe | nindent 2 }}
+{{- else }}
 {{- if not .Values.server.http.enabled }}
 {{- fail (print "HTTP support must be enabled to enable " $probeName ": 'server.http.enabled'") }}
 {{- end }}
 {{- $probeName }}:
-  {{- if or (hasKey $probe "tcpSocket") (and (not (hasKey $probe "tcpSocket")) (not (hasKey $probe "httpGet"))) }}
+  {{- if not (hasKey $probe "httpGet") }}
   tcpSocket:
     port: {{ .Values.server.http.port }}
-  {{- else if hasKey $probe "httpGet" }}
+  {{- else }}
   httpGet:
     port: {{ .Values.server.http.port }}
     {{- if or (empty $probe.httpGet) (not (hasKey $probe.httpGet "path")) }}
@@ -275,7 +248,19 @@ Declares the probe for Varnish pod
     {{- toYaml (omit $probe.httpGet "port") | nindent 4 -}}
     {{ end }}
   {{- end }}
-  {{- toYaml (omit (omit $probe "httpGet") "tcpSocket") | nindent 2 }}
+  {{- toYaml (omit $probe "httpGet") | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Mounts server.vcls.includes under /etc/varnish/vcls/
+*/}}
+{{- define "varnish-common.vclIncludeMounts" }}
+{{- range $filename, $_ := .Values.server.vcls.includes }}
+    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
+      mountPath: /etc/varnish/vcls/{{ clean $filename }}
+      subPath: {{ base $filename }}
 {{- end }}
 {{- end }}
 
@@ -284,80 +269,56 @@ Declares the Varnish container
 */}}
 {{- define "varnish-common.serverContainer" -}}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
-{{- $tlsConfig := include "varnish-common.tlsConfig" . }}
-{{- $cmdfileConfig := include "varnish-common.cmdfileConfig" . }}
-{{- $defaultVcl := osBase .Values.server.vclConfigPath -}}
+{{- $tlsConfig := include "varnish-common.tlsConfig" . -}}
 {{/*
 Composing the $varnishArgs list or arguments
 */}}
-{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" }}
-{{- if include "varnish-common.isSet" .Values.server.admin.port }}
-  {{- $varnishArgs = concat $varnishArgs (list "-T" ( printf "%s:%v" .Values.server.admin.address .Values.server.admin.port )) }}
-{{- end }}
-{{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
+{{- $varnishArgs := list "/usr/sbin/varnishd" "-F" "-T" "127.0.0.1:6082" }}
 {{- if not (empty .Values.server.vcls.routes) }}
   {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli" "-f" "") }}
 {{- else }}
   {{- if (include "varnish-common.agentEnabled" .) }}
-    {{- if not (eq $cmdfileConfig "") }}
-      {{ fail "Cannot enable both cmdfile and agent, use either: 'server.cmdfileConfig' or 'server.agent.enabled'" }}
-    {{- else if .Values.server.initAgent.enabled }}
-      {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
-    {{- else }}
-      {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
-    {{- end }}
-  {{- else if not (eq $cmdfileConfig "") }}
-    {{- $varnishArgs = concat $varnishArgs (list "-I" .Values.server.cmdfileConfigPath) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
   {{- end }}
   {{- if (include "varnish-common.clusterEnabled" .) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( list (dir .Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" )) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" "/etc/varnish/wrapped-default.vcl") }}
   {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-f" ( .Values.server.vclConfigPath )) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-f" "/etc/varnish/default.vcl") }}
   {{- end }}
 {{- end -}}
-{{/*
-    Parameter list
+{{- /*
+    Parameter list, keyed by snake_case name: duplicate spellings are rejected, and ranging
+    over the dict sorts by name, so thread_pool_max comes before
+    thread_pool_min (varnishd checks min <= max at each -p, with its own
+    defaults for the other one)
 */}}
-{{- $threadParams := dict }}
-{{- range $pKey, $pValue := dict
-    "thread_pool_min" .Values.server.minThreads
-    "thread_pool_max" .Values.server.maxThreads
-    "thread_pool_timeout" .Values.server.threadTimeout }}
-  {{- if include "varnish-common.isSet" $pValue }}
-    {{- $_ := set $threadParams $pKey (toString $pValue) }}
+{{- $varnishParams := dict }}
+{{- $paramKeys := dict }}
+{{- range $pKey, $pValue := .Values.server.parameters | default dict }}
+  {{- if not (kindIs "invalid" $pValue) }}
+    {{- $pName := snakecase $pKey }}
+    {{- if hasKey $paramKeys $pName }}
+      {{- fail (printf "'server.parameters.%s' and 'server.parameters.%s' both set '%s', keep only one" (get $paramKeys $pName) $pKey $pName) }}
+    {{- end }}
+    {{- $_ := set $paramKeys $pName $pKey }}
+    {{- $_ := set $varnishParams $pName $pValue }}
   {{- end }}
 {{- end }}
-{{- $varnishParams := merge $threadParams .Values.server.parameters }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
   {{- if not (include "varnish-common.isEnterprise" .) }}
     {{- fail "'server.delayedShutdown.method' 'shutdown_delay' requires Varnish Enterprise, use 'sleep' or 'mempool' instead" }}
   {{- end }}
-  {{- $varnishParams = merge (dict
-    "shutdown_delay" .Values.server.delayedShutdown.shutdownDelay.seconds
-    "shutdown_close" "off") $varnishParams }}
+  {{- $_ := set $varnishParams "shutdown_delay" .Values.server.delayedShutdown.shutdownDelay.seconds }}
+  {{- $_ := set $varnishParams "shutdown_close" "off" }}
 {{- end -}}
 {{- range $pKey, $pValue := $varnishParams }}
   {{- $pTp := kindOf $pValue }}
   {{- if eq $pTp "slice" }}
-    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (join "," $pValue))) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print $pKey "=" (join "," $pValue))) }}
   {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print $pKey "=" (toString $pValue))) }}
   {{- end }}
 {{- end -}}
-{{/*
-    Working directory
-*/}}
-{{- if eq (include "varnish-common.workDir" .) "-" }}
-{{- $varnishArgs = concat $varnishArgs (list "-n" "$(VARNISH_WORKDIR)" )  }}
-{{- else if not (eq (include "varnish-common.workDir" .) "") }}
-{{- $varnishArgs = concat $varnishArgs (list "-n" (include "varnish-common.workDir" .)) }}
-{{- end }}
-{{/*
-    TTL
-*/}}
-{{- if include "varnish-common.isSet" .Values.server.ttl }}
-{{- $varnishArgs = concat $varnishArgs (list "-t" (toString .Values.server.ttl)) }}
-{{- end }}
 {{/*
     Listen address
 */}}
@@ -369,18 +330,13 @@ Composing the $varnishArgs list or arguments
     {{- end }}
 {{- end -}}
 {{/*
-    Secret
+    Secret, written by the secret init container
 */}}
-{{- if or (not (eq .Values.server.secret "")) (not (empty .Values.server.secretFrom)) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/secret" ) }}
-{{- end -}}
+{{- $varnishArgs = concat $varnishArgs (list "-S" "/etc/varnish/shared/secret" ) }}
 {{/*
     MSE4
 */}}
 {{- if include "varnish-common.mse4Enabled" . }}
-  {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
-    {{- $varnishArgs = concat $varnishArgs (list "-p" (print "memory_target=" (toString .Values.server.mse4.memoryTarget))) }}
-  {{- end }}
   {{- if (not (empty $mse4Config)) }}
     {{- $varnishArgs = concat $varnishArgs (list "-s" (print "mse4,/etc/varnish/mse4.conf")) }}
   {{- else }}
@@ -397,21 +353,6 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs (list "-a" ( printf "https=%s:%s,https" (toString .Values.server.tls.address) (toString .Values.server.tls.port) )) }}
   {{- end }}
 {{- end -}}
-{{/*
-    Extra arguments
-*/}}
-{{- if eq (kindOf .Values.server.extraArgs) "string" }}
-  {{- $extra := .Values.server.extraArgs | default "" | trim -}}
-  {{- if $extra }}
-    {{- $varnishArgs = concat $varnishArgs ( regexSplit "\\s+" $extra -1 ) -}}
-  {{- end }}
-{{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
-  {{- range .Values.server.extraArgs }}
-    {{- $varnishArgs = append $varnishArgs (toString .) -}}
-  {{- end }}
-{{- else if .Values.server.extraArgs }}
-  {{- fail (printf "Validation failed: .Values.server.extraArgs should be a string or list, not a %s" (kindOf .Values.server.extraArgs)) }}
-{{- end }}
 {{/*
     Extra Listeners
 */}}
@@ -467,12 +408,14 @@ Composing the $varnishArgs list or arguments
     {{- if not .name }}
     {{- fail "Name must be set in extraListens: 'server.extraListens[].name'" }}
     {{- end }}
+    {{- if .port }}
     - name: extra-{{ .name }}
       containerPort: {{ .port }}
       protocol: TCP
       {{- if and .hostPort (not (empty .hostPort)) }}
       hostPort: {{ .hostPort }}
       {{- end }}
+    {{- end }}
     {{- end }}
   {{- include "varnish-common.varnishPodProbe" (merge (dict "probeName" "startupProbe") .) | nindent 2 }}
   {{- include "varnish-common.varnishPodProbe" (merge (dict "probeName" "livenessProbe") .) | nindent 2 }}
@@ -485,41 +428,12 @@ Composing the $varnishArgs list or arguments
         fieldRef:
           fieldPath: status.podIP
     {{- end }}
-    {{- if include "varnish-common.mse4Enabled" . }}
-    {{- if and .Values.server.mse4.memoryTarget (not (eq .Values.server.mse4.memoryTarget "")) }}
-    - name: MSE_MEMORY_TARGET
-      value: {{ .Values.server.mse4.memoryTarget | quote }}
-    {{- end }}
-    {{- if (not (empty $mse4Config)) }}
-    - name: MSE4_CONFIG
-      value: /etc/varnish/mse4.conf
-    {{- else }}
-    - name: VARNISH_STORAGE_BACKEND
-      value: "mse4"
-    {{- end }}
-    {{- end }}
-
-    {{- if .Values.server.tls.enabled }}
-    {{- if not (eq $tlsConfig "") }}
-    - name: VARNISH_TLS_CFG
-      value: /etc/varnish/tls.conf
-    {{- else }}
-    - name: VARNISH_TLS_CFG
-      value: "true"
-    {{- end }}
-    {{- end }}
-    {{- if and (include "varnish-common.agentEnabled" .) (not .Values.server.initAgent.enabled) }}
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-    - name: VARNISH_CONTROLLER_AGENT_NAME
-      value: "{{ .Release.Name }}"
-    {{- else }}
+    {{- if (include "varnish-common.agentEnabled" .) }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
     {{- end }}
-    {{- end }}
-    {{- include "varnish-common.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
     {{- if (include "varnish-common.clusterEnabled" .) }}
     {{- include "varnish-common.clusterEnv" . | nindent 4 }}
     {{- end }}
@@ -552,15 +466,6 @@ Composing the $varnishArgs list or arguments
       mountPath: /etc/varnish/tls.conf
       subPath: tls.conf
     {{- end }}
-    {{- if and (not (empty .Values.server.secretFrom)) (hasKey .Values.server.secretFrom "name") (hasKey .Values.server.secretFrom "key") }}
-    - name: {{ .Release.Name }}-config-secret
-      mountPath: /etc/varnish/secret
-      subPath: {{ .Values.server.secretFrom.key | quote }}
-    {{- else if not (eq (include "varnish-common.secretConfig" .) "") }}
-    - name: {{ .Release.Name }}-config-secret
-      mountPath: /etc/varnish/secret
-      subPath: secret
-    {{- end }}
     {{- if not (empty .Values.server.vcls.routes) }}
     - name: {{ .Release.Name }}-config-vcl-bundle-router
       mountPath: /etc/varnish/vcls/router.vcl
@@ -574,40 +479,22 @@ Composing the $varnishArgs list or arguments
       mountPath: /etc/varnish/vcls/{{ $name }}.vcl
       subPath: {{ $name }}.vcl
     {{- end }}
-    {{- range $filename, $_ := .Values.server.vcls.includes }}
-    - name: {{ $.Release.Name }}-config-vcl-bundle-include-{{ include "varnish-common.vclBundleK8sName" $filename }}
-      mountPath: /etc/varnish/vcls/{{ clean $filename }}
-      subPath: {{ base $filename }}
-    {{- end }}
     {{- else }}
     {{- if not (eq (include "varnish-common.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
-      mountPath: {{ .Values.server.vclConfigPath | quote }}
-      subPath: {{ $defaultVcl }}
-    {{- end }}
-    {{- $vclConfigs := omit .Values.server.vclConfigs $defaultVcl }}
-    {{- if not (empty $vclConfigs) }}
-    {{- range $k, $v := $vclConfigs }}
-    - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-      mountPath: {{ list (dir $.Values.server.vclConfigPath) $k | join "/" | quote }}
-      subPath: {{ $k | quote }}
-    {{- end }}
+      mountPath: "/etc/varnish/default.vcl"
+      subPath: default.vcl
     {{- end }}
     {{- if (include "varnish-common.clusterEnabled" .) }}
-    {{- $wrappedDefaultVCL := "wrapped-default.vcl" }}
-    - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $wrappedDefaultVCL "-" }}
-      mountPath: {{ list (dir $.Values.server.vclConfigPath) $wrappedDefaultVCL | join "/" | quote }}
-      subPath: {{ $wrappedDefaultVCL | quote }}
-    {{- end }}
-    {{- if not (eq (include "varnish-common.cmdfileConfig" .) "") }}
-    - name: {{ .Release.Name }}-config-cmdfile
-      mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
-      subPath: cmds.cli
+    - name: {{ .Release.Name }}-config-vcl-wrapped-default-vcl
+      mountPath: "/etc/varnish/wrapped-default.vcl"
+      subPath: "wrapped-default.vcl"
     {{- end }}
     {{- end }}
+    {{- include "varnish-common.vclIncludeMounts" . }}
     {{- if and (eq .Values.server.kind "StatefulSet") (and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}
     - name: {{ .Release.Name }}-mse4
-      mountPath: {{ .Values.server.mse4.persistence.mountPath }}
+      mountPath: /var/lib/mse4
     {{- end }}
     {{- if (include "varnish-common.agentEnabled" .) }}
     {{- if not (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
@@ -626,17 +513,11 @@ Composing the $varnishArgs list or arguments
         {{- toYaml .Values.server.extraVolumeMounts | nindent 4 }}
       {{- end }}
     {{- end }}
-  {{- if or .Values.server.delayedHaltSeconds (eq .Values.server.delayedShutdown.method "sleep") }}
-  {{ $haltSeconds := 0 }}
-  {{- if .Values.server.delayedHaltSeconds }}
-  {{ $haltSeconds = .Values.server.delayedHaltSeconds }}
-  {{- else }}
-  {{ $haltSeconds = .Values.server.delayedShutdown.sleep.seconds }}
-  {{- end }}
+  {{- if eq .Values.server.delayedShutdown.method "sleep" }}
   lifecycle:
     preStop:
       exec:
-        command: ["/bin/sleep", {{ $haltSeconds | quote }}]
+        command: ["/bin/sleep", {{ .Values.server.delayedShutdown.sleep.seconds | quote }}]
   {{- else if eq .Values.server.delayedShutdown.method "mempool" }}
   lifecycle:
     preStop:
@@ -646,7 +527,7 @@ Composing the $varnishArgs list or arguments
         - -c
         - |
           set -e
-          while [ "$(varnishstat {{ if not (eq (include "varnish-common.workDir" .) "") }}-n "$VARNISH_WORKDIR" {{ end }}-1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
+          while [ "$(varnishstat -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
             echo >&2 "Waiting for Varnish to drain connections..."
             sleep {{ .Values.server.delayedShutdown.mempool.pollSeconds }}
           done
@@ -660,14 +541,12 @@ Declares the Varnish NCSA container
 {{- define "varnish-common.ncsaContainer" -}}
 {{- if .Values.server.varnishncsa.enabled }}
 - name: {{ .Chart.Name }}-ncsa
-  {{- include "varnish-common.securityContext" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
-  {{- include "varnish-common.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
+  {{- /* varnishncsa has no securityContext of its own: global only */}}
+  {{- include "varnish-common.securityContext" (merge (dict "section" "global") .) | nindent 2 }}
+  {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
   {{- $ncsaArgs := list }}
-  {{- if not (eq (include "varnish-common.workDir" .) "") }}
-    {{- $ncsaArgs = list "-n" "$(VARNISH_WORKDIR)" }}
-  {{- end }}
   {{- if eq (kindOf .Values.server.varnishncsa.extraArgs) "string" }}
     {{- $extra := .Values.server.varnishncsa.extraArgs | trim }}
     {{- if $extra }}
@@ -684,36 +563,8 @@ Declares the Varnish NCSA container
   env:
     - name: VSM_NOPID
       value: "1"
-    {{- include "varnish-common.workDirEnv" (dict "name" "VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
   {{- if .Values.server.varnishncsa.extraEnvs }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.varnishncsa.extraEnvs) .) | trim | nindent 4 }}
-  {{- end }}
-  {{- if and .Values.server.varnishncsa.startupProbe (not (empty .Values.server.varnishncsa.startupProbe)) }}
-  startupProbe:
-    exec:
-      command:
-        - /bin/sh
-        - -c
-        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish-common.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
-    {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
-  {{- end }}
-  {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
-  readinessProbe:
-    exec:
-      command:
-        - /bin/sh
-        - -c
-        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish-common.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
-    {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
-  {{- end }}
-  {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
-  livenessProbe:
-    exec:
-      command:
-        - /bin/sh
-        - -c
-        - "/usr/bin/varnishncsa -d -t3{{ if not (eq (include "varnish-common.workDir" .) "") }} -n \"$VARNISH_WORKDIR\"{{ end }}"
-    {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
     - name: {{ .Release.Name }}-varnish-vsm
@@ -739,12 +590,11 @@ Declares the Varnish Otel container
 {{- if .Values.server.otel.enabled }}
 - name: {{ .Chart.Name }}-otel
   {{- include "varnish-common.securityContext" (merge (dict "section" "server.otel") .) | nindent 2 }}
-  {{- include "varnish-common.image" (merge (dict "base" .Values.server.image "image" .Values.server.otel.image) .) | nindent 2 }}
+  {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server.otel") .) | nindent 2 }}
   command: ["/usr/bin/varnish-otel"]
-  env:
-    {{- include "varnish-common.workDirEnv" (dict "name" "OTEL_VARNISH_WORKDIR" "Values" .Values) | nindent 4 }}
   {{- if .Values.server.otel.env }}
+  env:
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.otel.env) .) | nindent 4 }}
   {{- end }}
   volumeMounts:
@@ -760,9 +610,6 @@ Declares the Varnish Controller Agent container
 */}}
 {{- define "varnish-common.agentContainer" -}}
 {{- if (include "varnish-common.agentEnabled" .) }}
-{{- if eq (include "varnish-common.workDir" .) "" }}
-  {{- fail "'server.workDir' cannot be empty when 'server.agent.enabled' is set" }}
-{{- end }}
 - name: {{ .Chart.Name }}-agent
   {{- include "varnish-common.securityContext" (merge (dict "section" "server.agent") .) | nindent 2 }}
   {{- include "varnish-common.image" (merge (dict "image" .Values.server.agent.image) .) | nindent 2 }}
@@ -772,57 +619,28 @@ Declares the Varnish Controller Agent container
         fieldRef:
           fieldPath: status.podIP
     - name: VARNISH_CONTROLLER_VARNISH_ADMIN_HOST
-      value: {{ .Values.server.admin.address | quote }}
+      value: "127.0.0.1"
     - name: VARNISH_CONTROLLER_VARNISH_ADMIN_PORT
-      value: {{ .Values.server.admin.port | quote }}
-    - name: VARNISH_CONTROLLER_VARNISH_NAME
-      value: {{ (include "varnish-common.workDir" .) | quote }}
+      value: "6082"
+    - name: VARNISH_CONTROLLER_VARNISH_SECRET
+      value: /etc/varnish/shared/secret
     {{- if .Values.server.http.enabled }}
     - name: VARNISH_CONTROLLER_VARNISH_PORT
       value: {{ .Values.server.http.port | quote }}
     {{- else }}
     {{- fail "HTTP support must be enabled to enable Varnish Controller Agent: 'server.http.enabled'" }}
     {{- end }}
-    {{- if not (eq .Values.server.secret "") }}
-    - name: VARNISH_CONTROLLER_VARNISH_SECRET
-      value: /etc/varnish/secret
-    {{- end }}
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-    - name: VARNISH_CONTROLLER_AGENT_NAME
-      value: "{{ .Release.Name }}"
-    {{- else }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
-    {{- end }}
-    {{- if and .Values.server.agent.logLevel (not (eq .Values.server.agent.logLevel "")) }}
-    - name: VARNISH_CONTROLLER_LOG
-      value: {{ .Values.server.agent.logLevel | quote }}
-    {{- end }}
     {{- include "varnish-common.natsServer" . | indent 4 }}
-    {{- if and .Values.server.agent.tags (not (empty .Values.server.agent.tags)) }}
-    - name: VARNISH_CONTROLLER_TAGS
-      value: {{ .Values.server.agent.tags | join "," | quote }}
-    {{- end }}
-    {{- if and .Values.server.agent.location .Values.server.agent.location.longitude (not (eq .Values.server.agent.location.longitude "")) }}
-    - name: VARNISH_CONTROLLER_LONGITUDE
-      value: {{ .Values.server.agent.location.longitude | quote }}
-    {{- end }}
-    {{- if and .Values.server.agent.location .Values.server.agent.location.latitude (not (eq .Values.server.agent.location.latitude "")) }}
-    - name: VARNISH_CONTROLLER_LATITUDE
-      value: {{ .Values.server.agent.location.latitude | quote }}
-    {{- end }}
     {{- if not (empty .Values.server.baseUrl) }}
     - name: VARNISH_CONTROLLER_BASE_URL
       value: "{{ .Values.server.baseUrl }}"
     {{- else }}
     - name: VARNISH_CONTROLLER_BASE_URL
       value: "http://$(VARNISH_CONTROLLER_VARNISH_HOST){{ if ne (toString .Values.server.http.port) "80" }}:{{ .Values.server.http.port }}{{ end }}"
-    {{- end }}
-    {{- if not (empty .Values.server.agent.privateToken) }}
-    - name: VARNISH_CONTROLLER_PRIVATE_TOKEN
-      value: {{ .Values.server.agent.privateToken | quote }}
     {{- end }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.agent.extraEnvs) .) | nindent 4 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server.agent") .) | nindent 2 }}
@@ -839,35 +657,12 @@ Declares the Varnish Controller Agent container
       mountPath: /var/lib/varnish
     - name: {{ .Release.Name }}-config-shared
       mountPath: /etc/varnish/shared
-    {{- if and (not (empty .Values.server.secretFrom)) (hasKey .Values.server.secretFrom "name") (hasKey .Values.server.secretFrom "key") }}
-    - name: {{ .Release.Name }}-config-secret
-      mountPath: /etc/varnish/secret
-      subPath: {{ .Values.server.secretFrom.key | quote }}
-    {{- else if not (eq (include "varnish-common.secretConfig" .) "") }}
-    - name: {{ .Release.Name }}-config-secret
-      mountPath: /etc/varnish/secret
-      subPath: secret
-    {{- else }}
-    {{ fail "Secret must be set to enable Varnish Controller agent: 'server.secret' or 'secret.secretFrom'" }}
-    {{- end }}
     {{- if not (eq (include "varnish-common.vclConfig" .) "") }}
     - name: {{ .Release.Name }}-config-vcl
-      mountPath: {{ .Values.server.vclConfigPath | quote }}
-      subPath: {{ osBase .Values.server.vclConfigPath }}
+      mountPath: "/etc/varnish/default.vcl"
+      subPath: default.vcl
     {{- end }}
-    {{- $vclConfigs := omit .Values.server.vclConfigs (osBase .Values.server.vclConfigPath) }}
-    {{- if not (empty $vclConfigs) }}
-    {{- range $k, $v := $vclConfigs }}
-    - name: {{ $.Release.Name }}-config-vcl-{{ regexReplaceAll "\\W+" $k "-" }}
-      mountPath: {{ list (dir $.Values.server.vclConfigPath) $k | join "/" | quote }}
-      subPath: {{ $k | quote }}
-    {{- end }}
-    {{- end }}
-    {{- if not (eq (include "varnish-common.cmdfileConfig" .) "") }}
-    - name: {{ .Release.Name }}-config-cmdfile
-      mountPath: {{ .Values.server.cmdfileConfigPath | quote }}
-      subPath: cmds.cli
-    {{- end }}
+    {{- include "varnish-common.vclIncludeMounts" . }}
     {{- if not (eq .Values.server.agent.persistence.enableWithVolumeName "") }}
     - name: {{ .Values.server.agent.persistence.enableWithVolumeName }}
       mountPath: /var/lib/varnish-controller
@@ -903,17 +698,9 @@ Declares the Varnish Controller VCLI container for agent auto-removal
       sleep inf
   env:
     {{- if .Values.server.agent.autoRemove.vcli.internal.enabled }}
-    {{- $vcNamespace := .Release.Namespace }}
-    {{- $vcReleaseName := "varnish-controller" }}
-    {{- $vcClusterDomain := .Values.server.agent.autoRemove.vcli.internal.clusterDomain }}
-    {{- if not (empty .Values.server.agent.autoRemove.vcli.internal.namespace) }}
-    {{- $vcNamespace = .Values.server.agent.autoRemove.vcli.internal.namespace }}
-    {{- end }}
-    {{- if not (empty .Values.server.agent.autoRemove.vcli.internal.releaseName) }}
-    {{- $vcReleaseName = .Values.server.agent.autoRemove.vcli.internal.releaseName }}
-    {{- end }}
+    {{- $vcliInternal := .Values.server.agent.autoRemove.vcli.internal }}
     - name: VARNISH_CONTROLLER_CLI_ENDPOINT
-      value: "http{{ if .Values.server.agent.autoRemove.vcli.internal.https }}s{{ end }}://{{ $vcReleaseName }}-apigw.{{ $vcNamespace }}.svc.{{ $vcClusterDomain }}{{ if or (and .Values.server.agent.autoRemove.vcli.internal.https (not (eq (toString .Values.server.agent.autoRemove.vcli.internal.port) "443"))) (and (not .Values.server.agent.autoRemove.vcli.internal.https) (not (eq (toString .Values.server.agent.autoRemove.vcli.internal.port) "80"))) }}:{{ .Values.server.agent.autoRemove.vcli.internal.port }}{{ end }}"
+      value: "http{{ if $vcliInternal.https }}s{{ end }}://{{ include "varnish-common.controllerHost" (merge (dict "service" "apigw") .) }}{{ if or (and $vcliInternal.https (not (eq (toString $vcliInternal.port) "443"))) (and (not $vcliInternal.https) (not (eq (toString $vcliInternal.port) "80"))) }}:{{ $vcliInternal.port }}{{ end }}"
     {{- else if and (not .Values.server.agent.autoRemove.vcli.internal.enabled) (not (empty .Values.server.agent.autoRemove.vcli.externalAddress)) }}
     - name: VARNISH_CONTROLLER_CLI_ENDPOINT
       value: {{ .Values.server.agent.autoRemove.vcli.externalAddress | quote }}
@@ -938,17 +725,10 @@ Declares the Varnish Controller VCLI container for agent auto-removal
     {{- else }}
     {{- fail "Either 'server.agent.autoRemove.vcli.password' or 'server.agent.autoRemove.vcli.passwordFrom' must be set" }}
     {{- end }}
-    {{- if (include "varnish-common.agentEnabled" .) }}
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-    - name: VARNISH_CONTROLLER_AGENT_NAME
-      value: "{{ .Release.Name }}"
-    {{- else }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
-    {{- end }}
-    {{- end }}
     {{- if .Values.server.agent.autoRemove.vcli.extraEnvs }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.agent.autoRemove.vcli.extraEnvs) .) | nindent 4 }}
     {{- end }}
@@ -1004,11 +784,23 @@ Declares the Varnish init containers
 */}}
 {{- define "varnish-common.initContainers" -}}
 {{- $mse4PersistenceEnabled := and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled }}
-{{- if or (and (include "varnish-common.agentEnabled" .) .Values.server.initAgent.enabled) .Values.server.extraInitContainers $mse4PersistenceEnabled }}
 initContainers:
+  - name: {{ .Chart.Name }}-secret
+    {{- include "varnish-common.securityContext" (merge (dict "section" "server") .) | nindent 4 }}
+    {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    {{- include "varnish-common.resources" (merge (dict "section" "server") .) | nindent 4 }}
+    command:
+      - sh
+      - -c
+      - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+    volumeMounts:
+      - name: {{ .Release.Name }}-config-shared
+        mountPath: /etc/varnish/shared
 {{- if $mse4PersistenceEnabled }}
   - name: mse4-config
+    {{- include "varnish-common.securityContext" (merge (dict "section" "server") .) | nindent 4 }}
     {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    {{- include "varnish-common.resources" (merge (dict "section" "server") .) | nindent 4 }}
     command:
      - mkfs.mse4
      - -c
@@ -1016,48 +808,10 @@ initContainers:
      - configure
     volumeMounts:
      - name: {{ .Release.Name }}-mse4
-       mountPath: {{ .Values.server.mse4.persistence.mountPath }}
+       mountPath: /var/lib/mse4
      - name: {{ .Release.Name }}-config-mse4
        mountPath: /etc/varnish/mse4.conf
        subPath: mse4.conf
-{{- end }}
-{{- if and (include "varnish-common.agentEnabled" .) .Values.server.initAgent.enabled }}
-  - name: init-agent
-    {{- $initTag := .Values.global.initContainer.tag }}
-    {{- /* not "default": it would also replace a numeric tag 0 */}}
-    {{- if not (include "varnish-common.isSet" $initTag) }}{{ $initTag = "1.36" }}{{ end }}
-    image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ include "varnish-common.imageTag" $initTag }}
-    command:
-      - /bin/sh
-      - -c
-      - |
-        set -e
-        ln -sf \
-            /var/lib/varnish-controller/varnish-controller-agent/"${VARNISH_CONTROLLER_AGENT_NAME}" \
-            /etc/varnish/shared/agent
-    {{- include "varnish-common.securityContext" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
-    {{- include "varnish-common.resources" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
-    env:
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-      - name: VARNISH_CONTROLLER_AGENT_NAME
-        value: "{{ .Release.Name }}"
-    {{- else }}
-      - name: VARNISH_CONTROLLER_AGENT_NAME
-        valueFrom:
-          fieldRef:
-            fieldPath: metadata.name
-    {{- end }}
-    volumeMounts:
-      - name: {{ .Release.Name }}-config-shared
-        mountPath: /etc/varnish/shared
-      {{- if .Values.server.initAgent.extraVolumeMounts }}
-      {{- $tp := kindOf .Values.server.initAgent.extraVolumeMounts }}
-      {{- if eq $tp "string" }}
-      {{- tpl .Values.server.initAgent.extraVolumeMounts . | trim | nindent 6 }}
-      {{- else }}
-      {{- toYaml .Values.server.initAgent.extraVolumeMounts | nindent 6 }}
-      {{- end }}
-      {{- end }}
 {{- end }}
 {{- if .Values.server.extraInitContainers }}
   {{- $tp := kindOf .Values.server.extraInitContainers }}
@@ -1066,6 +820,5 @@ initContainers:
   {{- else }}
     {{- toYaml .Values.server.extraInitContainers | nindent 2 }}
   {{- end }}
-{{- end }}
 {{- end }}
 {{- end }}

@@ -100,18 +100,12 @@ EOT
   # YAML turns 8.0 into 8 and 1.10 into 1.1 before the chart sees them, and
   # --set turns 7 into an integer
   schema_rejects "at '/server/image/tag'" --set server.image.tag=7
-  schema_rejects "at '/server/varnishncsa/image/tag'" --set server.varnishncsa.image.tag=7
 
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   printf 'server:\n  image:\n    tag: 8.0\n' > "${values}"
   schema_rejects "at '/server/image/tag'" -f "${values}"
   printf 'server:\n  image:\n    tag: 7.6\n' > "${values}"
   schema_rejects "at '/server/image/tag'" -f "${values}"
-}
-
-@test "Schema: rejects a numeric global.initContainer.tag" {
-  skip_unless_enterprise
-  schema_rejects "at '/global/initContainer/tag'" --set global.initContainer.tag=1
 }
 
 @test "Schema: accepts string image tags that look like numbers" {
@@ -156,7 +150,8 @@ EOT
 server:
   http:
     hostPort: null
-  delayedHaltSeconds: null
+  tls:
+    hostPort: null
 EOT
   schema_accepts -f "${values}"
 }
@@ -183,24 +178,8 @@ EOT
 
 @test "Schema: accepts fractional seconds" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
-  printf 'server:\n  ttl: 0.5\n  threadTimeout: 1.5\n  delayedHaltSeconds: 2.5\n' > "${values}"
-  schema_accepts -f "${values}"
   printf 'server:\n  terminationGracePeriodSeconds: 30\n  delayedShutdown:\n    method: sleep\n    sleep:\n      seconds: 2.5\n' > "${values}"
   schema_accepts -f "${values}"
-}
-
-@test "Schema: accepts a fractional delayedHaltSeconds string, rounding the grace period up" {
-  # --set keeps 120.5 as a string
-  schema_accepts --set server.delayedHaltSeconds=120.5
-  [[ "$output" == *'command: ["/bin/sleep", "120.5"]'* ]]
-  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
-  schema_accepts --set-json server.delayedHaltSeconds=120.5
-  [[ "$output" == *"terminationGracePeriodSeconds: 181"* ]]
-}
-
-@test "Schema: rejects a nonnumeric delayedHaltSeconds string" {
-  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=soon
-  schema_rejects "at '/server/delayedHaltSeconds'" --set server.delayedHaltSeconds=1.
 }
 
 @test "Schema: accepts a null nodePort on an extra service" {
@@ -210,44 +189,76 @@ EOT
   [[ "$output" != *"nodePort"* ]]
 }
 
-@test "Schema: still rejects fractional thread counts" {
-  local values="${BATS_TEST_TMPDIR}/values.yaml"
-  printf 'server:\n  minThreads: 1.5\n' > "${values}"
-  schema_rejects "at '/server/minThreads'" -f "${values}"
-}
-
-@test "Schema: rejects non-integer thread count strings" {
-  # passed to varnishd as is, which refuses to start on "1.5" or "two"
-  schema_rejects "at '/server/minThreads'" --set-string server.minThreads=1.5
-  schema_rejects "at '/server/minThreads'" --set-string server.minThreads=two
-  schema_rejects "at '/server/maxThreads'" --set-string server.maxThreads=1.5
-  schema_rejects "at '/server/maxThreads'" --set-string server.maxThreads=two
-}
-
-@test "Schema: accepts integer and empty thread count strings" {
-  schema_accepts --set-string server.minThreads=10 --set-string server.maxThreads=100
-  [[ "$output" == *'thread_pool_min=10'* ]]
-  [[ "$output" == *'thread_pool_max=100'* ]]
-
-  schema_accepts --set-string server.minThreads= --set-string server.maxThreads=
-  [[ "$output" != *'thread_pool_min'* ]]
-  [[ "$output" != *'thread_pool_max'* ]]
-}
-
 @test "Schema: rejects an unknown delayedShutdown.method" {
   schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=wait
 }
 
-@test "Schema: rejects a string server.vclConfigs" {
-  schema_rejects "at '/server/vclConfigs'" --set server.vclConfigs=foo
+@test "Schema: rejects the removed server.vclConfigPath" {
+  schema_rejects "additional properties 'vclConfigPath' not allowed" --set server.vclConfigPath=x
 }
 
-@test "Schema: rejects a numeric server.secret" {
-  schema_rejects "at '/server/secret'" --set server.secret=1234
+@test "Schema: rejects the removed server.vclConfigs" {
+  schema_rejects "additional properties 'vclConfigs' not allowed" --set server.vclConfigs.x=y
 }
 
-@test "Schema: rejects unknown secretFrom keys" {
-  schema_rejects "additional properties 'nme' not allowed" --set server.secretFrom.nme=a
+@test "Schema: rejects the removed server.secret" {
+  schema_rejects "additional properties 'secret' not allowed" --set server.secret=x
+}
+
+@test "Schema: rejects the removed server.secretFrom" {
+  schema_rejects "additional properties 'secretFrom' not allowed" --set server.secretFrom.name=x
+}
+
+@test "Schema: rejects the removed server.secretFile" {
+  schema_rejects "additional properties 'secretFile' not allowed" --set server.secretFile=x
+}
+
+@test "Schema: rejects the removed server.admin" {
+  schema_rejects "additional properties 'admin' not allowed" --set server.admin.port=1
+}
+
+@test "Schema: rejects the removed server.workDir" {
+  schema_rejects "additional properties 'workDir' not allowed" --set server.workDir=x
+}
+
+@test "Schema: rejects the removed server.vclConfigFile" {
+  schema_rejects "additional properties 'vclConfigFile' not allowed" --set server.vclConfigFile=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfig" {
+  schema_rejects "additional properties 'cmdfileConfig' not allowed" --set server.cmdfileConfig=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfigFile" {
+  schema_rejects "additional properties 'cmdfileConfigFile' not allowed" --set server.cmdfileConfigFile=x
+}
+
+@test "Schema: rejects the removed server.cmdfileConfigPath" {
+  schema_rejects "additional properties 'cmdfileConfigPath' not allowed" --set server.cmdfileConfigPath=x
+}
+
+@test "Schema: rejects the removed server.delayedHaltSeconds" {
+  schema_rejects "additional properties 'delayedHaltSeconds' not allowed" --set server.delayedHaltSeconds=120
+}
+
+@test "Schema: rejects the removed server.service.http.enabled" {
+  schema_rejects "additional properties 'enabled' not allowed" --set server.service.http.enabled=false
+}
+
+@test "Schema: rejects the removed server.service.https.enabled" {
+  schema_rejects "additional properties 'enabled' not allowed" --set server.service.https.enabled=true
+}
+
+@test "Schema: rejects the removed server.tls.configFile" {
+  schema_rejects "additional properties 'configFile' not allowed" --set server.tls.configFile=x
+}
+
+@test "Schema: rejects the removed server.ttl" {
+  schema_rejects "additional properties 'ttl' not allowed" --set server.ttl=120
+}
+
+@test "Schema: rejects the removed server.threadTimeout" {
+  schema_rejects "additional properties 'threadTimeout' not allowed" --set server.threadTimeout=120
 }
 
 @test "Schema: vcls routes need vclContent" {
@@ -264,14 +275,14 @@ EOT
   schema_rejects "additional properties 'route' not allowed" --set server.vcls.route=x
 }
 
-@test "Schema: rejects a list server.labels" {
-  schema_rejects "at '/server/labels'" --set server.labels[0]=a
+@test "Schema: rejects a list global.labels" {
+  schema_rejects "at '/global/labels'" --set global.labels[0]=a
 }
 
 @test "Schema: accepts template-string labels" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   cat > "${values}" <<'EOT'
-server:
+global:
   labels: "foo: {{ .Release.Name }}"
 EOT
   schema_accepts -f "${values}"
@@ -361,19 +372,31 @@ EOT
   schema_rejects "additional properties 'extraArg' not allowed" --set server.varnishncsa.extraArg=x
 }
 
-@test "Schema: varnishncsa image accepts '-'" {
-  schema_accepts --set server.varnishncsa.image.tag=-
+@test "Schema: rejects the removed varnishncsa image, securityContext and probes" {
+  schema_rejects "additional properties 'image' not allowed" --set server.varnishncsa.image.tag=-
+  schema_rejects "additional properties 'securityContext' not allowed" --set server.varnishncsa.securityContext.runAsUser=1000
+  schema_rejects "additional properties 'startupProbe' not allowed" --set server.varnishncsa.startupProbe.periodSeconds=5
+  schema_rejects "additional properties 'readinessProbe' not allowed" --set server.varnishncsa.readinessProbe=false
+  schema_rejects "additional properties 'livenessProbe' not allowed" --set server.varnishncsa.livenessProbe=false
 }
 
 @test "Schema: accepts a list varnishncsa.extraEnvs" {
   schema_accepts --set server.varnishncsa.extraEnvs[0].name=A --set server.varnishncsa.extraEnvs[0].value=b
 }
 
-@test "Schema: varnishncsa probes can be disabled with false" {
-  schema_accepts --set server.varnishncsa.enabled=true --set server.varnishncsa.readinessProbe=false --set server.varnishncsa.livenessProbe=false
-  # only the varnish container probes are left
-  [ "$(grep -cE '^ *readinessProbe:' <<< "$output")" -eq 1 ]
-  [ "$(grep -cE '^ *livenessProbe:' <<< "$output")" -eq 1 ]
+@test "Schema: rejects the removed server.otel.image" {
+  schema_rejects "additional properties 'image' not allowed" --set server.otel.image.tag=-
+}
+
+@test "Schema: rejects the removed server labels and annotations" {
+  local key
+  for key in labels annotations podLabels podAnnotations; do
+    schema_rejects "additional properties '${key}' not allowed" --set "server.${key}.foo=bar"
+  done
+}
+
+@test "Schema: rejects the removed server.initAgent" {
+  schema_rejects "additional properties 'initAgent' not allowed" --set server.initAgent.enabled=false
 }
 
 @test "Schema: rejects unknown otel keys" {
@@ -411,4 +434,10 @@ EOT
       active = 0; print
     }' "$(chart_dir)/values.yaml" > "${values}"
   schema_accepts -f "${values}"
+}
+
+@test "Schema: terminationGracePeriodSeconds accepts null and 0, rejects negative numbers" {
+  schema_accepts --set server.terminationGracePeriodSeconds=null
+  schema_accepts --set server.terminationGracePeriodSeconds=0
+  schema_rejects "at '/server/terminationGracePeriodSeconds'" --set server.terminationGracePeriodSeconds=-1
 }

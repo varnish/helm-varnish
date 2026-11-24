@@ -103,58 +103,25 @@ rollingUpdate:
     [[ "$stderr" == *"'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'"* ]]
 }
 
-@test "Deployment/agent: test initContainer image and tag" {
+@test "Deployment/agent: has no init-agent init container" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    local object=$((helm template \
         --set 'server.kind=Deployment' \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'global.initContainer.image=ubuntu' \
-        --set 'global.initContainer.tag=24.04' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
-    [ "${actual}" == "ubuntu:24.04" ]
-}
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '[.spec.template.spec.initContainers[]?.name]' | tee -a /dev/stderr)
+    [ "${actual}" == '["varnish-enterprise-secret"]' ]
 
-@test "Deployment/agent: initContainer keeps a numeric tag 0 when the schema is skipped" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set 'server.kind=Deployment' \
-        --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
-        --skip-schema-validation \
-        --set 'global.initContainer.tag=0' \
-        --namespace default \
-        --show-only templates/deployment.yaml \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
-
-    [ "${actual}" == "busybox:0" ]
-}
-
-@test "Deployment/agent: initContainer numeric tag renders without scientific notation when the schema is skipped" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set 'server.kind=Deployment' \
-        --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
-        --skip-schema-validation \
-        --set-json 'global.initContainer.tag=20241129' \
-        --namespace default \
-        --show-only templates/deployment.yaml \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
-
-    [ "${actual}" == "busybox:20241129" ]
+    actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.template.spec.containers[0].command | contains(["-I", "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli"])' | tee -a /dev/stderr)
+    [ "${actual}" == "true" ]
 }
 
 @test "Deployment/agent/persistence: cannot be enabled" {
@@ -164,7 +131,6 @@ rollingUpdate:
     run helm template \
         --set "server.kind=Deployment" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
         --set 'server.agent.persistence.enabled=true' \
         --namespace default \
         --show-only templates/deployment.yaml \
@@ -174,6 +140,19 @@ rollingUpdate:
     [[ "${output}" == *"'server.agent.persistence.enabled' cannot be enabled"* ]]
 }
 
+@test "Deployment/agent/persistence: ignored when agent disabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    helm template \
+        --set "server.kind=Deployment" \
+        --set 'server.agent.enabled=false' \
+        --set 'server.agent.persistence.enabled=true' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . >/dev/null || render_failed
+}
+
 @test "Deployment/agent/persistence: can be enabled with volume name" {
     skip_unless_enterprise
     cd "$(chart_dir)"
@@ -181,7 +160,28 @@ rollingUpdate:
     local object=$((helm template \
         --set "server.kind=Deployment" \
         --set 'server.agent.enabled=true' \
-        --set 'server.secret=hello-varnish' \
+        --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
+            .volumeMounts[]? | select(.name == "my-varnish-controller-volume")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"my-varnish-controller-volume","mountPath":"/var/lib/varnish-controller"}' ]
+}
+
+@test "Deployment/agent/persistence: volume name overrides enabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=Deployment" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.agent.persistence.enabled=true' \
         --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
         --namespace default \
         --show-only templates/deployment.yaml \

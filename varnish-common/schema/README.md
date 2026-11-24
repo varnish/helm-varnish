@@ -36,16 +36,17 @@ The `x-` keywords:
 | `x-values-skip: true` | any node | Not written to values.yaml (e.g. `enabled`). |
 | `x-default-text: <md>` | any node | Docs "Default" line, overriding the rendered default (e.g. "name of the chart"). |
 | `x-since: {cache: <ver>, enterprise: <ver>}` | any node | "Availability" line for that flavor. |
+| `x-flavor-note: {cache: <md>, enterprise: <md>}` | any node | A paragraph added after the description for that flavor only, in the schema, docs and values.yaml. |
 | `x-deprecated: <md>` | any node | Docs and values.yaml prefix "Deprecated: …". The schema still accepts the key. |
 | `x-docs-section: <title>` | property node | The docs start a `###` heading with this title before this node. |
 | `x-docs-skip: true` | any node | No docs entry for the node or its children. |
-| `x-links: {<ref>: <url>}` | root only | Reference-style link definitions, appended to each generated docs block when the block uses them. |
+| `x-links: {<ref>: <url>}` | root only | Reference-style link definitions, appended to each generated docs block when the block uses them, and inlined in values.yaml. A URL can also be `{cache: <url>, enterprise: <url>}`, for links that differ between flavors. |
 
 Any other `x-` keyword, or one in the wrong place, is an error.
 
 Text:
 
-- `{product}` in descriptions, example descriptions, `x-default-text` and `x-deprecated` becomes "Varnish Cache" or "Varnish Enterprise".
+- `{product}` in descriptions, example descriptions, `x-default-text`, `x-flavor-note` and `x-deprecated` becomes "Varnish Cache" or "Varnish Enterprise".
 - A docs entry is written for every node with a `description`: a `**path**` line, then `- Type:`, `- Default:` (left out when the default is empty or multi-line, unless `x-default-text` is set) and `- Availability:`, then the description, then the examples. Array items are documented as `path[].key`.
 - values.yaml comments: the description wrapped to 90 columns (code blocks and lists are kept as written), `Type:`, `Availability:`, then the examples.
 

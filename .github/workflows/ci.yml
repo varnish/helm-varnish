@@ -126,6 +126,11 @@ jobs:
             echo "Error: ${{ matrix.chart }} package contains symbolic links"
             exit 1
           fi
+          # CHANGELOG.md is also a symlink to varnish-common/, check it shipped.
+          if [ -L "${{ matrix.chart }}/CHANGELOG.md" ] && ! tar tzf "${{ matrix.chart }}"-*.tgz | grep -qx "${{ matrix.chart }}/CHANGELOG.md"; then
+            echo "Error: ${{ matrix.chart }} package is missing CHANGELOG.md"
+            exit 1
+          fi
           mkdir -p /tmp/artifacts
           cp "${{ matrix.chart }}"-*.tgz /tmp/artifacts
       - name: "Push chart"

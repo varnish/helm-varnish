@@ -34,10 +34,12 @@ Create chart name and version as used by the chart label.
 
 {{/*
 Returns "true" when rendering the Varnish Enterprise flavor of the chart, as
-set by the "flavor" annotation in Chart.yaml. Enterprise-only
-values (cluster, mse4, agent, initAgent, licenseSecret, baseUrl,
-global.natsServer) are absent from the Varnish Cache values, so they must only
-be read behind this check or one of the predicates below.
+set by the "flavor" annotation in Chart.yaml. Enterprise-only values (those
+marked "x-flavor: enterprise" in varnish-common/schema/values.schema.yaml, such
+as cluster, server.mse4, server.agent, server.licenseSecret, server.baseUrl,
+server.delayedShutdown.shutdownDelay and global.natsServer) are absent from the
+Varnish Cache values, so they must only be read behind this check or one of the
+predicates below.
 */}}
 {{- define "varnish-common.isEnterprise" -}}
 {{- if eq (index (.Chart.Annotations | default dict) "flavor") "enterprise" }}true{{ end }}
@@ -73,17 +75,16 @@ toString prints in scientific notation (2.0241129e+07); toJson does not.
 {{- end }}
 
 {{/*
-Sets up the Varnish image and its overrides (if any)
+Renders the image and imagePullPolicy of a container. An empty tag falls back
+to the chart's appVersion.
 */}}
 {{- define "varnish-common.image" }}
-{{- $base := .base | default dict }}
 {{- $image := .image | default dict }}
 {{- $tag := $image.tag }}
-{{- if eq (toString $tag) "-" }}{{ $tag = $base.tag }}{{ end }}
 {{- /* not "default": it would also replace a numeric tag 0 */}}
 {{- if or (kindIs "invalid" $tag) (eq (toString $tag) "") }}{{ $tag = .Chart.AppVersion }}{{ end }}
-image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{ include "varnish-common.imageTag" $tag }}"
-imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else }}{{ $image.pullPolicy }}{{ end }}
+image: "{{ $image.repository }}:{{ include "varnish-common.imageTag" $tag }}"
+imagePullPolicy: {{ $image.pullPolicy }}
 {{- end }}
 
 {{/*
@@ -140,23 +141,25 @@ Converts size string (e.g. 10Mi or 10M) or a percentage to a number.
 {{- end }}
 
 {{/*
+The in-cluster host name of a Varnish Controller service ("nats", "apigw"),
+located with global.natsServer.internal.{releaseName,namespace,clusterDomain}.
+*/}}
+{{- define "varnish-common.controllerHost" -}}
+{{- $internal := .Values.global.natsServer.internal }}
+{{- $releaseName := $internal.releaseName | default "varnish-controller" }}
+{{- $namespace := $internal.namespace | default .Release.Namespace }}
+{{- printf "%s-%s.%s.svc.%s" $releaseName .service $namespace $internal.clusterDomain }}
+{{- end }}
+
+{{/*
 Sets up the NATS server
 */}}
 {{- define "varnish-common.natsServer" }}
 {{- $natsAddress := "" }}
 {{- $internalNats := false }}
-{{- $tp := kindOf .Values.global.natsServer.internal.enabled }}
 {{- if .Values.global.natsServer.internal.enabled }}
-{{- $natsNamespace := .Release.Namespace }}
-{{- $natsReleaseName := "varnish-controller" }}
 {{- $internalNats = true }}
-{{- if not (eq .Values.global.natsServer.internal.namespace "") }}
-{{- $natsNamespace = .Values.global.natsServer.internal.namespace }}
-{{- end }}
-{{- if not (eq .Values.global.natsServer.internal.releaseName "") }}
-{{- $natsReleaseName = .Values.global.natsServer.internal.releaseName }}
-{{- end }}
-{{- $natsAddress = printf "%s-nats.%s.svc.%s:4222" $natsReleaseName $natsNamespace .Values.global.natsServer.internal.clusterDomain }}
+{{- $natsAddress = printf "%s:4222" (include "varnish-common.controllerHost" (merge (dict "service" "nats") .)) }}
 {{- else }}
 {{- $natsAddress = .Values.global.natsServer.externalAddress }}
 {{- end }}
@@ -199,35 +202,27 @@ Sets extra envs from either an array, an object, or a string.
 {{- end }}
 
 {{/*
-Declares the YAML field.
+Renders `<fieldName>: <map>`: <section>.<fieldName> merged with global.<fieldName>
+(each an object or a template string), <section> winning. Renders nothing when empty.
 */}}
 {{- define "varnish-common.toYamlField" }}
-{{- $section := default "server" .section }}
 {{- $fieldName := .fieldName }}
-{{- $fieldKey := default $fieldName .fieldKey }}
 {{- $fieldValue := .Values }}
-{{- range $s := (splitList "." $section) }}
+{{- range $s := (splitList "." .section) }}
 {{- $fieldValue = (get $fieldValue $s) }}
 {{- end }}
-{{- $fieldValue = (get $fieldValue $fieldKey) }}
+{{- $fieldValue = (get $fieldValue $fieldName) }}
 {{- if (empty $fieldValue) }}
 {{- $fieldValue = (dict) }}
 {{- else if eq (kindOf $fieldValue) "string" }}
 {{- $fieldValue = (fromYaml (tpl $fieldValue .)) }}
 {{- end }}
-{{- $globalFieldValue := (get .Values.global $fieldKey) }}
+{{- $globalFieldValue := (get .Values.global $fieldName) }}
 {{- if eq (kindOf $globalFieldValue) "string" }}
 {{- $globalFieldValue = (fromYaml (tpl $globalFieldValue .)) }}
 {{- end }}
 {{- if not (empty $globalFieldValue) }}
 {{- $fieldValue = (merge $fieldValue $globalFieldValue) }}
-{{- end }}
-{{- $extraFieldValues := .extraFieldValues }}
-{{- if eq (kindOf $extraFieldValues) "string" }}
-{{- $extraFieldValues = (fromYaml (tpl $extraFieldValues .)) }}
-{{- end }}
-{{- if not (empty $extraFieldValues) }}
-{{- $fieldValue = (merge $fieldValue $extraFieldValues) }}
 {{- end }}
 {{- if not (empty $fieldValue) }}
 {{- (dict $fieldName $fieldValue) | toYaml }}
@@ -316,31 +311,5 @@ consumed by cluster_auto_dns.vcl. Varnish Enterprise only.
 {{- if ne $fallback "" }}
 - name: VARNISH_CLUSTER_FALLBACK
   value: {{ $fallback | quote }}
-{{- end }}
-{{- end }}
-
-{{/*
-Returns server.workDir as a string, or "" when it is null or empty.
-*/}}
-{{- define "varnish-common.workDir" -}}
-{{- if include "varnish-common.isSet" .Values.server.workDir }}{{ toString .Values.server.workDir }}{{ end }}
-{{- end }}
-
-{{/*
-Declares the env var named .name holding the varnishd working directory
-(-n) for sidecars and scripts. "-" uses the pod name, an empty
-server.workDir declares nothing as varnishd then runs without -n.
-Takes a dict with "name" and "Values".
-*/}}
-{{- define "varnish-common.workDirEnv" -}}
-{{- $workDir := include "varnish-common.workDir" . }}
-{{- if eq $workDir "-" }}
-- name: {{ .name }}
-  valueFrom:
-    fieldRef:
-      fieldPath: metadata.name
-{{- else if not (eq $workDir "") }}
-- name: {{ .name }}
-  value: "{{ $workDir }}"
 {{- end }}
 {{- end }}

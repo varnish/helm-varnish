@@ -45,7 +45,7 @@ spec:
       {{- include "varnish-common.topologySpreadConstraints" . | indent 6 }}
       {{- include "varnish-common.terminationGracePeriodSeconds" . | indent 6 }}
   {{- $mse4PersistenceEnabled := (and (include "varnish-common.mse4Enabled" .) .Values.server.mse4.persistence.enabled) }}
-  {{- $agentPersistenceEnabled := (and (include "varnish-common.isEnterprise" .) .Values.server.agent.persistence.enabled (eq .Values.server.agent.persistence.enableWithVolumeName "")) }}
+  {{- $agentPersistenceEnabled := (and (include "varnish-common.agentEnabled" .) .Values.server.agent.persistence.enabled (eq .Values.server.agent.persistence.enableWithVolumeName "")) }}
   {{- $extraVolumeClaimsEnabled := (not (empty .Values.server.extraVolumeClaimTemplates)) }}
   {{- if or $mse4PersistenceEnabled $agentPersistenceEnabled $extraVolumeClaimsEnabled }}
   volumeClaimTemplates:

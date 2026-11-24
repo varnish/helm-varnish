@@ -24,7 +24,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 spec:
   type: NodePort
-  internalTrafficPolicy: Cluster
   externalTrafficPolicy: Cluster
   ports:
     - name: http
@@ -99,16 +98,10 @@ spec:
             - 127.0.0.1:6082
             - -f
             - /etc/varnish/default.vcl
-            - -p
-            - thread_pool_max=1000
-            - -p
-            - thread_pool_min=50
-            - -p
-            - thread_pool_timeout=120
-            - -t
-            - "120"
             - -a
             - http=$(POD_IP):6081
+            - -S
+            - /etc/varnish/shared/secret
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
@@ -121,36 +114,26 @@ spec:
           image: "docker.io/varnish:APP_VERSION"
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnishncsa"]
-          args:
-            - -c
           env:
             - name: VSM_NOPID
               value: "1"
-          readinessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - "/usr/bin/varnishncsa -d -t3"
-            failureThreshold: 3
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          livenessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - "/usr/bin/varnishncsa -d -t3"
-            failureThreshold: 3
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 5
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish
+            - name: golden-config-shared
+              mountPath: /etc/varnish/shared
+      initContainers:
+        - name: varnish-cache-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          image: "docker.io/varnish:APP_VERSION"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret
+          volumeMounts:
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
       volumes:
