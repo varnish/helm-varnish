@@ -2038,6 +2038,75 @@ backend release-name {
     [ "${actual}" == "null" ]
 }
 
+@test "${kind}/livenessProbe: exec is rendered as given" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set-json 'server.livenessProbe={"exec":{"command":["varnishadm","ping"]},"periodSeconds":7}' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .livenessProbe | pick(["exec", "tcpSocket", "httpGet", "periodSeconds"])' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"exec":{"command":["varnishadm","ping"]},"periodSeconds":7}' ]
+}
+
+@test "${kind}/readinessProbe: grpc is rendered as given" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.readinessProbe.grpc.port=9000' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .readinessProbe | pick(["grpc", "tcpSocket", "httpGet"])' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"grpc":{"port":9000}}' ]
+}
+
+@test "${kind}/startupProbe: user tcpSocket is rendered as given" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.startupProbe.tcpSocket.port=8443' \
+        --set 'server.startupProbe.periodSeconds=3' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .startupProbe' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"periodSeconds":3,"tcpSocket":{"port":8443}}' ]
+}
+
+@test "${kind}/probes: exec handlers do not need http" {
+    cd "$(chart_dir)"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.http.enabled=false' \
+        --set 'server.tls.enabled=true' \
+        --set 'server.service.enabled=false' \
+        --set-json 'server.readinessProbe={"exec":{"command":["true"]}}' \
+        --set-json 'server.livenessProbe={"exec":{"command":["true"]}}' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) | tee -a /dev/stderr |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            [.readinessProbe.exec, .livenessProbe.exec]' | tee -a /dev/stderr)
+
+    [ "${actual}" == '[{"command":["true"]},{"command":["true"]}]' ]
+}
+
 @test "${kind}/resources: inherits resources from global and server" {
     cd "$(chart_dir)"
 

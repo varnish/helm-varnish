@@ -971,6 +971,10 @@ server:
   # An object that conforms to the Kubernetes
   # [startupProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
   # definition of a Container.
+  #
+  # Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With
+  # `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An
+  # `exec`, `grpc` or `tcpSocket` handler is rendered as given.
   # Type: object or false
   # Availability: v1.1.0
   # Example:
@@ -990,6 +994,10 @@ server:
   # An object that conforms to the Kubernetes
   # [readinessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
   # definition of a Container. Set to `false` to disable the probe.
+  #
+  # Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With
+  # `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An
+  # `exec`, `grpc` or `tcpSocket` handler is rendered as given.
   # Type: object or false
   # Availability: v1.2.0
   # Example:
@@ -1029,6 +1037,10 @@ server:
   # An object that conforms to the Kubernetes
   # [livenessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
   # definition of a Container. Set to `false` to disable the probe.
+  #
+  # Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With
+  # `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An
+  # `exec`, `grpc` or `tcpSocket` handler is rendered as given.
   # Type: object or false
   # Example:
   #   livenessProbe:

@@ -49,9 +49,11 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - Varnish Cache: `server.service.internalTrafficPolicy` defaults to `""` instead of `Cluster`, like Varnish Enterprise. The field is no longer rendered, and Kubernetes applies its default, `Cluster`.
 - `server.varnishncsa.extraArgs` defaults to `[]` instead of `["-c"]`. varnishncsa logs client requests by default, so the output is the same.
 - `server.service.externalTrafficPolicy` is only rendered when `server.service.type` is `NodePort` or `LoadBalancer`. The API server rejects it for other types.
+- A `tcpSocket` handler in `server.startupProbe`, `server.readinessProbe` or `server.livenessProbe` is rendered as given. Before, its port was replaced with `server.http.port`; leave `tcpSocket` out to keep that.
 
 ### Fixed
 
 - (Enterprise) On a Deployment or DaemonSet, `server.agent.persistence.enableWithVolumeName` now overrides `server.agent.persistence.enabled`, as on a StatefulSet. Before, rendering failed when both were set.
 - (Enterprise) The `mse4-config` init container gets `server.securityContext` and `server.resources`, merged with `global.securityContext` and `global.resources`, like the secret init container.
+- An `exec` or `grpc` handler in `server.startupProbe`, `server.readinessProbe` or `server.livenessProbe` is rendered as given, and no longer needs `server.http.enabled`. Before, the chart added a `tcpSocket` handler next to it, and the API server rejected the probe.
 - An entry of `server.extraListens` with `path` and no `port` no longer gets a container port without a number, which the API server rejected.

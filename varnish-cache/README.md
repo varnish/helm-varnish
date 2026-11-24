@@ -1360,6 +1360,8 @@ server:
 
 An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container.
 
+Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An `exec`, `grpc` or `tcpSocket` handler is rendered as given.
+
 For example:
 
 ```yaml
@@ -1429,6 +1431,8 @@ server:
 
 An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
 
+Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An `exec`, `grpc` or `tcpSocket` handler is rendered as given.
+
 For example:
 
 ```yaml
@@ -1489,6 +1493,8 @@ Sets the number of times when a consecutive failure response is considered a fai
 - Type: object or false
 
 An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
+
+Without a handler, the probe is a `tcpSocket` check on `server.http.port`. With `httpGet`, the port is always `server.http.port`. Both need `server.http.enabled`. An `exec`, `grpc` or `tcpSocket` handler is rendered as given.
 
 For example:
 

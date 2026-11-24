@@ -214,21 +214,32 @@ volumes:
 {{- end }}
 
 {{/*
-Declares the probe for Varnish pod
+Declares a probe of the Varnish container. An exec, grpc or tcpSocket handler
+is rendered as given. Otherwise the probe targets server.http.port: with
+httpGet (whose port is replaced), or with an added tcpSocket.
 */}}
 {{- define "varnish-common.varnishPodProbe" }}
-{{- $section := default "server" .section }}
 {{- $probeName := .probeName }}
-{{- $probe := (get (get .Values $section) $probeName) }}
-{{- if and $probe (not (empty $probe)) }}
+{{- $probe := get .Values.server $probeName }}
+{{- if $probe }}
+{{- $ownHandler := false }}
+{{- range list "exec" "grpc" "tcpSocket" }}
+  {{- if hasKey $probe . }}
+    {{- $ownHandler = true }}
+  {{- end }}
+{{- end }}
+{{- if $ownHandler }}
+{{- $probeName }}:
+  {{- toYaml $probe | nindent 2 }}
+{{- else }}
 {{- if not .Values.server.http.enabled }}
 {{- fail (print "HTTP support must be enabled to enable " $probeName ": 'server.http.enabled'") }}
 {{- end }}
 {{- $probeName }}:
-  {{- if or (hasKey $probe "tcpSocket") (and (not (hasKey $probe "tcpSocket")) (not (hasKey $probe "httpGet"))) }}
+  {{- if not (hasKey $probe "httpGet") }}
   tcpSocket:
     port: {{ .Values.server.http.port }}
-  {{- else if hasKey $probe "httpGet" }}
+  {{- else }}
   httpGet:
     port: {{ .Values.server.http.port }}
     {{- if or (empty $probe.httpGet) (not (hasKey $probe.httpGet "path")) }}
@@ -237,7 +248,8 @@ Declares the probe for Varnish pod
     {{- toYaml (omit $probe.httpGet "port") | nindent 4 -}}
     {{ end }}
   {{- end }}
-  {{- toYaml (omit (omit $probe "httpGet") "tcpSocket") | nindent 2 }}
+  {{- toYaml (omit $probe "httpGet") | nindent 2 }}
+{{- end }}
 {{- end }}
 {{- end }}
 
