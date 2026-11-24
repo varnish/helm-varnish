@@ -2668,6 +2668,7 @@ env: {
         --set "server.kind=${kind}" \
         --set "server.delayedShutdown.method=sleep" \
         --set "server.delayedShutdown.sleep.seconds=120" \
+        --set "server.terminationGracePeriodSeconds=180" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -2690,6 +2691,7 @@ env: {
         --set "server.delayedShutdown.method=mempool" \
         --set "server.delayedShutdown.mempool.pollSeconds=5" \
         --set "server.delayedShutdown.mempool.waitSeconds=30" \
+        --set "server.terminationGracePeriodSeconds=180" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -2718,6 +2720,7 @@ env: {
         --set "server.kind=${kind}" \
         --set "server.delayedShutdown.method=shutdown_delay" \
         --set "server.delayedShutdown.shutdownDelay.seconds=120" \
+        --set "server.terminationGracePeriodSeconds=180" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -2779,7 +2782,7 @@ env: {
     [ "${actual}" == "120" ]
 }
 
-@test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown sleep seconds" {
+@test "${kind}/terminationGracePeriodSeconds: accepted when longer than the sleep" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -2799,7 +2802,7 @@ env: {
     [ "${actual}" == "180" ]
 }
 
-@test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown mempool seconds" {
+@test "${kind}/terminationGracePeriodSeconds: accepted when longer than the mempool wait" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -2820,14 +2823,14 @@ env: {
     [ "${actual}" == "180" ]
 }
 
-@test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown shutdown_delay seconds" {
+@test "${kind}/terminationGracePeriodSeconds: accepted when longer than shutdown_delay" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set "server.terminationGracePeriodSeconds=180" \
-        --set "server.delayedShutdown.method=mempool" \
+        --set "server.delayedShutdown.method=shutdown_delay" \
         --set "server.delayedShutdown.shutdownDelay.seconds=1" \
         --namespace default \
         --show-only ${template} \
@@ -2857,6 +2860,99 @@ env: {
             .spec.template.spec.terminationGracePeriodSeconds' |
             tee -a /dev/stderr)
     [ "${actual}" == "0" ]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: accepted when equal to the delay" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=60" \
+        --set "server.delayedShutdown.method=sleep" \
+        --set-string "server.delayedShutdown.sleep.seconds=60" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.terminationGracePeriodSeconds' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "60" ]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: fails when unset with delayedShutdown" {
+    cd "$(chart_dir)"
+
+    run --separate-stderr helm template \
+        --set "server.kind=${kind}" \
+        --set "server.delayedShutdown.method=sleep" \
+        --namespace default \
+        --show-only ${template} \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.delayedShutdown.method' \"sleep\" needs 'server.terminationGracePeriodSeconds' set to at least 'server.delayedShutdown.sleep.seconds' (90)"* ]]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: fails when 0 with delayedShutdown" {
+    cd "$(chart_dir)"
+
+    run --separate-stderr helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=0" \
+        --set "server.delayedShutdown.method=sleep" \
+        --set "server.delayedShutdown.sleep.seconds=1" \
+        --namespace default \
+        --show-only ${template} \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.terminationGracePeriodSeconds' set to at least 'server.delayedShutdown.sleep.seconds' (1)"* ]]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: fails when shorter than the sleep" {
+    cd "$(chart_dir)"
+
+    run --separate-stderr helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=59" \
+        --set "server.delayedShutdown.method=sleep" \
+        --set "server.delayedShutdown.sleep.seconds=60" \
+        --namespace default \
+        --show-only ${template} \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.terminationGracePeriodSeconds' set to at least 'server.delayedShutdown.sleep.seconds' (60)"* ]]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: fails when shorter than the mempool wait" {
+    cd "$(chart_dir)"
+
+    run --separate-stderr helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=29" \
+        --set "server.delayedShutdown.method=mempool" \
+        --set "server.delayedShutdown.mempool.waitSeconds=30" \
+        --namespace default \
+        --show-only ${template} \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.delayedShutdown.method' \"mempool\" needs 'server.terminationGracePeriodSeconds' set to at least 'server.delayedShutdown.mempool.waitSeconds' (30)"* ]]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: fails when shorter than shutdown_delay" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    run --separate-stderr helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=30" \
+        --set "server.delayedShutdown.method=shutdown_delay" \
+        --namespace default \
+        --show-only ${template} \
+        .
+    [ "$status" -ne 0 ]
+    [[ "$stderr" == *"'server.delayedShutdown.method' \"shutdown_delay\" needs 'server.terminationGracePeriodSeconds' set to at least 'server.delayedShutdown.shutdownDelay.seconds' (90)"* ]]
 }
 
 @test "${kind}/agent: not enabled by default" {

@@ -916,7 +916,9 @@ server:
 
 - Type: number
 
-Sets the termination grace period seconds to wait for Varnish Cache to shut down. Once this number of seconds is reached without the Varnish Cache Pod shutting down, Kubernetes will send SIGKILL to the Pod. When unset, the Kubernetes default (30 seconds) applies; `0` is rendered as is. When `server.delayedShutdown` is used, this value should be set to a higher value than the **maximum** time (in seconds) it took for Varnish Cache to fully shut down after a delayed shutdown.
+Sets the termination grace period seconds to wait for Varnish Cache to shut down. Once this number of seconds is reached without the Varnish Cache Pod shutting down, Kubernetes will send SIGKILL to the Pod. When unset, the Kubernetes default (30 seconds) applies; `0` is rendered as is.
+
+When `server.delayedShutdown.method` is not "none", this value must be set, and rendering fails if it is shorter than the delay: `server.delayedShutdown.sleep.seconds`, `server.delayedShutdown.mempool.waitSeconds` or `server.delayedShutdown.shutdownDelay.seconds`. Set it higher than the **maximum** time (in seconds) it takes Varnish Cache to fully shut down after a delayed shutdown. With "mempool", that includes the time to drain connections.
 
 The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
 
@@ -939,7 +941,7 @@ Multiple methods are provided here:
 - `sleep` will simply sleep in the `preStop` for `server.delayedShutdown.sleep.seconds` seconds. This is the simplest way to delay the shutdown of Varnish Cache when the time taken for the load balancer component to stop forwarding traffic to Varnish Cache is largely fixed.
 - `mempool` polls varnishstat for `MEMPOOL.sess` to go down to zero. This allows for the quickest shutdown but requires tuning `server.delayedShutdown.mempool.pollSeconds` to traffic patterns (as `MEMPOOL.sess` may become 0 momentarily, resulting in an early shutdown).
 
-When `server.delayedShutdown.method` is set to a value other than "none", `server.terminationGracePeriodSeconds` **must** also be set.
+When `server.delayedShutdown.method` is set to a value other than "none", `server.terminationGracePeriodSeconds` **must** also be set, to at least the delay. Rendering fails otherwise.
 
 **server.delayedShutdown.sleep**
 

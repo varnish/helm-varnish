@@ -621,9 +621,14 @@ server:
   # Sets the termination grace period seconds to wait for Varnish Enterprise to shut down.
   # Once this number of seconds is reached without the Varnish Enterprise Pod shutting
   # down, Kubernetes will send SIGKILL to the Pod. When unset, the Kubernetes default (30
-  # seconds) applies; `0` is rendered as is. When `server.delayedShutdown` is used, this
-  # value should be set to a higher value than the **maximum** time (in seconds) it took
-  # for Varnish Enterprise to fully shut down after a delayed shutdown.
+  # seconds) applies; `0` is rendered as is.
+  #
+  # When `server.delayedShutdown.method` is not "none", this value must be set, and
+  # rendering fails if it is shorter than the delay:
+  # `server.delayedShutdown.sleep.seconds`, `server.delayedShutdown.mempool.waitSeconds`
+  # or `server.delayedShutdown.shutdownDelay.seconds`. Set it higher than the **maximum**
+  # time (in seconds) it takes Varnish Enterprise to fully shut down after a delayed
+  # shutdown. With "mempool", that includes the time to drain connections.
   #
   # The value to set here depends on the cluster setup. For example, an AWS Load Balancer
   # may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which
@@ -648,7 +653,8 @@ server:
     # - `mempool` polls varnishstat for `MEMPOOL.sess` to go down to zero. This allows for the quickest shutdown but requires tuning `server.delayedShutdown.mempool.pollSeconds` to traffic patterns (as `MEMPOOL.sess` may become 0 momentarily, resulting in an early shutdown).
     #
     # When `server.delayedShutdown.method` is set to a value other than "none",
-    # `server.terminationGracePeriodSeconds` **must** also be set.
+    # `server.terminationGracePeriodSeconds` **must** also be set, to at least the delay.
+    # Rendering fails otherwise.
     # Type: string, one of `none`, `sleep`, `mempool`, or `shutdown_delay`
     # Availability: v1.6.0
     method: "none"

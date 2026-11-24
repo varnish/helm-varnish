@@ -104,10 +104,30 @@ topologySpreadConstraints:
 {{- end }}
 
 {{/*
-Sets up terminationGracePeriodSeconds if set explicitly (0 included).
+Sets up terminationGracePeriodSeconds if set explicitly (0 included). Fails when
+a delayed shutdown is configured and the grace period is unset or shorter than
+the delay: the sleep, the mempool wait after draining, or shutdown_delay.
 */}}
 {{- define "varnish-common.terminationGracePeriodSeconds" -}}
 {{- $grace := .Values.server.terminationGracePeriodSeconds }}
+{{- $ds := .Values.server.delayedShutdown }}
+{{- if ne $ds.method "none" }}
+  {{- $delayKey := "" }}
+  {{- $delay := 0 }}
+  {{- if eq $ds.method "sleep" }}
+    {{- $delayKey = "server.delayedShutdown.sleep.seconds" }}
+    {{- $delay = $ds.sleep.seconds }}
+  {{- else if eq $ds.method "mempool" }}
+    {{- $delayKey = "server.delayedShutdown.mempool.waitSeconds" }}
+    {{- $delay = $ds.mempool.waitSeconds }}
+  {{- else if eq $ds.method "shutdown_delay" }}
+    {{- $delayKey = "server.delayedShutdown.shutdownDelay.seconds" }}
+    {{- $delay = $ds.shutdownDelay.seconds }}
+  {{- end }}
+  {{- if or (not (include "varnish-common.isSet" $grace)) (lt (float64 $grace) (float64 $delay)) }}
+    {{- fail (printf "'server.delayedShutdown.method' %q needs 'server.terminationGracePeriodSeconds' set to at least '%s' (%v), or Kubernetes kills the Pod before the delay ends" $ds.method $delayKey $delay) }}
+  {{- end }}
+{{- end }}
 {{- if include "varnish-common.isSet" $grace }}
 terminationGracePeriodSeconds: {{ $grace }}
 {{- end }}
