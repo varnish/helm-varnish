@@ -300,8 +300,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: VARNISH_CONTROLLER_LOG
-              value: "debug"
             - name: VARNISH_CONTROLLER_NATS_USER
               value: varnish-controller
             - name: VARNISH_CONTROLLER_NATS_HOST

@@ -1774,39 +1774,22 @@
               "default": {},
               "description": "An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.\n\nThis securityContext will be set on the Varnish Controller container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.\n"
             },
-            "logLevel": {
-              "type": "string",
-              "default": "debug",
-              "description": "Sets the log level for the Varnish Controller Agent. The value can be one of `debug`, `info`, `warning`, `error`, or `quiet`.\n"
-            },
-            "privateToken": {
-              "type": [
-                "string",
-                "integer"
-              ],
-              "default": "",
-              "description": "Sets a Varnish Controller private token.\n"
-            },
             "extraEnvs": {
               "$ref": "#/definitions/env",
               "default": {},
-              "description": "Sets the extra environment variables for Varnish Controller Agent. Can be set as either an object, an array of objects, or a template string.\n",
+              "description": "Sets the extra environment variables for Varnish Controller Agent. Can be set as either an object, an array of objects, or a template string.\n\nThe agent is configured through environment variables, listed in the [Varnish Controller Agent documentation](https://docs.varnish-software.com/varnish-controller/installation/agents/). Use this key for the ones the chart doesn't set, such as `VARNISH_CONTROLLER_LOG` (log level), `VARNISH_CONTROLLER_TAGS` (comma-separated tags), `VARNISH_CONTROLLER_LATITUDE`, `VARNISH_CONTROLLER_LONGITUDE` and `VARNISH_CONTROLLER_PRIVATE_TOKEN`.\n",
               "examples": [
                 {
-                  "MY_ENV_VAR": "value",
-                  "MY_OTHER_ENV_VAR": "other_value"
+                  "VARNISH_CONTROLLER_LOG": "info",
+                  "VARNISH_CONTROLLER_TAGS": "tokyodc,highmem"
                 },
                 [
                   {
-                    "name": "MY_ENV_VAR",
-                    "value": "value"
-                  },
-                  {
-                    "name": "MY_OTHER_ENV_VAR",
+                    "name": "VARNISH_CONTROLLER_PRIVATE_TOKEN",
                     "valueFrom": {
-                      "configMapKeyRef": {
-                        "name": "my-config-map",
-                        "key": "my-key"
+                      "secretKeyRef": {
+                        "name": "varnish-controller-agent",
+                        "key": "private-token"
                       }
                     }
                   }
@@ -1828,52 +1811,6 @@
               },
               "default": [],
               "description": "Sets the extra configuration args for Varnish Controller Agent.\n"
-            },
-            "tags": {
-              "type": [
-                "array",
-                "string",
-                "null"
-              ],
-              "items": {
-                "type": [
-                  "string",
-                  "integer"
-                ]
-              },
-              "default": [],
-              "description": "Sets the tags for the Varnish Controller Agent.\n",
-              "examples": [
-                [
-                  "tag1",
-                  "tag2"
-                ]
-              ]
-            },
-            "location": {
-              "type": [
-                "object",
-                "null"
-              ],
-              "additionalProperties": false,
-              "default": {},
-              "description": "Sets the location for this Varnish Controller Agent instance for use within Varnish Controller Router.\n\nThe location object can contain `latitude` and `longitude` keys to specify the geographic location of the server.\n",
-              "properties": {
-                "latitude": {
-                  "type": "string",
-                  "description": "The latitude of the server, as a string.\n"
-                },
-                "longitude": {
-                  "type": "string",
-                  "description": "The longitude of the server, as a string.\n"
-                }
-              },
-              "examples": [
-                {
-                  "longitude": "-121.955238",
-                  "latitude": "37.354107"
-                }
-              ]
             },
             "resources": {
               "$ref": "#/definitions/objectOrTemplate",

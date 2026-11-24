@@ -650,33 +650,13 @@ Declares the Varnish Controller Agent container
         fieldRef:
           fieldPath: metadata.name
     {{- end }}
-    {{- if and .Values.server.agent.logLevel (not (eq .Values.server.agent.logLevel "")) }}
-    - name: VARNISH_CONTROLLER_LOG
-      value: {{ .Values.server.agent.logLevel | quote }}
-    {{- end }}
     {{- include "varnish-common.natsServer" . | indent 4 }}
-    {{- if and .Values.server.agent.tags (not (empty .Values.server.agent.tags)) }}
-    - name: VARNISH_CONTROLLER_TAGS
-      value: {{ .Values.server.agent.tags | join "," | quote }}
-    {{- end }}
-    {{- if and .Values.server.agent.location .Values.server.agent.location.longitude (not (eq .Values.server.agent.location.longitude "")) }}
-    - name: VARNISH_CONTROLLER_LONGITUDE
-      value: {{ .Values.server.agent.location.longitude | quote }}
-    {{- end }}
-    {{- if and .Values.server.agent.location .Values.server.agent.location.latitude (not (eq .Values.server.agent.location.latitude "")) }}
-    - name: VARNISH_CONTROLLER_LATITUDE
-      value: {{ .Values.server.agent.location.latitude | quote }}
-    {{- end }}
     {{- if not (empty .Values.server.baseUrl) }}
     - name: VARNISH_CONTROLLER_BASE_URL
       value: "{{ .Values.server.baseUrl }}"
     {{- else }}
     - name: VARNISH_CONTROLLER_BASE_URL
       value: "http://$(VARNISH_CONTROLLER_VARNISH_HOST){{ if ne (toString .Values.server.http.port) "80" }}:{{ .Values.server.http.port }}{{ end }}"
-    {{- end }}
-    {{- if not (empty .Values.server.agent.privateToken) }}
-    - name: VARNISH_CONTROLLER_PRIVATE_TOKEN
-      value: {{ .Values.server.agent.privateToken | quote }}
     {{- end }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.agent.extraEnvs) .) | nindent 4 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server.agent") .) | nindent 2 }}

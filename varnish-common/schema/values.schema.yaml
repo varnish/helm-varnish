@@ -1858,39 +1858,25 @@ properties:
 
               This securityContext will be set on the Varnish Controller container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
 
-          logLevel:
-            type: string
-            default: debug
-            description: |
-              Sets the log level for the Varnish Controller Agent. The value can be one of `debug`, `info`, `warning`, `error`, or `quiet`.
-
-          privateToken:
-            type: [string, integer]
-            default: ""
-            x-since:
-              enterprise: v1.5.0
-            description: |
-              Sets a Varnish Controller private token.
-
           extraEnvs:
             $ref: "#/definitions/env"
             default: {}
             description: |
               Sets the extra environment variables for Varnish Controller Agent. Can be set as either an object, an array of objects, or a template string.
+
+              The agent is configured through environment variables, listed in the [Varnish Controller Agent documentation](https://docs.varnish-software.com/varnish-controller/installation/agents/). Use this key for the ones the chart doesn't set, such as `VARNISH_CONTROLLER_LOG` (log level), `VARNISH_CONTROLLER_TAGS` (comma-separated tags), `VARNISH_CONTROLLER_LATITUDE`, `VARNISH_CONTROLLER_LONGITUDE` and `VARNISH_CONTROLLER_PRIVATE_TOKEN`.
             x-examples:
               - description: "For example, as an object:"
                 value:
-                  MY_ENV_VAR: value
-                  MY_OTHER_ENV_VAR: other_value
-              - description: "As an array of objects:"
+                  VARNISH_CONTROLLER_LOG: info
+                  VARNISH_CONTROLLER_TAGS: tokyodc,highmem
+              - description: "As an array of objects, reading the private token from a Secret:"
                 value:
-                  - name: MY_ENV_VAR
-                    value: value
-                  - name: MY_OTHER_ENV_VAR
+                  - name: VARNISH_CONTROLLER_PRIVATE_TOKEN
                     valueFrom:
-                      configMapKeyRef:
-                        name: my-config-map
-                        key: my-key
+                      secretKeyRef:
+                        name: varnish-controller-agent
+                        key: private-token
               - description: "As a template string:"
                 value: |
                   - name: RELEASE_NAMESPACE
@@ -1904,45 +1890,6 @@ properties:
             default: []
             description: |
               Sets the extra configuration args for Varnish Controller Agent.
-
-          tags:
-            type: [array, string, "null"]
-            x-type-label: array of strings
-            items:
-              type: [string, integer]
-            default: []
-            description: |
-              Sets the tags for the Varnish Controller Agent.
-            x-examples:
-              - description: "For example:"
-                value:
-                  - tag1
-                  - tag2
-
-          location:
-            type: [object, "null"]
-            x-type-label: object
-            additionalProperties: false
-            default: {}
-            description: |
-              Sets the location for this Varnish Controller Agent instance for use within Varnish Controller Router.
-
-              The location object can contain `latitude` and `longitude` keys to specify the geographic location of the server.
-            x-examples:
-              - description: "For example:"
-                value:
-                  longitude: "-121.955238"
-                  latitude: "37.354107"
-            properties:
-              latitude:
-                type: string
-                description: |
-                  The latitude of the server, as a string.
-
-              longitude:
-                type: string
-                description: |
-                  The longitude of the server, as a string.
 
           resources:
             $ref: "#/definitions/objectOrTemplate"

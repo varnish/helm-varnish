@@ -30,6 +30,10 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - (Enterprise) `global.initContainer` → none, it only set the image of the `init-agent` container. It is now ignored rather than rejected, since `global` accepts keys from parent charts.
 - `server.labels`, `server.annotations` → `global.labels`, `global.annotations`. They apply to the same Deployment, StatefulSet or DaemonSet.
 - `server.podLabels`, `server.podAnnotations` → `global.podLabels`, `global.podAnnotations`.
+- (Enterprise) `server.agent.logLevel` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_LOG`. The chart no longer sets it, so the agent uses its own default instead of `debug`; set `VARNISH_CONTROLLER_LOG: debug` to keep the old level.
+- (Enterprise) `server.agent.tags: [a, b]` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_TAGS: a,b`.
+- (Enterprise) `server.agent.location.latitude`, `server.agent.location.longitude` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_LATITUDE`, `VARNISH_CONTROLLER_LONGITUDE`.
+- (Enterprise) `server.agent.privateToken` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_PRIVATE_TOKEN`, preferably read from a Secret with `valueFrom.secretKeyRef`.
 
 ### Changed
 

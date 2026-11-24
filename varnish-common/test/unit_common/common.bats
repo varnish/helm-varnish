@@ -3041,26 +3041,6 @@ env: {
     [ "${actual}" == '["'"${chart}"'-secret"]' ]
 }
 
-@test "${kind}/agent: can be enabled with private token" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set "server.agent.privateToken=private-token" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_PRIVATE_TOKEN") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'private-token' ]
-}
-
 @test "${kind}/agent: inherits securityContext from global and agent" {
     skip_unless_enterprise
     cd "$(chart_dir)"
@@ -3351,14 +3331,48 @@ release-namespace: to-be-override
     [[ "${output}" == *"Either 'global.natsServer.internal.enabled' or 'global.natsServer.externalAddress' must be set"* ]]
 }
 
-@test "${kind}/agent/logLevel: can be configured" {
+@test "${kind}/agent: leaves log level, tags, location and private token to the agent defaults" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'server.agent.enabled=true' \
-        --set 'server.agent.logLevel=info' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            [.spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
+            .env[]? | select(.name == "VARNISH_CONTROLLER_LOG" or .name == "VARNISH_CONTROLLER_TAGS" or
+                .name == "VARNISH_CONTROLLER_LATITUDE" or .name == "VARNISH_CONTROLLER_LONGITUDE" or
+                .name == "VARNISH_CONTROLLER_PRIVATE_TOKEN")]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '[]' ]
+}
+
+@test "${kind}/agent/extraEnvs: can set the private token from a secret" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local values="${BATS_TEST_TMPDIR}/values.yaml"
+    cat > "${values}" <<'EOT'
+server:
+  agent:
+    enabled: true
+    extraEnvs:
+      - name: VARNISH_CONTROLLER_PRIVATE_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: agent-token
+            key: token
+EOT
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        -f "${values}" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -3367,10 +3381,9 @@ release-namespace: to-be-override
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_LOG")' |
+            .env[]? | select(.name == "VARNISH_CONTROLLER_PRIVATE_TOKEN")' |
             tee -a /dev/stderr)
-
-    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_LOG","value":"info"}' ]
+    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_PRIVATE_TOKEN","valueFrom":{"secretKeyRef":{"key":"token","name":"agent-token"}}}' ]
 }
 
 @test "${kind}/agent/extraEnvs: can be configured" {
@@ -3498,104 +3511,6 @@ release-namespace: to-be-override
             .env[]? | select(.name == "FROM_SECRET")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FROM_SECRET","valueFrom":{"secretKeyRef":{"key":"my-key","name":"my-secret"}}}' ]
-}
-
-@test "${kind}/agent/tags: unset by default" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_TAGS")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-}
-
-@test "${kind}/agent/tags: can be configured" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.agent.tags[0]=tokyodc' \
-        --set 'server.agent.tags[1]=highmem' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_TAGS")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_TAGS","value":"tokyodc,highmem"}' ]
-}
-
-@test "${kind}/agent/location: unset by default" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_LONGITUDE")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_LATITUDE")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-}
-
-@test "${kind}/agent/location: can be configured" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.agent.location.latitude=37.354107' \
-        --set 'server.agent.location.longitude=-121.955238' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_LATITUDE")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_LATITUDE","value":"37.354107"}' ]
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
-            .env[]? | select(.name == "VARNISH_CONTROLLER_LONGITUDE")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"VARNISH_CONTROLLER_LONGITUDE","value":"-121.955238"}' ]
 }
 
 @test "${kind}/agent/resources: inherits resources from global and agent" {

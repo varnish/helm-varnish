@@ -1805,25 +1805,13 @@ An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-container
 
 This securityContext will be set on the Varnish Controller container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
 
-**server.agent.logLevel**
-
-- Type: string
-- Default: `debug`
-
-Sets the log level for the Varnish Controller Agent. The value can be one of `debug`, `info`, `warning`, `error`, or `quiet`.
-
-**server.agent.privateToken**
-
-- Type: string or number
-- Availability: v1.5.0
-
-Sets a Varnish Controller private token.
-
 **server.agent.extraEnvs**
 
 - Type: array of objects, object, or template string
 
 Sets the extra environment variables for Varnish Controller Agent. Can be set as either an object, an array of objects, or a template string.
+
+The agent is configured through environment variables, listed in the [Varnish Controller Agent documentation](https://docs.varnish-software.com/varnish-controller/installation/agents/). Use this key for the ones the chart doesn't set, such as `VARNISH_CONTROLLER_LOG` (log level), `VARNISH_CONTROLLER_TAGS` (comma-separated tags), `VARNISH_CONTROLLER_LATITUDE`, `VARNISH_CONTROLLER_LONGITUDE` and `VARNISH_CONTROLLER_PRIVATE_TOKEN`.
 
 For example, as an object:
 
@@ -1831,23 +1819,21 @@ For example, as an object:
 server:
   agent:
     extraEnvs:
-      MY_ENV_VAR: value
-      MY_OTHER_ENV_VAR: other_value
+      VARNISH_CONTROLLER_LOG: info
+      VARNISH_CONTROLLER_TAGS: "tokyodc,highmem"
 ```
 
-As an array of objects:
+As an array of objects, reading the private token from a Secret:
 
 ```yaml
 server:
   agent:
     extraEnvs:
-      - name: MY_ENV_VAR
-        value: value
-      - name: MY_OTHER_ENV_VAR
+      - name: VARNISH_CONTROLLER_PRIVATE_TOKEN
         valueFrom:
-          configMapKeyRef:
-            name: my-config-map
-            key: my-key
+          secretKeyRef:
+            name: varnish-controller-agent
+            key: private-token
 ```
 
 As a template string:
@@ -1865,52 +1851,6 @@ server:
 - Type: array of strings
 
 Sets the extra configuration args for Varnish Controller Agent.
-
-**server.agent.tags**
-
-- Type: array of strings
-
-Sets the tags for the Varnish Controller Agent.
-
-For example:
-
-```yaml
-server:
-  agent:
-    tags:
-      - tag1
-      - tag2
-```
-
-**server.agent.location**
-
-- Type: object
-
-Sets the location for this Varnish Controller Agent instance for use within Varnish Controller Router.
-
-The location object can contain `latitude` and `longitude` keys to specify the geographic location of the server.
-
-For example:
-
-```yaml
-server:
-  agent:
-    location:
-      longitude: "-121.955238"
-      latitude: "37.354107"
-```
-
-**server.agent.location.latitude**
-
-- Type: string
-
-The latitude of the server, as a string.
-
-**server.agent.location.longitude**
-
-- Type: string
-
-The longitude of the server, as a string.
 
 **server.agent.resources**
 

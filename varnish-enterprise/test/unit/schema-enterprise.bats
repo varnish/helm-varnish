@@ -59,13 +59,12 @@ load _helpers
   schema_rejects "additional properties 'enable' not allowed" --set server.agent.enable=true
 }
 
-@test "Schema: agent credentials and tags accept numbers from --set" {
+@test "Schema: vcli credentials accept numbers from --set" {
   schema_accepts --set server.agent.enabled=true \
-    --set server.agent.privateToken=123456 --set 'server.agent.tags={1,2}' \
     --set server.agent.autoRemove.method=vcli --set server.agent.autoRemove.vcli.username=1000 \
-    --set server.agent.autoRemove.vcli.password=123456 --set server.agent.autoRemove.vcli.externalAddress=https://c.example
+    --set server.agent.autoRemove.vcli.password=123456 --set server.agent.autoRemove.vcli.internal.enabled=false \
+    --set server.agent.autoRemove.vcli.externalAddress=https://c.example
   [[ "$output" == *'value: "123456"'* ]]
-  [[ "$output" == *'value: "1,2"'* ]]
   [[ "$output" == *'value: "1000"'* ]]
 }
 
@@ -76,15 +75,11 @@ load _helpers
   schema_rejects "at '/server/agent/persistence/storageSize'" --set server.agent.persistence.storageSize=lots
 }
 
-@test "Schema: rejects a numeric agent latitude" {
-  local values="${BATS_TEST_TMPDIR}/values.yaml"
-  cat > "${values}" <<'EOT'
-server:
-  agent:
-    location:
-      latitude: 37.35
-EOT
-  schema_rejects "at '/server/agent/location/latitude'" -f "${values}"
+@test "Schema: rejects the removed agent keys" {
+  local key
+  for key in logLevel=info privateToken=x 'tags={a}' location.latitude=1; do
+    schema_rejects "additional properties '${key%%[.=]*}' not allowed" --set "server.agent.${key}"
+  done
 }
 
 @test "Schema: rejects the removed server.mse4.configFile" {
