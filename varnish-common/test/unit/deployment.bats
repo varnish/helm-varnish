@@ -174,6 +174,28 @@ rollingUpdate:
     [ "${actual}" == '{"name":"my-varnish-controller-volume","mountPath":"/var/lib/varnish-controller"}' ]
 }
 
+@test "Deployment/agent/persistence: volume name overrides enabled" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=Deployment" \
+        --set 'server.agent.enabled=true' \
+        --set 'server.agent.persistence.enabled=true' \
+        --set 'server.agent.persistence.enableWithVolumeName=my-varnish-controller-volume' \
+        --namespace default \
+        --show-only templates/deployment.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent") |
+            .volumeMounts[]? | select(.name == "my-varnish-controller-volume")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"my-varnish-controller-volume","mountPath":"/var/lib/varnish-controller"}' ]
+}
+
 @test "Deployment/extraVolumeClaimTemplates: cannot be enabled" {
     cd "$(chart_dir)"
 

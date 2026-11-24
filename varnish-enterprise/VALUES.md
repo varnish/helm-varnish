@@ -1892,7 +1892,7 @@ server:
 
 - Type: object
 
-Configures persistence for Varnish Controller Agent state using PersistentVolumes. This configuration is only available when `server.kind` is set to StatefulSet. See the [Integration with Varnish Controller Agent](https://docs.varnish-software.com/varnish-helm/guides/setting-up-varnish-controller-agent/) documentation for more information.
+Configures persistence for Varnish Controller Agent state, which is stored in `/var/lib/varnish-controller`. Without it, the state is kept in an emptyDir volume and lost when the Pod is deleted. See the [Integration with Varnish Controller Agent](https://docs.varnish-software.com/varnish-helm/guides/setting-up-varnish-controller-agent/) documentation for more information.
 
 **server.agent.persistence.enabled**
 
@@ -1905,7 +1905,7 @@ Stores the Varnish Controller Agent state in a PersistentVolumeClaim created by 
 
 - Type: string
 
-Enables Varnish Controller Agent state persistency using a custom volume mounts. This configuration overrides `server.agent.persistence.enabled`.
+Mounts the volume with this name on `/var/lib/varnish-controller` to store the Varnish Controller Agent state. Works with every `server.kind`. The volume must be declared with `server.extraVolumes` or, for a StatefulSet, `server.extraVolumeClaimTemplates`. This configuration overrides `server.agent.persistence.enabled`.
 
 **server.agent.persistence.labels**
 

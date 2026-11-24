@@ -41,3 +41,7 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 
 - `server.minThreads` and `server.maxThreads` are now passed as `-p thread_pool_min` then `-p thread_pool_max`, before `server.parameters`. Setting `threadPoolMin` or `threadPoolMax` in `server.parameters` now fails rendering; use `server.minThreads` and `server.maxThreads` instead.
 - (Enterprise) `server.agent.persistence.enabled` is ignored when `server.agent.enabled` is false: a StatefulSet no longer gets the agent PersistentVolumeClaim, and a Deployment or DaemonSet no longer fails rendering. Since `volumeClaimTemplates` can't change on an existing StatefulSet, turning the agent on or off with persistence enabled now requires deleting the StatefulSet (`kubectl delete statefulset --cascade=orphan`) before upgrading.
+
+### Fixed
+
+- (Enterprise) On a Deployment or DaemonSet, `server.agent.persistence.enableWithVolumeName` now overrides `server.agent.persistence.enabled`, as on a StatefulSet. Before, rendering failed when both were set.
