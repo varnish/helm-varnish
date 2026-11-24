@@ -354,21 +354,6 @@ Composing the $varnishArgs list or arguments
   {{- end }}
 {{- end -}}
 {{/*
-    Extra arguments
-*/}}
-{{- if eq (kindOf .Values.server.extraArgs) "string" }}
-  {{- $extra := .Values.server.extraArgs | default "" | trim -}}
-  {{- if $extra }}
-    {{- $varnishArgs = concat $varnishArgs ( regexSplit "\\s+" $extra -1 ) -}}
-  {{- end }}
-{{- else if eq (kindOf .Values.server.extraArgs) "slice" }}
-  {{- range .Values.server.extraArgs }}
-    {{- $varnishArgs = append $varnishArgs (toString .) -}}
-  {{- end }}
-{{- else if .Values.server.extraArgs }}
-  {{- fail (printf "Validation failed: .Values.server.extraArgs should be a string or list, not a %s" (kindOf .Values.server.extraArgs)) }}
-{{- end }}
-{{/*
     Extra Listeners
 */}}
 {{- range .Values.server.extraListens }}

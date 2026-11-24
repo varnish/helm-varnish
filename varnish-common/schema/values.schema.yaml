@@ -645,13 +645,7 @@ properties:
           type: string
         default: []
         description: |
-          Sets the command for {product}. Note that by overriding this, you will also override parameters, listening ports, etc. See also [varnishd documentation][varnishd].
-
-      extraArgs:
-        $ref: "#/definitions/extraArgs"
-        default: []
-        description: |
-          Sets the extra arguments to varnishd. A string is split on whitespace into separate arguments, while each item of a list is passed as a single argument, so use a list for values containing spaces.
+          Sets the command for {product}. This replaces the whole command line built by the chart, including parameters, listening addresses, VCL and storage arguments. See also [varnishd documentation][varnishd].
 
       parameters:
         type: object

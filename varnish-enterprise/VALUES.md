@@ -520,13 +520,7 @@ Sets the maximum number of worker threads in each pool. Passed as `-p thread_poo
 
 - Type: array of strings
 
-Sets the command for Varnish Enterprise. Note that by overriding this, you will also override parameters, listening ports, etc. See also [varnishd documentation][varnishd].
-
-**server.extraArgs**
-
-- Type: string or array of strings
-
-Sets the extra arguments to varnishd. A string is split on whitespace into separate arguments, while each item of a list is passed as a single argument, so use a list for values containing spaces.
+Sets the command for Varnish Enterprise. This replaces the whole command line built by the chart, including parameters, listening addresses, VCL and storage arguments. See also [varnishd documentation][varnishd].
 
 **server.parameters**
 

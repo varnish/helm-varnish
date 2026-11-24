@@ -21,9 +21,8 @@ server:
       port: 8088
   extraEnvs:
     FOO: bar
-  extraArgs:
-    - -p
-    - thread_pool_stack=96k
+  parameters:
+    threadPoolStack: 96k
   vclConfig: |
     vcl 4.1;
     backend default { .host = "{{ .Release.Name }}-backend"; .port = "8080"; }

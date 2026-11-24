@@ -377,17 +377,12 @@ server:
   # Type: number
   maxThreads: 1000
 
-  # Sets the command for Varnish Enterprise. Note that by overriding this, you will also
-  # override parameters, listening ports, etc. See also [varnishd
+  # Sets the command for Varnish Enterprise. This replaces the whole command line built by
+  # the chart, including parameters, listening addresses, VCL and storage arguments. See
+  # also [varnishd
   # documentation](https://varnish-cache.org/docs/6.0/reference/varnishd.html).
   # Type: array of strings
   command: []
-
-  # Sets the extra arguments to varnishd. A string is split on whitespace into separate
-  # arguments, while each item of a list is passed as a single argument, so use a list for
-  # values containing spaces.
-  # Type: string or array of strings
-  extraArgs: []
 
   # Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names
   # are converted from camelCase to snake_case, and arrays are joined with a comma. Thread

@@ -36,8 +36,9 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - (Enterprise) `server.agent.privateToken` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_PRIVATE_TOKEN`, preferably read from a Secret with `valueFrom.secretKeyRef`.
 - (Enterprise) `server.agent.useReleaseName` → none, the agent name is always the Pod name. An agent that was registered under the release name shows up as a new agent.
 - (Enterprise) `server.agent.autoRemove.vcli.internal.namespace`, `releaseName`, `clusterDomain` → `global.natsServer.internal.namespace`, `releaseName`, `clusterDomain`. The VCLI container now finds the APIGW with the same values the agent uses for NATS, so the APIGW and NATS can no longer be in different releases or namespaces.
-- (Enterprise) `server.mse.enabled`, `server.mse.memoryTarget`, `server.mse.config`, `server.mse.configFile`, `server.mse.persistence.*` (MSE3) → `server.mse4` (`server.mse4.enabled: true`, `server.mse4.config`, `server.mse4.persistence`). The chart no longer configures MSE3; set `server.extraArgs: [-s, mse]` to run it in memory-only mode.
+- (Enterprise) `server.mse.enabled`, `server.mse.memoryTarget`, `server.mse.config`, `server.mse.configFile`, `server.mse.persistence.*` (MSE3) → `server.mse4` (`server.mse4.enabled: true`, `server.mse4.config`, `server.mse4.persistence`). The chart no longer configures MSE3; to run it in memory-only mode, set `server.command` to the chart's command line (see `helm template`) with `-s mse` added.
 - (Enterprise) `server.mse4.memoryTarget: X` → `server.parameters.memoryTarget: X`, which renders as `-p memory_target=X`.
+- `server.extraArgs` → `server.parameters` for `-p` arguments, `server.extraListens` for `-a` arguments. For any other argument, set `server.command` to the chart's command line (see `helm template`) with the argument added.
 
 ### Changed
 
