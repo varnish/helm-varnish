@@ -68,7 +68,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
-  internalTrafficPolicy: Cluster
   ports:
     - name: http
       port: 80

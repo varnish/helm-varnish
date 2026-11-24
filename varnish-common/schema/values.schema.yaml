@@ -1284,9 +1284,7 @@ properties:
             type: string
             enum: ["", Cluster, Local]
             x-type-label: string
-            x-default:
-              cache: Cluster
-              enterprise: ""
+            default: ""
             x-since:
               enterprise: v1.9.0
             description: |

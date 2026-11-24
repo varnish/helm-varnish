@@ -119,7 +119,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 spec:
   type: NodePort
-  internalTrafficPolicy: Cluster
   externalTrafficPolicy: Cluster
   ports:
     - name: http

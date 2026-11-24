@@ -1077,8 +1077,8 @@
                 "Cluster",
                 "Local"
               ],
-              "description": "Sets the internal traffic policy for this service. InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. Can be set to `Local` or `Cluster`. If unset, the Kubernetes default (`Cluster`) is used.\n",
-              "default": "Cluster"
+              "default": "",
+              "description": "Sets the internal traffic policy for this service. InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. Can be set to `Local` or `Cluster`. If unset, the Kubernetes default (`Cluster`) is used.\n"
             },
             "externalTrafficPolicy": {
               "type": "string",

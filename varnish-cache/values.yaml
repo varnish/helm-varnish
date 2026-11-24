@@ -730,7 +730,7 @@ server:
     # how nodes distribute service traffic they receive on the ClusterIP. Can be set to
     # `Local` or `Cluster`. If unset, the Kubernetes default (`Cluster`) is used.
     # Type: string
-    internalTrafficPolicy: "Cluster"
+    internalTrafficPolicy: ""
 
     # Sets the external traffic policy for this service. externalTrafficPolicy describes
     # how nodes distribute service traffic they receive on one of the Service's

@@ -97,6 +97,22 @@ load _helpers
     [ "${actual}" == "Local" ]
 }
 
+@test "Service/internalTrafficPolicy: not rendered by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --namespace default \
+        --show-only templates/service.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.internalTrafficPolicy' |
+        tee -a /dev/stderr)
+
+    [ "${actual}" == "null" ]
+}
+
 @test "Service/internalTrafficPolicy: follows the values default" {
     cd "$(chart_dir)"
     local expected=$(yq -r '.server.service.internalTrafficPolicy' < values.yaml)

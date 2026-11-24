@@ -1245,7 +1245,6 @@ Sets the port to expose this extra service on the node itself. Only applicable w
 **server.service.internalTrafficPolicy**
 
 - Type: string
-- Default: `Cluster`
 
 Sets the internal traffic policy for this service. InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP. Can be set to `Local` or `Cluster`. If unset, the Kubernetes default (`Cluster`) is used.
 
