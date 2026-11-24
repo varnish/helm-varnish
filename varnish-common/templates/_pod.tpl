@@ -408,25 +408,6 @@ Composing the $varnishArgs list or arguments
         fieldRef:
           fieldPath: status.podIP
     {{- end }}
-    {{- if include "varnish-common.mse4Enabled" . }}
-    {{- if (not (empty $mse4Config)) }}
-    - name: MSE4_CONFIG
-      value: /etc/varnish/mse4.conf
-    {{- else }}
-    - name: VARNISH_STORAGE_BACKEND
-      value: "mse4"
-    {{- end }}
-    {{- end }}
-
-    {{- if .Values.server.tls.enabled }}
-    {{- if not (eq $tlsConfig "") }}
-    - name: VARNISH_TLS_CFG
-      value: /etc/varnish/tls.conf
-    {{- else }}
-    - name: VARNISH_TLS_CFG
-      value: "true"
-    {{- end }}
-    {{- end }}
     {{- if (include "varnish-common.agentEnabled" .) }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       valueFrom:

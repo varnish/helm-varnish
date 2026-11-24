@@ -609,9 +609,9 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '{"name":"https","containerPort":8443,"protocol":"TCP"}' ]
 
     local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
+        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG")' |
             tee -a /dev/stderr)
-    [ "${actual}" == "true" ]
+    [ "${actual}" == "" ]
 
     local actual=$(echo "$container" |
         yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-tls")' |
@@ -648,9 +648,9 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG") | .value' |
+        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_TLS_CFG")' |
             tee -a /dev/stderr)
-    [ "${actual}" == "/etc/varnish/tls.conf" ]
+    [ "${actual}" == "" ]
 
     local actual=$(echo "$container" |
         yq -r -o=json -I=0 '.volumeMounts[] | select(.name == "release-name-config-tls")' |
@@ -2483,6 +2483,13 @@ podAntiAffinity:
             tee -a /dev/stderr)
 
     [ "${actual}" == "mse4" ]
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            [.env[]? | select(.name == "VARNISH_STORAGE_BACKEND" or .name == "MSE4_CONFIG" or .name == "MSE_MEMORY_TARGET")]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "[]" ]
 }
 
 @test "${kind}/mse4/memoryTarget: set with server.parameters" {

@@ -182,10 +182,6 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           env:
-            - name: MSE4_CONFIG
-              value: /etc/varnish/mse4.conf
-            - name: VARNISH_TLS_CFG
-              value: /etc/varnish/tls.conf
             - name: VARNISH_CONTROLLER_AGENT_NAME
               valueFrom:
                 fieldRef:
