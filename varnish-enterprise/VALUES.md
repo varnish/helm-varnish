@@ -1172,7 +1172,7 @@ Sets the internal traffic policy for this service. InternalTrafficPolicy describ
 - Type: string
 - Default: `Cluster`
 
-Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). Can be set to `Local` or `Cluster`.
+Sets the external traffic policy for this service. externalTrafficPolicy describes how nodes distribute service traffic they receive on one of the Service's "externally-facing" addresses (NodePorts, ExternalIPs, and LoadBalancer IPs). Can be set to `Local` or `Cluster`. Only rendered when `server.service.type` is NodePort or LoadBalancer, the only types Kubernetes accepts it for.
 
 **server.ingress**
 

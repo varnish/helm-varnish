@@ -97,6 +97,42 @@ load _helpers
     [ "${actual}" == "Local" ]
 }
 
+@test "Service/externalTrafficPolicy: not rendered for ClusterIP" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.service.type=ClusterIP' \
+        --set 'server.service.externalTrafficPolicy=Local' \
+        --namespace default \
+        --show-only templates/service.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.externalTrafficPolicy' |
+        tee -a /dev/stderr)
+
+    [ "${actual}" == "null" ]
+}
+
+@test "Service/externalTrafficPolicy: rendered for LoadBalancer" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set 'server.service.type=LoadBalancer' \
+        --set 'server.service.externalTrafficPolicy=Local' \
+        --namespace default \
+        --show-only templates/service.yaml \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.externalTrafficPolicy' |
+        tee -a /dev/stderr)
+
+    [ "${actual}" == "Local" ]
+}
+
 @test "Service/internalTrafficPolicy: not rendered by default" {
     cd "$(chart_dir)"
 

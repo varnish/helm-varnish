@@ -48,6 +48,7 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - Varnish Cache: `server.autoscaling.minReplicas` defaults to `"-"` instead of `1`, so the HorizontalPodAutoscaler uses `server.replicas` as its minimum, like Varnish Enterprise. Set `minReplicas: 1` to keep the old minimum.
 - Varnish Cache: `server.service.internalTrafficPolicy` defaults to `""` instead of `Cluster`, like Varnish Enterprise. The field is no longer rendered, and Kubernetes applies its default, `Cluster`.
 - `server.varnishncsa.extraArgs` defaults to `[]` instead of `["-c"]`. varnishncsa logs client requests by default, so the output is the same.
+- `server.service.externalTrafficPolicy` is only rendered when `server.service.type` is `NodePort` or `LoadBalancer`. The API server rejects it for other types.
 
 ### Fixed
 

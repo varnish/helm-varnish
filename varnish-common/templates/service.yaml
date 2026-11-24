@@ -20,7 +20,7 @@ spec:
   {{- if .Values.server.service.internalTrafficPolicy }}
   internalTrafficPolicy: {{ .Values.server.service.internalTrafficPolicy }}
   {{- end }}
-  {{- if .Values.server.service.externalTrafficPolicy }}
+  {{- if and .Values.server.service.externalTrafficPolicy (has $serviceType (list "NodePort" "LoadBalancer")) }}
   externalTrafficPolicy: {{ .Values.server.service.externalTrafficPolicy }}
   {{- end }}
   {{- if .Values.server.service.loadBalancerIP }}
