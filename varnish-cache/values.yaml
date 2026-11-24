@@ -565,7 +565,7 @@ server:
     # Sets the minimum number of replicas to always keep running. When set to "-", the
     # value of `server.replicas` is used.
     # Type: number or "-"
-    minReplicas: 1
+    minReplicas: "-"
 
     # Sets the maximum number of replicas to run at most.
     # Type: number

@@ -1023,7 +1023,7 @@ Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Cache Pod. `ser
 **server.autoscaling.minReplicas**
 
 - Type: number or "-"
-- Default: `1`
+- Default: `-`
 
 Sets the minimum number of replicas to always keep running. When set to "-", the value of `server.replicas` is used.
 

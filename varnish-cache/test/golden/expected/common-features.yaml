@@ -249,7 +249,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: golden
-  minReplicas: 1
+  minReplicas: 2
   maxReplicas: 5
 ---
 # Source: varnish-cache/templates/ingress.yaml

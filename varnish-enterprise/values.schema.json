@@ -1001,8 +1001,8 @@
             },
             "minReplicas": {
               "$ref": "#/definitions/intOrDash",
-              "description": "Sets the minimum number of replicas to always keep running. When set to \"-\", the value of `server.replicas` is used.\n",
-              "default": "-"
+              "default": "-",
+              "description": "Sets the minimum number of replicas to always keep running. When set to \"-\", the value of `server.replicas` is used.\n"
             },
             "maxReplicas": {
               "type": "integer",

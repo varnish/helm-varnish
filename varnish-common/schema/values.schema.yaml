@@ -1054,9 +1054,7 @@ properties:
 
           minReplicas:
             $ref: "#/definitions/intOrDash"
-            x-default:
-              cache: 1
-              enterprise: "-"
+            default: "-"
             description: |
               Sets the minimum number of replicas to always keep running. When set to "-", the value of `server.replicas` is used.
 
