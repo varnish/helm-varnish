@@ -2899,51 +2899,6 @@ env: {
     [ "${actual}" == '{"fieldRef":{"fieldPath":"metadata.name"}}' ]
 }
 
-@test "${kind}/agent: can be enabled with useReleaseName" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.replicas=1" \
-        --set "server.agent.enabled=true" \
-        --set "server.agent.useReleaseName=true" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_AGENT_NAME") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'release-name' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-I", "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | tee -a /dev/stderr |
-            yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" = "true" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_AGENT_NAME") | .value' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'release-name' ]
-}
-
 @test "${kind}/agent: can be enabled with custom http port" {
     skip_unless_enterprise
     cd "$(chart_dir)"
@@ -4048,6 +4003,27 @@ backend {{ .Release.Name }} {
         yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_CLI_ENDPOINT")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"VARNISH_CONTROLLER_CLI_ENDPOINT","value":"http://vc-apigw.default.svc.cluster.local:8080"}' ]
+}
+
+@test "${kind}/agent/autoRemove/vcli: sets the agent name from the Pod name" {
+    skip_unless_enterprise
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.agent.enabled=true" \
+        --set "server.agent.autoRemove.method=vcli" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-vcli") |
+            .env[]? | select(.name == "VARNISH_CONTROLLER_AGENT_NAME") | .valueFrom' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"fieldRef":{"fieldPath":"metadata.name"}}' ]
 }
 
 @test "${kind}/agent/autoRemove/vcli: can be configured to use internal controller with a different port" {

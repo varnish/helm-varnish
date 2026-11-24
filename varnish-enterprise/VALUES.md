@@ -1888,14 +1888,6 @@ server:
         mountPath: /etc/varnish/extra
 ```
 
-**server.agent.useReleaseName**
-
-- Type: boolean
-- Default: `false`
-- Availability: v1.4.0
-
-When `server.replicas` is set to 1, use Helm Chart release name as Varnish Enterprise server name.
-
 **server.agent.persistence**
 
 - Type: object

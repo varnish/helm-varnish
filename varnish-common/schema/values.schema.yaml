@@ -1917,14 +1917,6 @@ properties:
                   - name: {{ .Release.Name }}-extra
                     mountPath: /etc/varnish/extra
 
-          useReleaseName:
-            type: boolean
-            default: false
-            x-since:
-              enterprise: v1.4.0
-            description: |
-              When `server.replicas` is set to 1, use Helm Chart release name as Varnish Enterprise server name.
-
           persistence:
             type: object
             additionalProperties: false

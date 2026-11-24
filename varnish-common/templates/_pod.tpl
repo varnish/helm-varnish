@@ -435,15 +435,10 @@ Composing the $varnishArgs list or arguments
     {{- end }}
     {{- end }}
     {{- if (include "varnish-common.agentEnabled" .) }}
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-    - name: VARNISH_CONTROLLER_AGENT_NAME
-      value: "{{ .Release.Name }}"
-    {{- else }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
-    {{- end }}
     {{- end }}
     {{- if (include "varnish-common.clusterEnabled" .) }}
     {{- include "varnish-common.clusterEnv" . | nindent 4 }}
@@ -641,15 +636,10 @@ Declares the Varnish Controller Agent container
     {{- else }}
     {{- fail "HTTP support must be enabled to enable Varnish Controller Agent: 'server.http.enabled'" }}
     {{- end }}
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-    - name: VARNISH_CONTROLLER_AGENT_NAME
-      value: "{{ .Release.Name }}"
-    {{- else }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
-    {{- end }}
     {{- include "varnish-common.natsServer" . | indent 4 }}
     {{- if not (empty .Values.server.baseUrl) }}
     - name: VARNISH_CONTROLLER_BASE_URL
@@ -749,17 +739,10 @@ Declares the Varnish Controller VCLI container for agent auto-removal
     {{- else }}
     {{- fail "Either 'server.agent.autoRemove.vcli.password' or 'server.agent.autoRemove.vcli.passwordFrom' must be set" }}
     {{- end }}
-    {{- if (include "varnish-common.agentEnabled" .) }}
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-    - name: VARNISH_CONTROLLER_AGENT_NAME
-      value: "{{ .Release.Name }}"
-    {{- else }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
-    {{- end }}
-    {{- end }}
     {{- if .Values.server.agent.autoRemove.vcli.extraEnvs }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.agent.autoRemove.vcli.extraEnvs) .) | nindent 4 }}
     {{- end }}

@@ -1374,12 +1374,6 @@ server:
     #       mountPath: /etc/varnish/extra
     extraVolumeMounts: []
 
-    # When `server.replicas` is set to 1, use Helm Chart release name as Varnish
-    # Enterprise server name.
-    # Type: boolean
-    # Availability: v1.4.0
-    useReleaseName: false
-
     # Configures persistence for Varnish Controller Agent state using PersistentVolumes.
     # This configuration is only available when `server.kind` is set to StatefulSet. See
     # the [Integration with Varnish Controller

@@ -77,7 +77,7 @@ load _helpers
 
 @test "Schema: rejects the removed agent keys" {
   local key
-  for key in logLevel=info privateToken=x 'tags={a}' location.latitude=1; do
+  for key in logLevel=info privateToken=x 'tags={a}' location.latitude=1 useReleaseName=true; do
     schema_rejects "additional properties '${key%%[.=]*}' not allowed" --set "server.agent.${key}"
   done
 }

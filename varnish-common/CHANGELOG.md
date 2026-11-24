@@ -34,6 +34,7 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - (Enterprise) `server.agent.tags: [a, b]` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_TAGS: a,b`.
 - (Enterprise) `server.agent.location.latitude`, `server.agent.location.longitude` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_LATITUDE`, `VARNISH_CONTROLLER_LONGITUDE`.
 - (Enterprise) `server.agent.privateToken` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_PRIVATE_TOKEN`, preferably read from a Secret with `valueFrom.secretKeyRef`.
+- (Enterprise) `server.agent.useReleaseName` → none, the agent name is always the Pod name. An agent that was registered under the release name shows up as a new agent.
 
 ### Changed
 
