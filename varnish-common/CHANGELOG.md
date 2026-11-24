@@ -36,10 +36,13 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - (Enterprise) `server.agent.privateToken` → `server.agent.extraEnvs` with `VARNISH_CONTROLLER_PRIVATE_TOKEN`, preferably read from a Secret with `valueFrom.secretKeyRef`.
 - (Enterprise) `server.agent.useReleaseName` → none, the agent name is always the Pod name. An agent that was registered under the release name shows up as a new agent.
 - (Enterprise) `server.agent.autoRemove.vcli.internal.namespace`, `releaseName`, `clusterDomain` → `global.natsServer.internal.namespace`, `releaseName`, `clusterDomain`. The VCLI container now finds the APIGW with the same values the agent uses for NATS, so the APIGW and NATS can no longer be in different releases or namespaces.
+- (Enterprise) `server.mse.enabled`, `server.mse.memoryTarget`, `server.mse.config`, `server.mse.configFile`, `server.mse.persistence.*` (MSE3) → `server.mse4` (`server.mse4.enabled: true`, `server.mse4.config`, `server.mse4.persistence`). The chart no longer configures MSE3; set `server.extraArgs: [-s, mse]` to run it in memory-only mode.
 - (Enterprise) `server.mse4.memoryTarget: X` → `server.parameters.memoryTarget: X`, which renders as `-p memory_target=X`.
 
 ### Changed
 
+- (Enterprise) With default values, varnishd no longer gets `-s mse` and uses its default storage. Set `server.mse4.enabled: true` to use MSE4.
+- `thread_pool_timeout` is no longer set by default. It was 120 (from `server.threadTimeout`); varnishd's default, 300, now applies. Set `server.parameters.threadPoolTimeout: 120` to keep the old value.
 - `server.minThreads` and `server.maxThreads` are now passed as `-p thread_pool_min` then `-p thread_pool_max`, before `server.parameters`. Setting `threadPoolMin` or `threadPoolMax` in `server.parameters` now fails rendering; use `server.minThreads` and `server.maxThreads` instead.
 - (Enterprise) `server.agent.persistence.enabled` is ignored when `server.agent.enabled` is false: a StatefulSet no longer gets the agent PersistentVolumeClaim, and a Deployment or DaemonSet no longer fails rendering. Since `volumeClaimTemplates` can't change on an existing StatefulSet, turning the agent on or off with persistence enabled now requires deleting the StatefulSet (`kubectl delete statefulset --cascade=orphan`) before upgrading.
 - The varnish container no longer gets the `VARNISH_TLS_CFG` environment variable, and in Enterprise no longer gets `MSE4_CONFIG`, `VARNISH_STORAGE_BACKEND` or `MSE_MEMORY_TARGET`. The chart sets the varnishd command line itself, with the TLS and MSE4 settings as arguments, so these variables had no effect. Set them in `server.extraEnvs` if your own scripts need them.
@@ -49,12 +52,14 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - Varnish Cache: `server.service.internalTrafficPolicy` defaults to `""` instead of `Cluster`, like Varnish Enterprise. The field is no longer rendered, and Kubernetes applies its default, `Cluster`.
 - `server.varnishncsa.extraArgs` defaults to `[]` instead of `["-c"]`. varnishncsa logs client requests by default, so the output is the same.
 - `server.service.externalTrafficPolicy` is only rendered when `server.service.type` is `NodePort` or `LoadBalancer`. The API server rejects it for other types.
+- Rendering fails when the Service is enabled but neither `server.http.enabled` nor `server.tls.enabled` is true, instead of producing a Service without ports that the API server rejects.
 - A `tcpSocket` handler in `server.startupProbe`, `server.readinessProbe` or `server.livenessProbe` is rendered as given. Before, its port was replaced with `server.http.port`; leave `tcpSocket` out to keep that.
 - Rendering fails when `server.autoscaling.enabled` is true and `server.kind` is `DaemonSet`. The HorizontalPodAutoscaler could not scale a DaemonSet; set `autoscaling.enabled: false`.
 
 ### Fixed
 
 - (Enterprise) On a Deployment or DaemonSet, `server.agent.persistence.enableWithVolumeName` now overrides `server.agent.persistence.enabled`, as on a StatefulSet. Before, rendering failed when both were set.
+- The init container that generates the secret gets `server.resources`, so Pods are accepted in namespaces whose ResourceQuota requires requests or limits.
 - (Enterprise) The `mse4-config` init container gets `server.securityContext` and `server.resources`, merged with `global.securityContext` and `global.resources`, like the secret init container.
 - An `exec` or `grpc` handler in `server.startupProbe`, `server.readinessProbe` or `server.livenessProbe` is rendered as given, and no longer needs `server.http.enabled`. Before, the chart added a `tcpSocket` handler next to it, and the API server rejected the probe.
 - An entry of `server.extraListens` with `path` and no `port` no longer gets a container port without a number, which the API server rejected.
