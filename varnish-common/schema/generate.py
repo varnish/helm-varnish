@@ -132,8 +132,12 @@ def validate(node, path, kind):
         raise SourceError(f"{path}: x-flavor-note must map flavors to text")
     if "x-default-comments" in node and not isinstance(node["x-default-comments"], dict):
         raise SourceError(f"{path}: x-default-comments must map relative paths to text")
-    if "x-links" in node and not isinstance(node["x-links"], dict):
-        raise SourceError(f"{path}: x-links must map references to URLs")
+    if "x-links" in node:
+        links = node["x-links"]
+        if not isinstance(links, dict) or not all(
+            isinstance(url, str) or (isinstance(url, dict) and set(url) == set(FLAVORS)) for url in links.values()
+        ):
+            raise SourceError(f"{path}: x-links must map references to a URL, or to a URL per flavor")
 
     for key, value in node.items():
         if key in SCHEMA_KEYWORDS and isinstance(value, dict):
@@ -147,6 +151,13 @@ def validate(node, path, kind):
 
 
 # --- Flavor helpers ----------------------------------------------------------
+
+
+def flavor_links(source, flavor):
+    """The x-links of the source, with per-flavor URLs resolved for the flavor."""
+    return {
+        ref: url[flavor] if isinstance(url, dict) else url for ref, url in source.get("x-links", {}).items()
+    }
 
 
 def substitute(text, flavor):
@@ -514,7 +525,7 @@ def description_text(node, flavor):
 
 def render_values(source, flavor):
     definitions = source.get("definitions", {})
-    links = source.get("x-links", {})
+    links = flavor_links(source, flavor)
     lines = ["---", f"# {GENERATED}", ""]
     lines += values_mapping(source, 0, definitions, flavor, links)
     return "\n".join(lines) + "\n"
@@ -561,7 +572,7 @@ def render_docs(source, flavor):
     definitions = source.get("definitions", {})
     blocks = docs_entries(source, "", definitions, flavor)
     text = "\n\n".join(blocks)
-    links = source.get("x-links", {})
+    links = flavor_links(source, flavor)
     used = sorted(ref for ref in links if f"][{ref}]" in text)
     if used:
         text += "\n\n" + "\n".join(f"[{ref}]: {links[ref]}" for ref in used)

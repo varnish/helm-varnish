@@ -3,6 +3,9 @@ $schema: http://json-schema.org/draft-07/schema#
 x-links:
   k8s-pod: https://kubernetes.io/docs/concepts/workloads/pods/
   unused-link: https://example.com/
+  flavor-link:
+    cache: https://example.com/cache/
+    enterprise: https://example.com/enterprise/
 type: object
 additionalProperties: false
 definitions:
@@ -21,7 +24,7 @@ properties:
     default: ""
     x-default-text: name of the chart
     description: |
-      Overrides the name of the chart. This description is long enough to be wrapped over several lines by the generator, as it runs well past ninety columns, and it links to the [Pod][k8s-pod] documentation of {product}.
+      Overrides the name of the chart. This description is long enough to be wrapped over several lines by the generator, as it runs well past ninety columns, and it links to the [Pod][k8s-pod] documentation of {product}, and to its [manual][flavor-link].
 
       A second paragraph.
   enabled:

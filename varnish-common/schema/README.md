@@ -40,7 +40,7 @@ The `x-` keywords:
 | `x-deprecated: <md>` | any node | Docs and values.yaml prefix "Deprecated: …". The schema still accepts the key. |
 | `x-docs-section: <title>` | property node | The docs start a `###` heading with this title before this node. |
 | `x-docs-skip: true` | any node | No docs entry for the node or its children. |
-| `x-links: {<ref>: <url>}` | root only | Reference-style link definitions, appended to each generated docs block when the block uses them. |
+| `x-links: {<ref>: <url>}` | root only | Reference-style link definitions, appended to each generated docs block when the block uses them, and inlined in values.yaml. A URL can also be `{cache: <url>, enterprise: <url>}`, for links that differ between flavors. |
 
 Any other `x-` keyword, or one in the wrong place, is an error.
 

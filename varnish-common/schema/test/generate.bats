@@ -159,6 +159,26 @@ enterprise_docs() {
   [[ "$output" == *"x-flavor-note must map flavors to text"* ]]
 }
 
+@test "generate: x-links can differ between flavors" {
+  generate
+  [ "$status" -eq 0 ]
+
+  grep -qxF '[flavor-link]: https://example.com/cache/' "$(cache_docs)"
+  run ! grep -qF 'https://example.com/enterprise/' "$(cache_docs)"
+  grep -qxF '[flavor-link]: https://example.com/enterprise/' "$(enterprise_docs)"
+  run ! grep -qF 'https://example.com/cache/' "$(enterprise_docs)"
+
+  grep -qF '[manual](https://example.com/cache/)' "${ROOT}/varnish-cache/values.yaml"
+  grep -qF '[manual](https://example.com/enterprise/)' "${ROOT}/varnish-enterprise/values.yaml"
+}
+
+@test "generate: rejects an x-links URL missing a flavor" {
+  yq -i '.x-links.flavor-link = {"cache": "https://example.com/cache/"}' "${SOURCE}"
+  generate
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"x-links must map references to a URL, or to a URL per flavor"* ]]
+}
+
 @test "generate: --check detects drift" {
   generate
   [ "$status" -eq 0 ]
