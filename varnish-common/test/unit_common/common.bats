@@ -774,59 +774,7 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '["sh","-c","umask 077; test -s /etc/varnish/shared/secret || head -c 32 /dev/urandom > /etc/varnish/shared/secret"]' ]
 }
 
-@test "${kind}/threads: omitted when null" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.minThreads=null' \
-        --set 'server.maxThreads=null' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-            jq -r -c 'if . == null then "no command" else [.[] | select(startswith("thread_pool_"))] end' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '[]' ]
-}
-
-@test "${kind}/threads: min before max, before parameters" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.minThreads=10' \
-        --set 'server.maxThreads=80' \
-        --set 'server.parameters.acceptorSleepMax=0.05' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local command=$(echo "$object" |
-        yq -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
-            .command' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$command" |
-        jq -r -c '[index("thread_pool_min=10"), index("thread_pool_max=80"), index("acceptor_sleep_max=0.05")] |
-            if all(. != null) and .[0] < .[1] and .[1] < .[2] then "ordered" else tostring end' |
-        tee -a /dev/stderr)
-    [ "${actual}" == 'ordered' ]
-
-    local actual=$(echo "$command" |
-        jq -r -c '[index(["-t"]), (.[] | select(startswith("thread_pool_timeout")))]' |
-        tee -a /dev/stderr)
-    [ "${actual}" == '[null]' ]
-}
-
-@test "${kind}/threads: defaults" {
+@test "${kind}/threads: not set by default" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -842,23 +790,45 @@ release-namespace: {{ .Release.Namespace }}
             .command' |
             jq -r -c '[.[] | select(startswith("thread_pool_"))]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '["thread_pool_min=50","thread_pool_max=1000"]' ]
+    [ "${actual}" == '[]' ]
 }
 
-@test "${kind}/threads: rejected in parameters" {
+@test "${kind}/parameters: sorted by snake_case name, max before min" {
     cd "$(chart_dir)"
 
-    for key in threadPoolMin threadPoolMax thread_pool_min thread_pool_max ThreadPoolMin ThreadPoolMax; do
-        run helm template \
-            --set "server.kind=${kind}" \
-            --set "server.parameters.${key}=5" \
-            --namespace default \
-            --show-only ${template} \
-            .
-        echo "${output}" >&2
-        [ "${status}" -ne 0 ]
-        [[ "${output}" == *"Set thread pool sizes with 'server.minThreads'/'server.maxThreads', not 'server.parameters'"* ]]
-    done
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.parameters.threadPoolMin=300' \
+        --set 'server.parameters.threadPoolMax=5000' \
+        --set 'server.parameters.acceptorSleepMax=0.05' \
+        --set 'server.parameters.thread_pools=4' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'") |
+            .command' |
+            jq -r -c '[.[] | select(test("^(acceptor_sleep_max|thread_pool)"))]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["acceptor_sleep_max=0.05","thread_pool_max=5000","thread_pool_min=300","thread_pools=4"]' ]
+}
+
+@test "${kind}/parameters: duplicate spellings fail" {
+    cd "$(chart_dir)"
+
+    run helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.parameters.threadPoolMin=10' \
+        --set 'server.parameters.thread_pool_min=10' \
+        --namespace default \
+        --show-only ${template} \
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.parameters.threadPoolMin' and 'server.parameters.thread_pool_min' both set 'thread_pool_min'"* ]]
 }
 
 @test "${kind}/workdir: no -n" {
@@ -1126,64 +1096,6 @@ release-namespace: {{ .Release.Namespace }}
             .env[]? | select(.name == "FROM_SECRET")' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"name":"FROM_SECRET","valueFrom":{"secretKeyRef":{"key":"my-key","name":"my-secret"}}}' ]
-}
-
-@test "${kind}/settings: configured by default" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_min=50"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_min=50' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_max=1000"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_max=1000' ]
-}
-
-@test "${kind}/settings: can be configured" {
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.minThreads=300' \
-        --set 'server.maxThreads=5000' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_min=300"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_min=300' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-p", "thread_pool_max=5000"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == 'thread_pool_max=5000' ]
 }
 
 @test "${kind}/command: can be configured" {

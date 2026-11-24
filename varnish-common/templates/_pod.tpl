@@ -286,37 +286,37 @@ Composing the $varnishArgs list or arguments
     {{- $varnishArgs = concat $varnishArgs (list "-f" "/etc/varnish/default.vcl") }}
   {{- end }}
 {{- end -}}
-{{/*
-    Parameter list
+{{- /*
+    Parameter list, keyed by snake_case name: duplicate spellings are rejected, and ranging
+    over the dict sorts by name, so thread_pool_max comes before
+    thread_pool_min (varnishd checks min <= max at each -p, with its own
+    defaults for the other one)
 */}}
-{{- $userParams := .Values.server.parameters | default dict }}
-{{- range $pKey, $_ := $userParams }}
-  {{- if has (snakecase $pKey) (list "thread_pool_min" "thread_pool_max") }}
-    {{- fail "Set thread pool sizes with 'server.minThreads'/'server.maxThreads', not 'server.parameters'" }}
+{{- $varnishParams := dict }}
+{{- $paramKeys := dict }}
+{{- range $pKey, $pValue := .Values.server.parameters | default dict }}
+  {{- if not (kindIs "invalid" $pValue) }}
+    {{- $pName := snakecase $pKey }}
+    {{- if hasKey $paramKeys $pName }}
+      {{- fail (printf "'server.parameters.%s' and 'server.parameters.%s' both set '%s', keep only one" (get $paramKeys $pName) $pKey $pName) }}
+    {{- end }}
+    {{- $_ := set $paramKeys $pName $pKey }}
+    {{- $_ := set $varnishParams $pName $pValue }}
   {{- end }}
 {{- end }}
-{{- /* min first: varnishd checks min <= max at each -p, and its default min is 100 */}}
-{{- if include "varnish-common.isSet" .Values.server.minThreads }}
-  {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_min=" (toString .Values.server.minThreads))) }}
-{{- end }}
-{{- if include "varnish-common.isSet" .Values.server.maxThreads }}
-  {{- $varnishArgs = concat $varnishArgs (list "-p" (print "thread_pool_max=" (toString .Values.server.maxThreads))) }}
-{{- end }}
-{{- $varnishParams := merge (dict) $userParams }}
 {{- if eq .Values.server.delayedShutdown.method "shutdown_delay" }}
   {{- if not (include "varnish-common.isEnterprise" .) }}
     {{- fail "'server.delayedShutdown.method' 'shutdown_delay' requires Varnish Enterprise, use 'sleep' or 'mempool' instead" }}
   {{- end }}
-  {{- $varnishParams = merge (dict
-    "shutdown_delay" .Values.server.delayedShutdown.shutdownDelay.seconds
-    "shutdown_close" "off") $varnishParams }}
+  {{- $_ := set $varnishParams "shutdown_delay" .Values.server.delayedShutdown.shutdownDelay.seconds }}
+  {{- $_ := set $varnishParams "shutdown_close" "off" }}
 {{- end -}}
 {{- range $pKey, $pValue := $varnishParams }}
   {{- $pTp := kindOf $pValue }}
   {{- if eq $pTp "slice" }}
-    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (join "," $pValue))) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print $pKey "=" (join "," $pValue))) }}
   {{- else }}
-    {{- $varnishArgs = concat $varnishArgs (list "-p" (print (snakecase $pKey) "=" (toString $pValue))) }}
+    {{- $varnishArgs = concat $varnishArgs (list "-p" (print $pKey "=" (toString $pValue))) }}
   {{- end }}
 {{- end -}}
 {{/*

@@ -502,20 +502,6 @@ server:
       value: {{ .Release.Namespace }}
 ```
 
-**server.minThreads**
-
-- Type: number
-- Default: `50`
-
-Sets the minimum number of worker threads in each pool. Passed as `-p thread_pool_min` before `server.parameters` (min first). See also [varnishd documentation][varnishd].
-
-**server.maxThreads**
-
-- Type: number
-- Default: `1000`
-
-Sets the maximum number of worker threads in each pool. Passed as `-p thread_pool_max` after `thread_pool_min` and before `server.parameters`. See also [varnishd documentation][varnishd].
-
 **server.command**
 
 - Type: array of strings
@@ -526,7 +512,7 @@ Sets the command for Varnish Enterprise. This replaces the whole command line bu
 
 - Type: object
 
-Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Thread pool sizes are set with `server.minThreads` and `server.maxThreads`: setting `thread_pool_min` or `thread_pool_max` here, in any spelling, fails rendering.
+Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Parameters are passed in alphabetical order of their snake_case names, so `thread_pool_max` comes before `thread_pool_min`. Setting the same parameter twice with different spellings (e.g., `threadPoolMin` and `thread_pool_min`) fails rendering.
 
 For example, the following results in `-p backend_idle_timeout=60 -p feature=+http2`:
 

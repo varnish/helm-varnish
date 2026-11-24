@@ -189,30 +189,6 @@ EOT
   [[ "$output" != *"nodePort"* ]]
 }
 
-@test "Schema: still rejects fractional thread counts" {
-  local values="${BATS_TEST_TMPDIR}/values.yaml"
-  printf 'server:\n  minThreads: 1.5\n' > "${values}"
-  schema_rejects "at '/server/minThreads'" -f "${values}"
-}
-
-@test "Schema: rejects non-integer thread count strings" {
-  # passed to varnishd as is, which refuses to start on "1.5" or "two"
-  schema_rejects "at '/server/minThreads'" --set-string server.minThreads=1.5
-  schema_rejects "at '/server/minThreads'" --set-string server.minThreads=two
-  schema_rejects "at '/server/maxThreads'" --set-string server.maxThreads=1.5
-  schema_rejects "at '/server/maxThreads'" --set-string server.maxThreads=two
-}
-
-@test "Schema: accepts integer and empty thread count strings" {
-  schema_accepts --set-string server.minThreads=10 --set-string server.maxThreads=100
-  [[ "$output" == *'thread_pool_min=10'* ]]
-  [[ "$output" == *'thread_pool_max=100'* ]]
-
-  schema_accepts --set-string server.minThreads= --set-string server.maxThreads=
-  [[ "$output" != *'thread_pool_min'* ]]
-  [[ "$output" != *'thread_pool_max'* ]]
-}
-
 @test "Schema: rejects an unknown delayedShutdown.method" {
   schema_rejects "at '/server/delayedShutdown/method'" --set server.delayedShutdown.method=wait
 }

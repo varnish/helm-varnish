@@ -608,32 +608,6 @@
             "- name: RELEASE_NAMESPACE\n  value: {{ .Release.Namespace }}\n"
           ]
         },
-        "minThreads": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string",
-              "pattern": "^[0-9]*$"
-            }
-          ],
-          "default": 50,
-          "description": "Sets the minimum number of worker threads in each pool. Passed as `-p thread_pool_min` before `server.parameters` (min first). See also [varnishd documentation][varnishd].\n"
-        },
-        "maxThreads": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "string",
-              "pattern": "^[0-9]*$"
-            }
-          ],
-          "default": 1000,
-          "description": "Sets the maximum number of worker threads in each pool. Passed as `-p thread_pool_max` after `thread_pool_min` and before `server.parameters`. See also [varnishd documentation][varnishd].\n"
-        },
         "command": {
           "type": "array",
           "items": {
@@ -653,7 +627,7 @@
             ]
           },
           "default": {},
-          "description": "Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Thread pool sizes are set with `server.minThreads` and `server.maxThreads`: setting `thread_pool_min` or `thread_pool_max` here, in any spelling, fails rendering.\n",
+          "description": "Sets Varnish Enterprise parameters (the `-p` argument of varnishd). Parameter names are converted from camelCase to snake_case, and arrays are joined with a comma. Parameters are passed in alphabetical order of their snake_case names, so `thread_pool_max` comes before `thread_pool_min`. Setting the same parameter twice with different spellings (e.g., `threadPoolMin` and `thread_pool_min`) fails rendering.\n",
           "examples": [
             {
               "backendIdleTimeout": "60",
