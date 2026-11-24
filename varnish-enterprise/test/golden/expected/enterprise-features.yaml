@@ -186,6 +186,10 @@ spec:
               value: /etc/varnish/mse4.conf
             - name: VARNISH_TLS_CFG
               value: /etc/varnish/tls.conf
+            - name: VARNISH_CONTROLLER_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: VARNISH_CLUSTER_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -205,7 +209,7 @@ spec:
             - -T
             - 127.0.0.1:6082
             - -I
-            - /etc/varnish/shared/agent/cmds.cli
+            - /var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli
             - -f
             - /etc/varnish/wrapped-default.vcl
             - -p
@@ -394,27 +398,6 @@ spec:
            - name: golden-config-mse4
              mountPath: /etc/varnish/mse4.conf
              subPath: mse4.conf
-        - name: init-agent
-          image: busybox:1.36
-          command:
-            - /bin/sh
-            - -c
-            - |
-              set -e
-              ln -sf \
-                  /var/lib/varnish-controller/varnish-controller-agent/"${VARNISH_CONTROLLER_AGENT_NAME}" \
-                  /etc/varnish/shared/agent
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 999
-          env:
-            - name: VARNISH_CONTROLLER_AGENT_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-          volumeMounts:
-            - name: golden-config-shared
-              mountPath: /etc/varnish/shared
       volumes:
       - name: golden-varnish-vsm
         emptyDir:

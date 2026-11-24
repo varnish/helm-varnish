@@ -103,55 +103,25 @@ rollingUpdate:
     [[ "$stderr" == *"'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'Deployment'"* ]]
 }
 
-@test "Deployment/agent: test initContainer image and tag" {
+@test "Deployment/agent: has no init-agent init container" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    local object=$((helm template \
         --set 'server.kind=Deployment' \
         --set 'server.agent.enabled=true' \
         --set 'global.initContainer.image=ubuntu' \
-        --set 'global.initContainer.tag=24.04' \
         --namespace default \
         --show-only templates/deployment.yaml \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
+        . || render_failed) | tee -a /dev/stderr)
 
-    [ "${actual}" == "ubuntu:24.04" ]
-}
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '[.spec.template.spec.initContainers[]?.name]' | tee -a /dev/stderr)
+    [ "${actual}" == '["varnish-enterprise-secret"]' ]
 
-@test "Deployment/agent: initContainer keeps a numeric tag 0 when the schema is skipped" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set 'server.kind=Deployment' \
-        --set 'server.agent.enabled=true' \
-        --skip-schema-validation \
-        --set 'global.initContainer.tag=0' \
-        --namespace default \
-        --show-only templates/deployment.yaml \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
-
-    [ "${actual}" == "busybox:0" ]
-}
-
-@test "Deployment/agent: initContainer numeric tag renders without scientific notation when the schema is skipped" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set 'server.kind=Deployment' \
-        --set 'server.agent.enabled=true' \
-        --skip-schema-validation \
-        --set-json 'global.initContainer.tag=20241129' \
-        --namespace default \
-        --show-only templates/deployment.yaml \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '.spec.template.spec.initContainers[]? | select(.name == "init-agent") | .image' | tee -a /dev/stderr)
-
-    [ "${actual}" == "busybox:20241129" ]
+    actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.template.spec.containers[0].command | contains(["-I", "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli"])' | tee -a /dev/stderr)
+    [ "${actual}" == "true" ]
 }
 
 @test "Deployment/agent/persistence: cannot be enabled" {

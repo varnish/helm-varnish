@@ -108,11 +108,6 @@ EOT
   schema_rejects "at '/server/image/tag'" -f "${values}"
 }
 
-@test "Schema: rejects a numeric global.initContainer.tag" {
-  skip_unless_enterprise
-  schema_rejects "at '/global/initContainer/tag'" --set global.initContainer.tag=1
-}
-
 @test "Schema: accepts string image tags that look like numbers" {
   # --set only converts integers and booleans, so 7.6 stays a string
   schema_accepts --set server.image.tag=7.6
@@ -415,6 +410,10 @@ EOT
 
 @test "Schema: rejects the removed server.otel.image" {
   schema_rejects "additional properties 'image' not allowed" --set server.otel.image.tag=-
+}
+
+@test "Schema: rejects the removed server.initAgent" {
+  schema_rejects "additional properties 'initAgent' not allowed" --set server.initAgent.enabled=false
 }
 
 @test "Schema: rejects unknown otel keys" {

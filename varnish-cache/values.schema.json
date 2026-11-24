@@ -1599,10 +1599,6 @@
             }
           }
         },
-        "initAgent": {
-          "type": "null",
-          "description": "Varnish Enterprise only."
-        },
         "agent": {
           "type": "null",
           "description": "Varnish Enterprise only."

@@ -2865,50 +2865,6 @@ env: {
             tee -a /dev/stderr)
 
     local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_AGENT_NAME")' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '' ]
-
-    local actual=$(echo "$container" |
-        yq -o=json -I=0 '.command' |
-            jq -r -c '.[index(["-I", "/etc/varnish/shared/agent/cmds.cli"]) + 1]' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '/etc/varnish/shared/agent/cmds.cli' ]
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" | tee -a /dev/stderr |
-            yq -r 'length > 0' | tee -a /dev/stderr)
-    [ "${actual}" = "true" ]
-
-    local actual=$(echo "$container" |
-        yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_AGENT_NAME") | .valueFrom' |
-            tee -a /dev/stderr)
-    [ "${actual}" == '{"fieldRef":{"fieldPath":"metadata.name"}}' ]
-}
-
-@test "${kind}/agent: can be enabled without initAgent" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "server.agent.enabled=true" \
-        --set "server.initAgent.enabled=false" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local container=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'")' |
-            tee -a /dev/stderr)
-
-    local actual=$(echo "$container" |
         yq -r -o=json -I=0 '.env[]? | select(.name == "VARNISH_CONTROLLER_AGENT_NAME") | .valueFrom' |
             tee -a /dev/stderr)
     [ "${actual}" == '{"fieldRef":{"fieldPath":"metadata.name"}}' ]
@@ -2934,7 +2890,7 @@ env: {
     [ "${actual}" == '{"fieldRef":{"fieldPath":"metadata.name"}}' ]
 }
 
-@test "${kind}/agent: can be enabled without initAgent with useReleaseName" {
+@test "${kind}/agent: can be enabled with useReleaseName" {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
@@ -2942,7 +2898,6 @@ env: {
         --set "server.kind=${kind}" \
         --set "server.replicas=1" \
         --set "server.agent.enabled=true" \
-        --set "server.initAgent.enabled=false" \
         --set "server.agent.useReleaseName=true" \
         --namespace default \
         --show-only ${template} \
@@ -3033,55 +2988,48 @@ env: {
     skip_unless_enterprise
     cd "$(chart_dir)"
 
-    for initAgent in true false; do
-        local object=$((helm template \
-            --set "server.kind=${kind}" \
-            --set 'server.agent.enabled=true' \
-            --set "server.initAgent.enabled=${initAgent}" \
-            --namespace default \
-            --show-only ${template} \
-            . || render_failed) |
-            tee -a /dev/stderr)
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.agent.enabled=true' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
 
-        local container=$(echo "$object" |
-            yq -r -o=json -I=0 '
-                .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
-            tee -a /dev/stderr)
+    local container=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-agent")' |
+        tee -a /dev/stderr)
 
-        local actual=$(echo "$container" |
-            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_SECRET") | .value' |
-            tee -a /dev/stderr)
-        [ "${actual}" == '/etc/varnish/shared/secret' ]
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_SECRET") | .value' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '/etc/varnish/shared/secret' ]
 
-        local actual=$(echo "$container" |
-            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_HOST") | .value' |
-            tee -a /dev/stderr)
-        [ "${actual}" == '127.0.0.1' ]
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_HOST") | .value' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '127.0.0.1' ]
 
-        local actual=$(echo "$container" |
-            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_PORT") | .value' |
-            tee -a /dev/stderr)
-        [ "${actual}" == '6082' ]
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_ADMIN_PORT") | .value' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '6082' ]
 
-        local actual=$(echo "$container" |
-            yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_NAME") | .name' |
-            tee -a /dev/stderr)
-        [ "${actual}" == '' ]
+    local actual=$(echo "$container" |
+        yq -r '.env[]? | select(.name == "VARNISH_CONTROLLER_VARNISH_NAME") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '' ]
 
-        local actual=$(echo "$container" |
-            yq -r '.volumeMounts[] | select(.mountPath == "/etc/varnish/shared") | .name' |
-            tee -a /dev/stderr)
-        [ "${actual}" == 'release-name-config-shared' ]
+    local actual=$(echo "$container" |
+        yq -r '.volumeMounts[] | select(.mountPath == "/etc/varnish/shared") | .name' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'release-name-config-shared' ]
 
-        local actual=$(echo "$object" |
-            yq -r -o=json -I=0 '[.spec.template.spec.initContainers[].name]' |
-            tee -a /dev/stderr)
-        if [ "${initAgent}" == "true" ]; then
-            [ "${actual}" == '["'"${chart}"'-secret","init-agent"]' ]
-        else
-            [ "${actual}" == '["'"${chart}"'-secret"]' ]
-        fi
-    done
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '[.spec.template.spec.initContainers[].name]' |
+        tee -a /dev/stderr)
+    [ "${actual}" == '["'"${chart}"'-secret"]' ]
 }
 
 @test "${kind}/agent: can be enabled with private token" {
@@ -4547,75 +4495,6 @@ backend {{ .Release.Name }} {
     local actual=$(echo "$object" |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-vcli") |
-            .volumeMounts[]? | select(.name == "release-name-data")' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == '{"name":"release-name-data","mountPath":"/var/data"}' ]
-}
-
-@test "${kind}/initAgent: enabled by default" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.initContainers[]? | select(.name == "init-agent") |
-            length > 0' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == 'true' ]
-}
-
-@test "${kind}/initAgent/extraVolumeMounts: can be configured" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set 'server.initAgent.extraVolumeMounts[0].name=varnish-data' \
-        --set 'server.initAgent.extraVolumeMounts[0].mountPath=/var/data' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.initContainers[]? | select(.name == "init-agent") |
-            .volumeMounts[]? | select(.name == "varnish-data")' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == '{"mountPath":"/var/data","name":"varnish-data"}' ]
-}
-
-@test "${kind}/initAgent/extraVolumeMounts: can be configured as templated string" {
-    skip_unless_enterprise
-    cd "$(chart_dir)"
-
-    local extraVolumeMounts="
-- name: {{ .Release.Name }}-data
-  mountPath: /var/data"
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.agent.enabled=true' \
-        --set "server.initAgent.extraVolumeMounts=${extraVolumeMounts}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.initContainers[]? | select(.name == "init-agent") |
             .volumeMounts[]? | select(.name == "release-name-data")' |
             tee -a /dev/stderr)
 

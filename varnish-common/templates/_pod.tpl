@@ -253,11 +253,7 @@ Composing the $varnishArgs list or arguments
   {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/vcls/cmds.cli" "-f" "") }}
 {{- else }}
   {{- if (include "varnish-common.agentEnabled" .) }}
-    {{- if .Values.server.initAgent.enabled }}
-      {{- $varnishArgs = concat $varnishArgs (list "-I" "/etc/varnish/shared/agent/cmds.cli") }}
-    {{- else }}
-      {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
-    {{- end }}
+    {{- $varnishArgs = concat $varnishArgs (list "-I" "/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli") }}
   {{- end }}
   {{- if (include "varnish-common.clusterEnabled" .) }}
     {{- $varnishArgs = concat $varnishArgs (list "-f" "/etc/varnish/wrapped-default.vcl") }}
@@ -446,7 +442,7 @@ Composing the $varnishArgs list or arguments
       value: "true"
     {{- end }}
     {{- end }}
-    {{- if and (include "varnish-common.agentEnabled" .) (not .Values.server.initAgent.enabled) }}
+    {{- if (include "varnish-common.agentEnabled" .) }}
     {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
     - name: VARNISH_CONTROLLER_AGENT_NAME
       value: "{{ .Release.Name }}"
@@ -873,44 +869,6 @@ initContainers:
      - name: {{ .Release.Name }}-config-mse4
        mountPath: /etc/varnish/mse4.conf
        subPath: mse4.conf
-{{- end }}
-{{- if and (include "varnish-common.agentEnabled" .) .Values.server.initAgent.enabled }}
-  - name: init-agent
-    {{- $initTag := .Values.global.initContainer.tag }}
-    {{- /* not "default": it would also replace a numeric tag 0 */}}
-    {{- if not (include "varnish-common.isSet" $initTag) }}{{ $initTag = "1.36" }}{{ end }}
-    image: {{ .Values.global.initContainer.image | default "busybox"}}:{{ include "varnish-common.imageTag" $initTag }}
-    command:
-      - /bin/sh
-      - -c
-      - |
-        set -e
-        ln -sf \
-            /var/lib/varnish-controller/varnish-controller-agent/"${VARNISH_CONTROLLER_AGENT_NAME}" \
-            /etc/varnish/shared/agent
-    {{- include "varnish-common.securityContext" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
-    {{- include "varnish-common.resources" (merge (dict "section" "server.initAgent") .) | nindent 4 }}
-    env:
-    {{- if and (eq (toString .Values.server.replicas) "1") .Values.server.agent.useReleaseName }}
-      - name: VARNISH_CONTROLLER_AGENT_NAME
-        value: "{{ .Release.Name }}"
-    {{- else }}
-      - name: VARNISH_CONTROLLER_AGENT_NAME
-        valueFrom:
-          fieldRef:
-            fieldPath: metadata.name
-    {{- end }}
-    volumeMounts:
-      - name: {{ .Release.Name }}-config-shared
-        mountPath: /etc/varnish/shared
-      {{- if .Values.server.initAgent.extraVolumeMounts }}
-      {{- $tp := kindOf .Values.server.initAgent.extraVolumeMounts }}
-      {{- if eq $tp "string" }}
-      {{- tpl .Values.server.initAgent.extraVolumeMounts . | trim | nindent 6 }}
-      {{- else }}
-      {{- toYaml .Values.server.initAgent.extraVolumeMounts | nindent 6 }}
-      {{- end }}
-      {{- end }}
 {{- end }}
 {{- if .Values.server.extraInitContainers }}
   {{- $tp := kindOf .Values.server.extraInitContainers }}

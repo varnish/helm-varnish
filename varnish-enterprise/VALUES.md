@@ -46,26 +46,6 @@ global:
     - name: registry-quay-k7c2f4m2d5
 ```
 
-**global.initContainer**
-
-- Type: object
-
-Overrides the default busybox initContainer image.
-
-**global.initContainer.image**
-
-- Type: string
-- Default: `busybox`
-
-The image to use for the initContainer.
-
-**global.initContainer.tag**
-
-- Type: string
-- Default: `1.36`
-
-The tag to use for the initContainer image.
-
 **global.podSecurityContext**
 
 - Type: object
@@ -1798,71 +1778,6 @@ server:
   otel:
     env:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
-```
-
-**server.initAgent**
-
-- Type: object
-
-Configures the init container for Varnish Controller Agent.
-
-**server.initAgent.enabled**
-
-- Type: boolean
-- Default: `true`
-- Availability: v1.6.0
-
-Configures whether to use init container to initialize Varnish Controller Agent state directory symbolic link. This is to allow Varnish Enterprise Pod to have a static path for accessing Varnish Controller Agent state files. When `server.initAgent.enabled` is `false`, the Varnish Controller Agent state directory will be discovered using a dynamic environment variable based on Pod name.
-
-Before v1.6.0, the state directory symbolic link is created at `/etc/varnish/agent`.
-
-From v1.6.0, the state directory symbolic link is created at `/etc/varnish/shared/agent`.
-
-From v1.8.0, the default will be changed to `false`.
-
-**server.initAgent.securityContext**
-
-- Type: object or template string
-- Availability: v1.5.0
-
-An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
-
-This securityContext will be set on the Varnish Controller Agent's init container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
-
-**server.initAgent.extraVolumeMounts**
-
-- Type: array or template string
-
-Declares the extra volumes to mount with Varnish Controller Agent init container. Can be set as either a YAML list or a template string.
-
-For example:
-
-```yaml
-server:
-  initAgent:
-    extraVolumeMounts: |
-      - name: {{ .Release.Name }}-extra
-        mountPath: /etc/varnish/extra
-```
-
-**server.initAgent.resources**
-
-- Type: object or template string
-
-An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Controller Agent init container.
-
-For example:
-
-```yaml
-server:
-  initAgent:
-    resources:
-      limits:
-        cpu: "100m"
-        memory: "128Mi"
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
 ```
 
 **server.agent**

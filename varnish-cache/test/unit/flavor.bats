@@ -41,7 +41,6 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
         'cluster.enabled=true' \
         'server.mse4.enabled=true' \
         'server.agent.enabled=true' \
-        'server.initAgent.enabled=true' \
         'server.licenseSecret=license' \
         'server.baseUrl=http://example.com'; do
         run helm template --set "${value}" --namespace default .
@@ -57,7 +56,6 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
         'cluster=null' \
         'server.mse4=null' \
         'server.agent=null' \
-        'server.initAgent=null' \
         'server.licenseSecret=null' \
         'server.baseUrl=null'; do
         run helm template --set "${value}" --namespace default .
@@ -85,7 +83,7 @@ ENTERPRISE_ONLY='mse|license|cluster[-_.]|activedns|varnish-controller'
     cd "$(chart_dir)"
     local docs=$(sed -n '/<!-- BEGIN GENERATED VALUES -->/,/<!-- END GENERATED VALUES -->/p' README.md)
     [ -n "${docs}" ]
-    for key in '**cluster' '**server.mse' '**server.agent' '**server.initAgent' '**server.licenseSecret' '**server.baseUrl' 'shutdown_delay' 'natsServer'; do
+    for key in '**cluster' '**server.mse' '**server.agent' '**server.licenseSecret' '**server.baseUrl' 'shutdown_delay' 'natsServer'; do
         echo "${key}" >&2
         run ! grep -qF -- "${key}" <<<"${docs}"
     done

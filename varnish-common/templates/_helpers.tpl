@@ -35,7 +35,7 @@ Create chart name and version as used by the chart label.
 {{/*
 Returns "true" when rendering the Varnish Enterprise flavor of the chart, as
 set by the "flavor" annotation in Chart.yaml. Enterprise-only
-values (cluster, mse4, agent, initAgent, licenseSecret, baseUrl,
+values (cluster, mse4, agent, licenseSecret, baseUrl,
 global.natsServer) are absent from the Varnish Cache values, so they must only
 be read behind this check or one of the predicates below.
 */}}
