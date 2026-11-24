@@ -4638,15 +4638,13 @@ backend {{ .Release.Name }} {
     [ "${actual}" == "" ]
 }
 
-@test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa" {
+@test "${kind}/varnishncsa: inherits securityContext from global" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'global.securityContext.hello=world' \
         --set 'server.securityContext.ignore-this=yes' \
-        --set 'server.varnishncsa.securityContext.runAsUser=1001' \
-        --set 'server.varnishncsa.securityContext.foo=baz' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -4656,10 +4654,10 @@ backend {{ .Release.Name }} {
 
     # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"foo":"baz","hello":"world","runAsNonRoot":true,"runAsUser":1001}' ]
+    [ "${actual}" == '{"hello":"world","runAsNonRoot":true,"runAsUser":'"${default_uid}"'}' ]
 }
 
-@test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with global as a templated string" {
+@test "${kind}/varnishncsa: inherits securityContext from global as a templated string" {
     cd "$(chart_dir)"
 
     local securityContext="
@@ -4672,8 +4670,6 @@ release-namespace: {{ .Release.Namespace }}
         --set 'server.varnishncsa.enabled=true' \
         --set "global.securityContext=${securityContext}" \
         --set 'server.securityContext.ignore-this=yes' \
-        --set 'server.varnishncsa.securityContext.runAsUser=1001' \
-        --set 'server.varnishncsa.securityContext.foo=baz' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -4681,58 +4677,6 @@ release-namespace: {{ .Release.Namespace }}
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
             .securityContext' | tee -a /dev/stderr)
 
-    [ "${actual}" == '{"foo":"baz","release-name":"release-name","release-namespace":"default","runAsUser":1001}' ]
-}
-
-@test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with varnishncsa as a templated string" {
-    cd "$(chart_dir)"
-
-    local securityContext="
-release-name: {{ .Release.Name }}
-release-namespace: {{ .Release.Namespace }}
-"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.enabled=true' \
-        --set 'global.securityContext.hello=world' \
-        --set 'server.securityContext.ignore-this=yes' \
-        --set "server.varnishncsa.securityContext=${securityContext}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .securityContext' | tee -a /dev/stderr)
-
-    # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
-    # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":'"${default_uid}"'}' ]
-}
-
-@test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with both as a templated string" {
-    cd "$(chart_dir)"
-
-    local securityContext="
-release-name: {{ .Release.Name }}
-release-namespace: to-be-override
-"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.enabled=true' \
-        --set "global.securityContext=${securityContext}" \
-        --set 'server.securityContext.ignore-this=yes' \
-        --set 'server.varnishncsa.securityContext=release-namespace: {{ .Release.Namespace }}' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .securityContext' | tee -a /dev/stderr)
-
-    # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
-    # we're testing that the values are merged and not replaced.
     [ "${actual}" == '{"release-name":"release-name","release-namespace":"default"}' ]
 }
 
@@ -4801,7 +4745,6 @@ release-namespace: to-be-override
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.startupProbe.periodSeconds=5' \
         --set-json 'server.varnishncsa.extraArgs=[]' \
         --namespace default \
         --show-only ${template} \
@@ -4816,12 +4759,9 @@ release-namespace: to-be-override
 
     local actual=$(echo "$container" | yq -o=json -I=0 '.args' | tee -a /dev/stderr)
     [ "${actual}" == 'null' ]
-
-    local actual=$(echo "$container" | yq -r '.startupProbe.exec.command[2]' | tee -a /dev/stderr)
-    [ "${actual}" == '/usr/bin/varnishncsa -d -t3' ]
 }
 
-@test "${kind}/varnishncsa/image: inherit from ${chart} by default" {
+@test "${kind}/varnishncsa/image: uses server.image" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -4842,27 +4782,20 @@ release-namespace: to-be-override
     [ "${actual}" == "localhost/${chart}:latest" ]
 }
 
-@test "${kind}/varnishncsa/image: can be overridden" {
+@test "${kind}/varnishncsa: has no probes" {
     cd "$(chart_dir)"
 
-    local object=$((helm template \
+    local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set "server.image.repository=localhost/${chart}" \
-        --set "server.image.tag=latest" \
-        --set "server.varnishncsa.image.repository=localhost/${chart}-ncsa" \
-        --set "server.varnishncsa.image.tag=ncsa-latest" \
         --namespace default \
         --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
+        . || render_failed) | tee -a /dev/stderr |
         yq -r -o=json -I=0 '
             .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .image' |
+            [has("startupProbe"), has("readinessProbe"), has("livenessProbe")]' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == "localhost/${chart}-ncsa:ncsa-latest" ]
+    [ "${actual}" == '[false,false,false]' ]
 }
 
 @test "${kind}/varnishncsa/image: numeric tag 0 is kept when the schema is skipped" {
@@ -4893,113 +4826,6 @@ release-namespace: to-be-override
             tee -a /dev/stderr)
 
     [ "${actual}" == "localhost/${chart}:0" ]
-}
-
-@test "${kind}/varnishncsa/startupProbe: not configured by default" {
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .startupProbe' | tee -a /dev/stderr)
-
-    [ "${actual}" == 'null' ]
-}
-
-@test "${kind}/varnishncsa/startupProbe: can be enabled" {
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.startupProbe.initialDelaySeconds=10' \
-        --set 'server.varnishncsa.startupProbe.periodSeconds=20' \
-        --set 'server.varnishncsa.startupProbe.timeoutSeconds=2' \
-        --set 'server.varnishncsa.startupProbe.successThreshold=2' \
-        --set 'server.varnishncsa.startupProbe.failureThreshold=6' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .startupProbe' | tee -a /dev/stderr)
-
-    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
-}
-
-@test "${kind}/varnishncsa/readinessProbe: can be configured" {
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.readinessProbe.initialDelaySeconds=10' \
-        --set 'server.varnishncsa.readinessProbe.periodSeconds=20' \
-        --set 'server.varnishncsa.readinessProbe.timeoutSeconds=2' \
-        --set 'server.varnishncsa.readinessProbe.successThreshold=2' \
-        --set 'server.varnishncsa.readinessProbe.failureThreshold=6' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .readinessProbe' | tee -a /dev/stderr)
-
-    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
-}
-
-@test "${kind}/varnishncsa/readinessProbe: can be disabled" {
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.readinessProbe=' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .readinessProbe' | tee -a /dev/stderr)
-
-    [ "${actual}" == "null" ]
-}
-
-@test "${kind}/varnishncsa/livenessProbe: can be configured" {
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.livenessProbe.initialDelaySeconds=10' \
-        --set 'server.varnishncsa.livenessProbe.periodSeconds=20' \
-        --set 'server.varnishncsa.livenessProbe.timeoutSeconds=2' \
-        --set 'server.varnishncsa.livenessProbe.successThreshold=2' \
-        --set 'server.varnishncsa.livenessProbe.failureThreshold=6' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .livenessProbe' | tee -a /dev/stderr)
-
-    [ "${actual}" == '{"exec":{"command":["/bin/sh","-c","/usr/bin/varnishncsa -d -t3"]},"failureThreshold":6,"initialDelaySeconds":10,"periodSeconds":20,"successThreshold":2,"timeoutSeconds":2}' ]
-}
-
-@test "${kind}/varnishncsa/livenessProbe: can be disabled" {
-    cd "$(chart_dir)"
-
-    local actual=$((helm template \
-        --set "server.kind=${kind}" \
-        --set 'server.varnishncsa.livenessProbe=' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) | tee -a /dev/stderr |
-        yq -r -o=json -I=0 '
-            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
-            .livenessProbe' | tee -a /dev/stderr)
-
-    [ "${actual}" == "null" ]
 }
 
 @test "${kind}/varnishncsa/resources: can be configured" {

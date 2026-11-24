@@ -169,6 +169,9 @@ The following values were removed. As unknown keys are rejected by `values.schem
 - `server.threadTimeout: N` → `server.parameters.threadPoolTimeout: N`.
 - `server.delayedHaltSeconds: N` → `server.delayedShutdown` with `method: sleep` and `sleep.seconds: N`, plus `server.terminationGracePeriodSeconds` (previously defaulted to N + 60).
 - `server.service.http.enabled`, `server.service.https.enabled` → none, the Service exposes `http` if and only if `server.http.enabled` is true, and `https` if and only if `server.tls.enabled` is true.
+- `server.varnishncsa.image` → none, varnishncsa always runs `server.image`, as it must match the varnishd version.
+- `server.varnishncsa.securityContext` → none, the varnishncsa container gets `global.securityContext`.
+- `server.varnishncsa.startupProbe`, `server.varnishncsa.readinessProbe`, `server.varnishncsa.livenessProbe` → none, the varnishncsa container has no probes. They ran a separate `varnishncsa -d -t3`, which only checked that the varnishd shared memory log was readable, not that the logging varnishncsa process was healthy; a varnishncsa that exits is still restarted by Kubernetes.
 
 `server.minThreads` and `server.maxThreads` are now passed as `-p thread_pool_min` then `-p thread_pool_max`, before `server.parameters`. Setting `threadPoolMin` or `threadPoolMax` in `server.parameters` now fails rendering; use `server.minThreads` and `server.maxThreads` instead.
 
@@ -1741,47 +1744,6 @@ An object for configuring [varnishncsa][varnishncsa].
 
 Enables HTTP request logging via [varnishncsa][varnishncsa].
 
-**server.varnishncsa.image**
-
-- Type: object
-
-Sets the image and tag to use to deploy the varnishncsa sidecar. Setting a field to "-" inherits it from `server.image`.
-
-**server.varnishncsa.image.repository**
-
-- Default: `-`
-
-Sets the repository for Varnish Cache image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Cache server. Set this to "-" to inherit the value of `server.image.repository`.
-
-**server.varnishncsa.image.pullPolicy**
-
-- Default: `-`
-
-Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image for use with varnishncsa. This can be one of Always, Never, or IfNotPresent. Set this to "-" to inherit the value of `server.image.pullPolicy`.
-
-**server.varnishncsa.image.tag**
-
-- Default: `-`
-
-Sets the tag for the Varnish Cache image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Cache server. Set this to "-" to inherit the value of `server.image.tag`.
-
-**server.varnishncsa.securityContext**
-
-- Type: object or template string
-
-An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
-
-This securityContext will be set on the varnishncsa container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
-
-For example:
-
-```yaml
-server:
-  varnishncsa:
-    securityContext:
-      runAsUser: 1000
-```
-
 **server.varnishncsa.extraArgs**
 
 - Type: string or array of strings
@@ -1829,104 +1791,6 @@ server:
       - name: RELEASE_NAMESPACE
         value: {{ .Release.Namespace }}
 ```
-
-**server.varnishncsa.startupProbe**
-
-- Type: object or false
-
-An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container. The probe is disabled when empty. The probe command is set by the chart.
-
-For example:
-
-```yaml
-server:
-  varnishncsa:
-    startupProbe:
-      periodSeconds: 5
-      failureThreshold: 10
-```
-
-**server.varnishncsa.readinessProbe**
-
-- Type: object or false
-
-An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
-
-**server.varnishncsa.readinessProbe.initialDelaySeconds**
-
-- Type: number
-- Default: `5`
-
-Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is ready to handle the logs.
-
-**server.varnishncsa.readinessProbe.periodSeconds**
-
-- Type: number
-- Default: `10`
-
-Sets the delay between each probe to determine if the varnishncsa Pod is ready to handle the logs after the initial probe.
-
-**server.varnishncsa.readinessProbe.timeoutSeconds**
-
-- Type: number
-- Default: `1`
-
-Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
-
-**server.varnishncsa.readinessProbe.successThreshold**
-
-- Type: number
-- Default: `1`
-
-Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered ready to handle the logs.
-
-**server.varnishncsa.readinessProbe.failureThreshold**
-
-- Type: number
-- Default: `3`
-
-Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.
-
-**server.varnishncsa.livenessProbe**
-
-- Type: object or false
-
-An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.
-
-**server.varnishncsa.livenessProbe.initialDelaySeconds**
-
-- Type: number
-- Default: `30`
-
-Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is still ready to handle the logs.
-
-**server.varnishncsa.livenessProbe.periodSeconds**
-
-- Type: number
-- Default: `10`
-
-Sets the delay between each probe to determine if the varnishncsa Pod is still ready to handle the logs after the initial probe.
-
-**server.varnishncsa.livenessProbe.timeoutSeconds**
-
-- Type: number
-- Default: `5`
-
-Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
-
-**server.varnishncsa.livenessProbe.successThreshold**
-
-- Type: number
-- Default: `1`
-
-Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered still ready to handle the logs.
-
-**server.varnishncsa.livenessProbe.failureThreshold**
-
-- Type: number
-- Default: `3`
-
-Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.
 
 **server.varnishncsa.resources**
 

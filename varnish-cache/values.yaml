@@ -1048,40 +1048,6 @@ server:
     # Type: boolean
     enabled: true
 
-    # Sets the image and tag to use to deploy the varnishncsa sidecar. Setting a field to
-    # "-" inherits it from `server.image`.
-    # Type: object
-    image:
-      # Sets the repository for Varnish Cache image for use with varnishncsa. The Varnish
-      # image used here must be the same version as the Varnish Cache server. Set this to
-      # "-" to inherit the value of `server.image.repository`.
-      repository: "-"
-
-      # Sets the
-      # [imagePullPolicy](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-      # for the Varnish Cache image for use with varnishncsa. This can be one of Always,
-      # Never, or IfNotPresent. Set this to "-" to inherit the value of
-      # `server.image.pullPolicy`.
-      pullPolicy: "-"
-
-      # Sets the tag for the Varnish Cache image for use with varnishncsa. The Varnish
-      # image used here must be the same version as the Varnish Cache server. Set this to
-      # "-" to inherit the value of `server.image.tag`.
-      tag: "-"
-
-    # An object that conforms to the Kubernetes
-    # [securityContext](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-    # definition of a Container.
-    #
-    # This securityContext will be set on the varnishncsa container. For setting
-    # securityContext on the Pod itself, see `global.podSecurityContext`. For setting
-    # securityContext to all containers, see `global.securityContext`.
-    # Type: object or template string
-    # Example:
-    #   securityContext:
-    #     runAsUser: 1000
-    securityContext: {}
-
     # Sets the extra arguments to varnishncsa.
     # Type: string or array of strings
     extraArgs:
@@ -1111,75 +1077,6 @@ server:
     #     - name: RELEASE_NAMESPACE
     #       value: {{ .Release.Namespace }}
     extraEnvs: {}
-
-    # An object that conforms to the Kubernetes
-    # [startupProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-    # definition of a Container. The probe is disabled when empty. The probe command is
-    # set by the chart.
-    # Type: object or false
-    # Example:
-    #   startupProbe:
-    #     periodSeconds: 5
-    #     failureThreshold: 10
-    startupProbe: {}
-
-    # An object that conforms to the Kubernetes
-    # [readinessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-    # definition of a Container. Set to `false` to disable the probe.
-    # Type: object or false
-    readinessProbe:
-      # Sets the initial delay before the first probe is sent to determine if the
-      # varnishncsa Pod is ready to handle the logs.
-      # Type: number
-      initialDelaySeconds: 5
-
-      # Sets the delay between each probe to determine if the varnishncsa Pod is ready to
-      # handle the logs after the initial probe.
-      # Type: number
-      periodSeconds: 10
-
-      # Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
-      # Type: number
-      timeoutSeconds: 1
-
-      # Sets the number of times when a consecutive successful response is considered a
-      # success and the varnishncsa Pod is considered ready to handle the logs.
-      # Type: number
-      successThreshold: 1
-
-      # Sets the number of times when a consecutive failure response is considered a
-      # failure and the varnishncsa Pod is considered unhealthy.
-      # Type: number
-      failureThreshold: 3
-
-    # An object that conforms to the Kubernetes
-    # [livenessProbe](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)
-    # definition of a Container. Set to `false` to disable the probe.
-    # Type: object or false
-    livenessProbe:
-      # Sets the initial delay before the first probe is sent to determine if the
-      # varnishncsa Pod is still ready to handle the logs.
-      # Type: number
-      initialDelaySeconds: 30
-
-      # Sets the delay between each probe to determine if the varnishncsa Pod is still
-      # ready to handle the logs after the initial probe.
-      # Type: number
-      periodSeconds: 10
-
-      # Sets the timeout for the probe to wait for a response from the varnishncsa Pod.
-      # Type: number
-      timeoutSeconds: 5
-
-      # Sets the number of times when a consecutive successful response is considered a
-      # success and the varnishncsa Pod is considered still ready to handle the logs.
-      # Type: number
-      successThreshold: 1
-
-      # Sets the number of times when a consecutive failure response is considered a
-      # failure and the varnishncsa Pod is considered unhealthy.
-      # Type: number
-      failureThreshold: 3
 
     # An object that conforms to the Kubernetes
     # [resources](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#containers)

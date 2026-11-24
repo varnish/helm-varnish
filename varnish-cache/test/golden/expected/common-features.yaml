@@ -192,28 +192,6 @@ spec:
           env:
             - name: VSM_NOPID
               value: "1"
-          readinessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - "/usr/bin/varnishncsa -d -t3"
-            failureThreshold: 3
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          livenessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - "/usr/bin/varnishncsa -d -t3"
-            failureThreshold: 3
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 5
           volumeMounts:
             - name: golden-varnish-vsm
               mountPath: /var/lib/varnish

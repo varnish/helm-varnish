@@ -564,8 +564,9 @@ Declares the Varnish NCSA container
 {{- define "varnish-common.ncsaContainer" -}}
 {{- if .Values.server.varnishncsa.enabled }}
 - name: {{ .Chart.Name }}-ncsa
-  {{- include "varnish-common.securityContext" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
-  {{- include "varnish-common.image" (merge (dict "base" .Values.server.image "image" .Values.server.varnishncsa.image) .) | nindent 2 }}
+  {{- /* varnishncsa has no securityContext of its own: global only */}}
+  {{- include "varnish-common.securityContext" (merge (dict "section" "global") .) | nindent 2 }}
+  {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 2 }}
   {{- include "varnish-common.resources" (merge (dict "section" "server.varnishncsa") .) | nindent 2 }}
   command: ["/usr/bin/varnishncsa"]
   {{- $ncsaArgs := list }}
@@ -587,33 +588,6 @@ Declares the Varnish NCSA container
       value: "1"
   {{- if .Values.server.varnishncsa.extraEnvs }}
     {{- include "varnish-common.toEnv" (merge (dict "envs" .Values.server.varnishncsa.extraEnvs) .) | trim | nindent 4 }}
-  {{- end }}
-  {{- if and .Values.server.varnishncsa.startupProbe (not (empty .Values.server.varnishncsa.startupProbe)) }}
-  startupProbe:
-    exec:
-      command:
-        - /bin/sh
-        - -c
-        - "/usr/bin/varnishncsa -d -t3"
-    {{- toYaml .Values.server.varnishncsa.startupProbe | nindent 4 }}
-  {{- end }}
-  {{- if and .Values.server.varnishncsa.readinessProbe (not (empty .Values.server.varnishncsa.readinessProbe)) }}
-  readinessProbe:
-    exec:
-      command:
-        - /bin/sh
-        - -c
-        - "/usr/bin/varnishncsa -d -t3"
-    {{- toYaml .Values.server.varnishncsa.readinessProbe | nindent 4 }}
-  {{- end }}
-  {{- if and .Values.server.varnishncsa.livenessProbe (not (empty .Values.server.varnishncsa.livenessProbe)) }}
-  livenessProbe:
-    exec:
-      command:
-        - /bin/sh
-        - -c
-        - "/usr/bin/varnishncsa -d -t3"
-    {{- toYaml .Values.server.varnishncsa.livenessProbe | nindent 4 }}
   {{- end }}
   volumeMounts:
     - name: {{ .Release.Name }}-varnish-vsm

@@ -1535,38 +1535,6 @@
               "default": true,
               "description": "Enables HTTP request logging via [varnishncsa][varnishncsa].\n"
             },
-            "image": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/sidecarImage"
-                }
-              ],
-              "description": "Sets the image and tag to use to deploy the varnishncsa sidecar. Setting a field to \"-\" inherits it from `server.image`.\n",
-              "properties": {
-                "repository": {
-                  "default": "-",
-                  "description": "Sets the repository for Varnish Cache image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Cache server. Set this to \"-\" to inherit the value of `server.image.repository`.\n"
-                },
-                "pullPolicy": {
-                  "default": "-",
-                  "description": "Sets the [imagePullPolicy][k8s-pod-v1-containers] for the Varnish Cache image for use with varnishncsa. This can be one of Always, Never, or IfNotPresent. Set this to \"-\" to inherit the value of `server.image.pullPolicy`.\n"
-                },
-                "tag": {
-                  "default": "-",
-                  "description": "Sets the tag for the Varnish Cache image for use with varnishncsa. The Varnish image used here must be the same version as the Varnish Cache server. Set this to \"-\" to inherit the value of `server.image.tag`.\n"
-                }
-              }
-            },
-            "securityContext": {
-              "$ref": "#/definitions/objectOrTemplate",
-              "default": {},
-              "description": "An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.\n\nThis securityContext will be set on the varnishncsa container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.\n",
-              "examples": [
-                {
-                  "runAsUser": 1000
-                }
-              ]
-            },
             "extraArgs": {
               "$ref": "#/definitions/extraArgs",
               "default": [
@@ -1600,91 +1568,6 @@
                 ],
                 "- name: RELEASE_NAMESPACE\n  value: {{ .Release.Namespace }}\n"
               ]
-            },
-            "startupProbe": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/toggleableProbe"
-                }
-              ],
-              "default": {},
-              "description": "An object that conforms to the Kubernetes [startupProbe][k8s-pod-v1-containers] definition of a Container. The probe is disabled when empty. The probe command is set by the chart.\n",
-              "examples": [
-                {
-                  "periodSeconds": 5,
-                  "failureThreshold": 10
-                }
-              ]
-            },
-            "readinessProbe": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/toggleableProbe"
-                }
-              ],
-              "description": "An object that conforms to the Kubernetes [readinessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.\n",
-              "properties": {
-                "initialDelaySeconds": {
-                  "type": "integer",
-                  "default": 5,
-                  "description": "Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is ready to handle the logs.\n"
-                },
-                "periodSeconds": {
-                  "type": "integer",
-                  "default": 10,
-                  "description": "Sets the delay between each probe to determine if the varnishncsa Pod is ready to handle the logs after the initial probe.\n"
-                },
-                "timeoutSeconds": {
-                  "type": "integer",
-                  "default": 1,
-                  "description": "Sets the timeout for the probe to wait for a response from the varnishncsa Pod.\n"
-                },
-                "successThreshold": {
-                  "type": "integer",
-                  "default": 1,
-                  "description": "Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered ready to handle the logs.\n"
-                },
-                "failureThreshold": {
-                  "type": "integer",
-                  "default": 3,
-                  "description": "Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.\n"
-                }
-              }
-            },
-            "livenessProbe": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/toggleableProbe"
-                }
-              ],
-              "description": "An object that conforms to the Kubernetes [livenessProbe][k8s-pod-v1-containers] definition of a Container. Set to `false` to disable the probe.\n",
-              "properties": {
-                "initialDelaySeconds": {
-                  "type": "integer",
-                  "default": 30,
-                  "description": "Sets the initial delay before the first probe is sent to determine if the varnishncsa Pod is still ready to handle the logs.\n"
-                },
-                "periodSeconds": {
-                  "type": "integer",
-                  "default": 10,
-                  "description": "Sets the delay between each probe to determine if the varnishncsa Pod is still ready to handle the logs after the initial probe.\n"
-                },
-                "timeoutSeconds": {
-                  "type": "integer",
-                  "default": 5,
-                  "description": "Sets the timeout for the probe to wait for a response from the varnishncsa Pod.\n"
-                },
-                "successThreshold": {
-                  "type": "integer",
-                  "default": 1,
-                  "description": "Sets the number of times when a consecutive successful response is considered a success and the varnishncsa Pod is considered still ready to handle the logs.\n"
-                },
-                "failureThreshold": {
-                  "type": "integer",
-                  "default": 3,
-                  "description": "Sets the number of times when a consecutive failure response is considered a failure and the varnishncsa Pod is considered unhealthy.\n"
-                }
-              }
             },
             "resources": {
               "$ref": "#/definitions/objectOrTemplate",

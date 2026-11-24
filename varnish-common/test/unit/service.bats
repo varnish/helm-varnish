@@ -138,8 +138,6 @@ load _helpers
         --set 'server.tls.enabled=false' \
         --set 'server.livenessProbe=null' \
         --set 'server.readinessProbe=null' \
-        --set 'server.varnishncsa.livenessProbe=null' \
-        --set 'server.varnishncsa.readinessProbe=null' \
         --namespace default \
         --show-only templates/service.yaml \
         .

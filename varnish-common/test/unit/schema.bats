@@ -100,7 +100,6 @@ EOT
   # YAML turns 8.0 into 8 and 1.10 into 1.1 before the chart sees them, and
   # --set turns 7 into an integer
   schema_rejects "at '/server/image/tag'" --set server.image.tag=7
-  schema_rejects "at '/server/varnishncsa/image/tag'" --set server.varnishncsa.image.tag=7
 
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   printf 'server:\n  image:\n    tag: 8.0\n' > "${values}"
@@ -402,19 +401,16 @@ EOT
   schema_rejects "additional properties 'extraArg' not allowed" --set server.varnishncsa.extraArg=x
 }
 
-@test "Schema: varnishncsa image accepts '-'" {
-  schema_accepts --set server.varnishncsa.image.tag=-
+@test "Schema: rejects the removed varnishncsa image, securityContext and probes" {
+  schema_rejects "additional properties 'image' not allowed" --set server.varnishncsa.image.tag=-
+  schema_rejects "additional properties 'securityContext' not allowed" --set server.varnishncsa.securityContext.runAsUser=1000
+  schema_rejects "additional properties 'startupProbe' not allowed" --set server.varnishncsa.startupProbe.periodSeconds=5
+  schema_rejects "additional properties 'readinessProbe' not allowed" --set server.varnishncsa.readinessProbe=false
+  schema_rejects "additional properties 'livenessProbe' not allowed" --set server.varnishncsa.livenessProbe=false
 }
 
 @test "Schema: accepts a list varnishncsa.extraEnvs" {
   schema_accepts --set server.varnishncsa.extraEnvs[0].name=A --set server.varnishncsa.extraEnvs[0].value=b
-}
-
-@test "Schema: varnishncsa probes can be disabled with false" {
-  schema_accepts --set server.varnishncsa.enabled=true --set server.varnishncsa.readinessProbe=false --set server.varnishncsa.livenessProbe=false
-  # only the varnish container probes are left
-  [ "$(grep -cE '^ *readinessProbe:' <<< "$output")" -eq 1 ]
-  [ "$(grep -cE '^ *livenessProbe:' <<< "$output")" -eq 1 ]
 }
 
 @test "Schema: rejects unknown otel keys" {
