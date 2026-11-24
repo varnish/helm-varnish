@@ -50,6 +50,7 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - `server.varnishncsa.extraArgs` defaults to `[]` instead of `["-c"]`. varnishncsa logs client requests by default, so the output is the same.
 - `server.service.externalTrafficPolicy` is only rendered when `server.service.type` is `NodePort` or `LoadBalancer`. The API server rejects it for other types.
 - A `tcpSocket` handler in `server.startupProbe`, `server.readinessProbe` or `server.livenessProbe` is rendered as given. Before, its port was replaced with `server.http.port`; leave `tcpSocket` out to keep that.
+- Rendering fails when `server.autoscaling.enabled` is true and `server.kind` is `DaemonSet`. The HorizontalPodAutoscaler could not scale a DaemonSet; set `autoscaling.enabled: false`.
 
 ### Fixed
 

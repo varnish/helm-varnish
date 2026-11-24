@@ -1019,7 +1019,7 @@ An object for configuring [HorizontalPodAutoscaling][k8s-hpa].
 - Type: boolean
 - Default: `false`
 
-Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Cache Pod. `server.replicas` is ignored if autoscaling is enabled.
+Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Cache Pod. `server.replicas` is ignored if autoscaling is enabled. Rendering fails when `server.kind` is `DaemonSet`, which has no replicas to scale.
 
 **server.autoscaling.minReplicas**
 

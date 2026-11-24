@@ -722,7 +722,8 @@ server:
     # Enables the
     # [HorizontalPodAutoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
     # with the Varnish Enterprise Pod. `server.replicas` is ignored if autoscaling is
-    # enabled.
+    # enabled. Rendering fails when `server.kind` is `DaemonSet`, which has no replicas to
+    # scale.
     # Type: boolean
     enabled: false
 

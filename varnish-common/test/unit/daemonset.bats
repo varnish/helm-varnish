@@ -42,6 +42,20 @@ chart=$(chart_name)
     [[ "${output}" == *"'server.strategy' cannot be enabled"* ]]
 }
 
+@test "DaemonSet/autoscaling: cannot be enabled" {
+    cd "$(chart_dir)"
+
+    run helm template \
+        --set 'server.kind=DaemonSet' \
+        --set 'server.autoscaling.enabled=true' \
+        --namespace default \
+        --show-only templates/daemonset.yaml \
+        .
+    echo "${output}" >&2
+    [ "${status}" -ne 0 ]
+    [[ "${output}" == *"'server.autoscaling.enabled' cannot be enabled"* ]]
+}
+
 @test "DaemonSet/updateStrategy: can be disabled" {
     cd "$(chart_dir)"
 

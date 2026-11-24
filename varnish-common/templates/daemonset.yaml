@@ -2,6 +2,9 @@
 {{- if .Values.server.strategy }}
 {{- fail "'server.strategy' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
 {{- end }}
+{{- if .Values.server.autoscaling.enabled }}
+{{- fail "'server.autoscaling.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}
+{{- end }}
 {{- if include "varnish-common.isEnterprise" . }}
 {{- if .Values.server.mse4.persistence.enabled }}
 {{- fail "'server.mse4.persistence.enabled' cannot be enabled when 'server.kind' is 'DaemonSet'" }}

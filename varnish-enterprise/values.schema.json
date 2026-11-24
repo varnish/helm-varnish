@@ -1001,7 +1001,7 @@
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Enterprise Pod. `server.replicas` is ignored if autoscaling is enabled.\n"
+              "description": "Enables the [HorizontalPodAutoscaling][k8s-hpa] with the Varnish Enterprise Pod. `server.replicas` is ignored if autoscaling is enabled. Rendering fails when `server.kind` is `DaemonSet`, which has no replicas to scale.\n"
             },
             "minReplicas": {
               "$ref": "#/definitions/intOrDash",
