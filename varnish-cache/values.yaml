@@ -2,8 +2,9 @@
 # Generated from varnish-common/schema/values.schema.yaml by generate.py. Do not edit.
 
 # Overrides the name of the chart (without the release name). For example, setting
-# `nameOverride` to "hello" would produce a workload named "release-name-hello".
-# Containers within a pod derive their name from this setting.
+# `nameOverride` to "hello" would produce a workload named "release-name-hello". Container
+# names are not affected: they are always based on the chart name (`varnish-cache` or
+# `varnish-enterprise`).
 #
 # By default, the name of the chart is used.
 # Type: string
@@ -295,19 +296,19 @@ server:
 
   # Sets the minimum number of worker threads in each pool. Passed as `-p thread_pool_min`
   # before `server.parameters` (min first). See also [varnishd
-  # documentation](https://varnish-cache.org/docs/6.0/reference/varnishd.html).
+  # documentation](https://www.varnish.org/docs/reference/varnishd/).
   # Type: number
   minThreads: 50
 
   # Sets the maximum number of worker threads in each pool. Passed as `-p thread_pool_max`
   # after `thread_pool_min` and before `server.parameters`. See also [varnishd
-  # documentation](https://varnish-cache.org/docs/6.0/reference/varnishd.html).
+  # documentation](https://www.varnish.org/docs/reference/varnishd/).
   # Type: number
   maxThreads: 1000
 
   # Sets the command for Varnish Cache. Note that by overriding this, you will also
   # override parameters, listening ports, etc. See also [varnishd
-  # documentation](https://varnish-cache.org/docs/6.0/reference/varnishd.html).
+  # documentation](https://www.varnish.org/docs/reference/varnishd/).
   # Type: array of strings
   command: []
 
@@ -332,10 +333,8 @@ server:
   # An array of objects that conform to the Kubernetes
   # [initContainers](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec)
   # definition of a Pod. This can be used to run initialization tasks before varnishd
-  # starts. Note that `initContainers` cannot be changed once it is applied. To update
-  # this value after the initial deploy, uninstall Varnish Cache Helm Chart from the
-  # cluster and reinstall. The value can be set as either an array of objects or a
-  # template string.
+  # starts. Like any change to the Pod template, changing this value replaces the Pods.
+  # The value can be set as either an array of objects or a template string.
   # Type: array or template string
   # Example:
   #   extraInitContainers: |
@@ -1031,11 +1030,11 @@ server:
     extraEgress: []
 
   # An object for configuring
-  # [varnishncsa](https://varnish-cache.org/docs/6.0/reference/varnishncsa.html).
+  # [varnishncsa](https://www.varnish.org/docs/reference/varnishncsa/).
   # Type: object
   varnishncsa:
     # Enables HTTP request logging via
-    # [varnishncsa](https://varnish-cache.org/docs/6.0/reference/varnishncsa.html).
+    # [varnishncsa](https://www.varnish.org/docs/reference/varnishncsa/).
     # Type: boolean
     enabled: true
 

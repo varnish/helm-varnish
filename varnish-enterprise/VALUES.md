@@ -19,7 +19,7 @@ fix the values instead.
 - Type: string
 - Default: name of the chart
 
-Overrides the name of the chart (without the release name). For example, setting `nameOverride` to "hello" would produce a workload named "release-name-hello". Containers within a pod derive their name from this setting.
+Overrides the name of the chart (without the release name). For example, setting `nameOverride` to "hello" would produce a workload named "release-name-hello". Container names are not affected: they are always based on the chart name (`varnish-cache` or `varnish-enterprise`).
 
 By default, the name of the chart is used.
 
@@ -548,7 +548,7 @@ server:
 
 - Type: array or template string
 
-An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Note that `initContainers` cannot be changed once it is applied. To update this value after the initial deploy, uninstall Varnish Enterprise Helm Chart from the cluster and reinstall. The value can be set as either an array of objects or a template string.
+An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Like any change to the Pod template, changing this value replaces the Pods. The value can be set as either an array of objects or a template string.
 
 For example:
 

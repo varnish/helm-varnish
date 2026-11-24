@@ -180,7 +180,7 @@
     "nameOverride": {
       "type": "string",
       "default": "",
-      "description": "Overrides the name of the chart (without the release name). For example, setting `nameOverride` to \"hello\" would produce a workload named \"release-name-hello\". Containers within a pod derive their name from this setting.\n\nBy default, the name of the chart is used.\n"
+      "description": "Overrides the name of the chart (without the release name). For example, setting `nameOverride` to \"hello\" would produce a workload named \"release-name-hello\". Container names are not affected: they are always based on the chart name (`varnish-cache` or `varnish-enterprise`).\n\nBy default, the name of the chart is used.\n"
     },
     "fullnameOverride": {
       "type": "string",
@@ -615,7 +615,7 @@
         "extraInitContainers": {
           "$ref": "#/definitions/arrayOrTemplate",
           "default": [],
-          "description": "An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Note that `initContainers` cannot be changed once it is applied. To update this value after the initial deploy, uninstall Varnish Cache Helm Chart from the cluster and reinstall. The value can be set as either an array of objects or a template string.\n",
+          "description": "An array of objects that conform to the Kubernetes [initContainers][k8s-pod-v1-pods] definition of a Pod. This can be used to run initialization tasks before varnishd starts. Like any change to the Pod template, changing this value replaces the Pods. The value can be set as either an array of objects or a template string.\n",
           "examples": [
             "- name: varnish-setup-tls\n  securityContext:\n    {{- toYaml .Values.global.securityContext | nindent 4 }}\n  image: debian:latest\n  command:\n    - sh -c \"sleep 3600\"\n"
           ]
