@@ -778,7 +778,9 @@ initContainers:
         mountPath: /etc/varnish/shared
 {{- if $mse4PersistenceEnabled }}
   - name: mse4-config
+    {{- include "varnish-common.securityContext" (merge (dict "section" "server") .) | nindent 4 }}
     {{- include "varnish-common.image" (merge (dict "image" .Values.server.image) .) | nindent 4 }}
+    {{- include "varnish-common.resources" (merge (dict "section" "server") .) | nindent 4 }}
     command:
      - mkfs.mse4
      - -c

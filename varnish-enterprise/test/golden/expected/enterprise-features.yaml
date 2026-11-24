@@ -379,6 +379,9 @@ spec:
             - name: golden-config-shared
               mountPath: /etc/varnish/shared
         - name: mse4-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
           image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
           imagePullPolicy: IfNotPresent
           command:

@@ -319,7 +319,7 @@ global:
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-pods] definition of a Pod.
 
-This securityContext will be set on all Pods within this chart. For setting securityContext on all containers, see `global.securityContext`.
+This securityContext will be set on all Pods within this chart. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 For example:
 
@@ -336,7 +336,7 @@ global:
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
 
-This securityContext will be set on all containers within this chart. For setting securityContext on the Pod itself, see `global.podSecurityContext`.
+This securityContext is set on every container the chart creates, merged with the container's own securityContext (e.g., `server.securityContext`), which takes precedence. The chart's init containers get the same securityContext as the Varnish Cache container. Containers from `server.extraContainers` and `server.extraInitContainers` don't get it. For setting securityContext on the Pod itself, see `global.podSecurityContext`.
 
 For example:
 
@@ -402,7 +402,7 @@ global:
 
 - Type: object or template string
 
-An object that conforms to the Kubernetes resources definition of a Container. This configuration will apply resource constraints to all containers. To specify resources on a single container, use `server.resources`, `server.varnishncsa.resources`, and `server.otel.resources`.
+An object that conforms to the Kubernetes resources definition of a Container. These resources are set on every container the chart creates, merged with the container's own resources (e.g., `server.resources`, `server.varnishncsa.resources`, `server.otel.resources`), which take precedence. The chart's init containers get the same resources as the Varnish Cache container. Containers from `server.extraContainers` and `server.extraInitContainers` don't get them.
 
 For example:
 
@@ -1344,7 +1344,7 @@ server:
 
 An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container.
 
-This securityContext will be set on the Varnish Cache container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+This securityContext will be set on the Varnish Cache container and the chart's init containers. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 For example:
 
@@ -1549,7 +1549,7 @@ Sets the number of times when a consecutive failure response is considered a fai
 
 - Type: object or template string
 
-An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Cache container.
+An object that conforms to the Kubernetes [resources][k8s-pod-v1-containers] definition of a Container. This configuration can be used to limit resources consumed by the Varnish Cache container. The chart's init containers get the same resources.
 
 For example:
 
@@ -1805,7 +1805,7 @@ Runs `/usr/bin/varnish-otel` in a sidecar container to export Varnish logs and m
 
 - Type: object or template string
 
-An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container. This securityContext will be set on the OTEL container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext to all containers, see `global.securityContext`.
+An object that conforms to the Kubernetes [securityContext][k8s-pod-v1-containers] definition of a Container. This securityContext will be set on the OTEL container. For setting securityContext on the Pod itself, see `global.podSecurityContext`. For setting securityContext on every container the chart creates, see `global.securityContext`.
 
 **server.otel.resources**
 
