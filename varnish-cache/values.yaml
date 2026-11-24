@@ -472,7 +472,8 @@ server:
 
   # Sets the termination grace period seconds to wait for Varnish Cache to shut down. Once
   # this number of seconds is reached without the Varnish Cache Pod shutting down,
-  # Kubernetes will send SIGKILL to the Pod. When `server.delayedShutdown` is used, this
+  # Kubernetes will send SIGKILL to the Pod. When unset, the Kubernetes default (30
+  # seconds) applies; `0` is rendered as is. When `server.delayedShutdown` is used, this
   # value should be set to a higher value than the **maximum** time (in seconds) it took
   # for Varnish Cache to fully shut down after a delayed shutdown.
   #
@@ -482,7 +483,7 @@ server:
   # `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in
   # order to have a zero-downtime during a rolling update or scaling down.
   # Type: number
-  terminationGracePeriodSeconds: 0
+  terminationGracePeriodSeconds: null
 
   # Configures delayed shutdown for zero-downtime downscaling.
   # Type: object

@@ -2841,6 +2841,24 @@ env: {
     [ "${actual}" == "180" ]
 }
 
+@test "${kind}/terminationGracePeriodSeconds: renders 0" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=0" \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.terminationGracePeriodSeconds' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "0" ]
+}
+
 @test "${kind}/agent: not enabled by default" {
     cd "$(chart_dir)"
 

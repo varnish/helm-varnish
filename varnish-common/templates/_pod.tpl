@@ -104,11 +104,12 @@ topologySpreadConstraints:
 {{- end }}
 
 {{/*
-Sets up terminationGracePeriodSeconds if set explicitly.
+Sets up terminationGracePeriodSeconds if set explicitly (0 included).
 */}}
 {{- define "varnish-common.terminationGracePeriodSeconds" -}}
-{{- if not (empty .Values.server.terminationGracePeriodSeconds) }}
-terminationGracePeriodSeconds: {{ .Values.server.terminationGracePeriodSeconds }}
+{{- $grace := .Values.server.terminationGracePeriodSeconds }}
+{{- if include "varnish-common.isSet" $grace }}
+terminationGracePeriodSeconds: {{ $grace }}
 {{- end }}
 {{- end }}
 

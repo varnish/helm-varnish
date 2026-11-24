@@ -459,3 +459,9 @@ EOT
     }' "$(chart_dir)/values.yaml" > "${values}"
   schema_accepts -f "${values}"
 }
+
+@test "Schema: terminationGracePeriodSeconds accepts null and 0, rejects negative numbers" {
+  schema_accepts --set server.terminationGracePeriodSeconds=null
+  schema_accepts --set server.terminationGracePeriodSeconds=0
+  schema_rejects "at '/server/terminationGracePeriodSeconds'" --set server.terminationGracePeriodSeconds=-1
+}
