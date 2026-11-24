@@ -46,6 +46,7 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - `server.terminationGracePeriodSeconds` defaults to null instead of `0`, and `0` is now rendered. Before, `0` meant unset; set `null` to keep the Kubernetes default (30 seconds).
 - Rendering fails when `server.delayedShutdown.method` is not `none` and `server.terminationGracePeriodSeconds` is unset or shorter than the delay: `sleep.seconds` for `sleep`, `mempool.waitSeconds` for `mempool`, `shutdownDelay.seconds` for `shutdown_delay`. Set the grace period above the delay.
 - Varnish Cache: `server.autoscaling.minReplicas` defaults to `"-"` instead of `1`, so the HorizontalPodAutoscaler uses `server.replicas` as its minimum, like Varnish Enterprise. Set `minReplicas: 1` to keep the old minimum.
+- `server.varnishncsa.extraArgs` defaults to `[]` instead of `["-c"]`. varnishncsa logs client requests by default, so the output is the same.
 
 ### Fixed
 

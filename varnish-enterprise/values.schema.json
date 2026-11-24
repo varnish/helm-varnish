@@ -1645,10 +1645,8 @@
             },
             "extraArgs": {
               "$ref": "#/definitions/extraArgs",
-              "default": [
-                "-c"
-              ],
-              "description": "Sets the extra arguments to varnishncsa.\n"
+              "default": [],
+              "description": "Sets the extra arguments to varnishncsa. Without `-b` or `-c`, varnishncsa logs client requests.\n"
             },
             "extraEnvs": {
               "$ref": "#/definitions/env",

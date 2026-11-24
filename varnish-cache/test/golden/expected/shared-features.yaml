@@ -170,8 +170,6 @@ spec:
           image: "docker.io/varnish:APP_VERSION"
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnishncsa"]
-          args:
-            - -c
           env:
             - name: VSM_NOPID
               value: "1"

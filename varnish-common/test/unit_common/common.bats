@@ -4605,6 +4605,25 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '{"release-name":"release-name","release-namespace":"default"}' ]
 }
 
+@test "${kind}/varnishncsa/extraArgs: no args by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.enabled=true' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '
+            .spec.template.spec.containers[]? | select(.name == "'"${chart}"'-ncsa") |
+            .args' |
+        tee -a /dev/stderr)
+    [ "${actual}" == 'null' ]
+}
+
 @test "${kind}/varnishncsa/extraArgs: can be configured" {
     cd "$(chart_dir)"
 

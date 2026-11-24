@@ -1627,9 +1627,8 @@ Enables HTTP request logging via [varnishncsa][varnishncsa].
 **server.varnishncsa.extraArgs**
 
 - Type: string or array of strings
-- Default: `["-c"]`
 
-Sets the extra arguments to varnishncsa.
+Sets the extra arguments to varnishncsa. Without `-b` or `-c`, varnishncsa logs client requests.
 
 **server.varnishncsa.extraEnvs**
 

@@ -1191,10 +1191,10 @@ server:
     # Type: boolean
     enabled: true
 
-    # Sets the extra arguments to varnishncsa.
+    # Sets the extra arguments to varnishncsa. Without `-b` or `-c`, varnishncsa logs
+    # client requests.
     # Type: string or array of strings
-    extraArgs:
-      - "-c"
+    extraArgs: []
 
     # Sets additional environment variables for the varnishncsa container. Can be set as
     # an object, an array of objects, or a template string.

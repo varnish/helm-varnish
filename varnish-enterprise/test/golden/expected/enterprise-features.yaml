@@ -251,8 +251,6 @@ spec:
           image: "quay.io/varnish-software/varnish-plus:APP_VERSION"
           imagePullPolicy: IfNotPresent
           command: ["/usr/bin/varnishncsa"]
-          args:
-            - -c
           env:
             - name: VSM_NOPID
               value: "1"
