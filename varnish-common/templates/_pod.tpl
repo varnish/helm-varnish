@@ -2,7 +2,6 @@
 Sets up Pod annotations
 */}}
 {{- define "varnish-common.podAnnotations" }}
-{{- $section := default "server" .section }}
 {{- $mse4Config := include "varnish-common.mse4Config" . }}
 {{- $tlsConfig := include "varnish-common.tlsConfig" . }}
 {{- $vclConfig := include "varnish-common.vclConfig" . }}
@@ -39,14 +38,7 @@ Sets up Pod annotations
 {{- end }}
 {{- end }}
 {{- end }}
-{{- include "varnish-common.toYamlField"
-  (merge
-    (dict
-      "section" $section
-      "fieldName" "annotations"
-      "fieldKey" "podAnnotations"
-      "extraFieldValues" $checksum)
-    .) }}
+{{- include "varnish-common.globalMetadata" (dict "context" . "name" "annotations" "key" "podAnnotations" "defaults" $checksum) }}
 {{- end }}
 
 {{/*

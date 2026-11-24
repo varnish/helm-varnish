@@ -351,33 +351,52 @@ global:
 
 - Type: object or template string
 
-Applies extra annotations to all workloads. The value can be set as either an object or a template string. Workload annotations can be used for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the workload itself.
+Applies extra annotations to the Varnish Cache workload (the Deployment, StatefulSet or DaemonSet). The value can be set as either an object or a template string.
 
-To apply annotations on a Pod, use `global.podAnnotations`. To apply annotations on a specific workload, use `server.annotations`.
+To apply annotations on the Pods, use `global.podAnnotations`.
 
 **global.podAnnotations**
 
 - Type: object or template string
 
-Applies extra annotations to all Pods. The value can be set as either an object or a template string. Pod annotations can be used for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to a Pod itself.
+Applies extra annotations to the Varnish Cache Pods. The value can be set as either an object or a template string.
 
-To apply annotations on a workload, use `global.annotations`. To apply annotations on a specific Pod, use `server.podAnnotations`.
+To apply annotations on the workload, use `global.annotations`.
+
+For example:
+
+```yaml
+global:
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9273"
+    prometheus.io/scheme: http
+```
 
 **global.labels**
 
 - Type: object or template string
 
-Applies extra labels to all workloads. The value can be set as either an object or a template string. Workload labels can be used for applying additional metadata or for integrating with external tooling. The labels specified here will be applied to the workload itself.
+Applies extra labels to the Varnish Cache workload (the Deployment, StatefulSet or DaemonSet). The value can be set as either an object or a template string.
 
-To apply labels on a Pod, use `global.podLabels`. To apply labels on a specific workload, use `server.labels`.
+To apply labels on the Pods, use `global.podLabels`.
 
 **global.podLabels**
 
 - Type: object or template string
 
-Applies extra labels to all Pods. The value can be set as either an object or a template string. Pod labels can be used for applying additional metadata or for integrating with external tooling. Labels specified here will be applied to a Pod itself.
+Applies extra labels to the Varnish Cache Pods. The value can be set as either an object or a template string.
 
-To apply labels on a workload, use `global.labels`. To apply labels on a specific Pod, use `server.podLabels`.
+To apply labels on the workload, use `global.labels`.
+
+For example:
+
+```yaml
+global:
+  podLabels:
+    varnish-software.com/tier: edge
+```
 
 **global.resources**
 
@@ -442,18 +461,6 @@ When `server.autoscaling.enabled` is set to `true`, and `server.autoscaling.minR
 - Default: `Deployment`
 
 Specifies the type of workload to deploy Varnish Cache server. The value can be one of `Deployment`, `DaemonSet`, or `StatefulSet` depending on usage scenarios.
-
-**server.labels**
-
-- Type: object or template string
-
-Applies extra labels to the workload. The value can be set as either an object or a template string. Labels specified here will be applied to the workload itself. To apply labels on the Pod, use `server.podLabels`.
-
-**server.annotations**
-
-- Type: object or template string
-
-Applies extra annotations to the workload. The value can be set as either an object or a template string. Workload annotations can be used for applying additional metadata or for integrating with external tooling. The annotations specified here will be applied to the workload itself. To apply annotations on the Pod, use `server.podAnnotations`.
 
 **server.strategy**
 
@@ -1329,37 +1336,6 @@ server:
       - secretName: chart-example-tls
         hosts:
           - chart-example.local
-```
-
-**server.podAnnotations**
-
-- Type: object or template string
-
-Applies extra annotations to the Pod. The value can be set as either an object or a template string. Pod annotations can be used for applying additional metadata or for integrating with external tooling. Annotations specified here will be applied to the Pod. To apply annotations on the workload, use `server.annotations`.
-
-For example:
-
-```yaml
-server:
-  podAnnotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/path: /metrics
-    prometheus.io/port: "9273"
-    prometheus.io/scheme: http
-```
-
-**server.podLabels**
-
-- Type: object or template string
-
-Applies extra labels to the Pod. The value can be set as either an object or a template string. Labels specified here will be applied to the Pod itself. To apply labels on the workload, use `server.labels`.
-
-For example:
-
-```yaml
-server:
-  podLabels:
-    varnish-software.com/tier: edge
 ```
 
 **server.securityContext**

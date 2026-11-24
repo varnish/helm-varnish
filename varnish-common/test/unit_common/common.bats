@@ -158,12 +158,12 @@ release-namespace: to-be-override
     [ "${actual}" == '{"release-name":"release-name","release-namespace":"default"}' ]
 }
 
-@test "${kind}: inherits labels from server" {
+@test "${kind}: inherits labels from global" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.labels.hello=varnish' \
+        --set 'global.labels.hello=varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -172,12 +172,12 @@ release-namespace: to-be-override
     [ "${actual}" == "varnish" ]
 }
 
-@test "${kind}: inherits labels from server as templated string" {
+@test "${kind}: inherits labels from global as templated string" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.labels=hello: {{ .Release.Name }}' \
+        --set 'global.labels=hello: {{ .Release.Name }}' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -186,12 +186,12 @@ release-namespace: to-be-override
     [ "${actual}" == "release-name" ]
 }
 
-@test "${kind}: inherits annotations from server" {
+@test "${kind}: inherits annotations from global" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.annotations.hello=varnish' \
+        --set 'global.annotations.hello=varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -200,12 +200,12 @@ release-namespace: to-be-override
     [ "${actual}" == "varnish" ]
 }
 
-@test "${kind}: inherits annotations from server as templated string" {
+@test "${kind}: inherits annotations from global as templated string" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.annotations=hello: {{ .Release.Name }}' \
+        --set 'global.annotations=hello: {{ .Release.Name }}' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -214,12 +214,12 @@ release-namespace: to-be-override
     [ "${actual}" == "release-name" ]
 }
 
-@test "${kind}: inherits podAnnotations from server" {
+@test "${kind}: inherits podAnnotations from global" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.podAnnotations.hello=varnish' \
+        --set 'global.podAnnotations.hello=varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -228,12 +228,12 @@ release-namespace: to-be-override
     [ "${actual}" == "varnish" ]
 }
 
-@test "${kind}: inherits podAnnotations from server as templated string" {
+@test "${kind}: inherits podAnnotations from global as templated string" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.podAnnotations=hello: {{ .Release.Name }}' \
+        --set 'global.podAnnotations=hello: {{ .Release.Name }}' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) | tee -a /dev/stderr |
@@ -242,13 +242,28 @@ release-namespace: to-be-override
     [ "${actual}" == "release-name" ]
 }
 
-@test "${kind}: inherits podLabels from global and server" {
+@test "${kind}: global.labels apply to the workload only" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'global.labels.hello=varnish' \
+        --set 'global.annotations.hello=varnish' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    [ "$(echo "$object" | yq -r '.spec.template.metadata.labels.hello')" == "null" ]
+    [ "$(echo "$object" | yq -r '.spec.template.metadata.annotations.hello')" == "null" ]
+}
+
+@test "${kind}: inherits podLabels from global" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
         --set 'global.podLabels.foo=bar' \
-        --set 'server.podLabels.hello=varnish' \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -258,34 +273,10 @@ release-namespace: to-be-override
         yq -r -o=json -I=0 '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
 
-    [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'","foo":"bar","hello":"varnish"}' ]
+    [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'","foo":"bar"}' ]
 }
 
-@test "${kind}: inherits podLabels from global and server with global as templated string" {
-    cd "$(chart_dir)"
-
-    local labels="
-release-name: {{ .Release.Name }}
-release-namespace: to-be-override
-"
-
-    local object=$((helm template \
-        --set "server.kind=${kind}" \
-        --set "global.podLabels=${labels}" \
-        --set 'server.podLabels.release-namespace=varnish' \
-        --namespace default \
-        --show-only ${template} \
-        . || render_failed) |
-        tee -a /dev/stderr)
-
-    local actual=$(echo "$object" |
-        yq -r -o=json -I=0 '.spec.template.metadata.labels' |
-            tee -a /dev/stderr)
-
-    [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'","release-name":"release-name","release-namespace":"varnish"}' ]
-}
-
-@test "${kind}: inherits podLabels from global and server with server as templated string" {
+@test "${kind}: inherits podLabels from global as templated string" {
     cd "$(chart_dir)"
 
     local labels="
@@ -295,8 +286,7 @@ release-namespace: {{ .Release.Namespace }}
 
     local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'global.podLabels.release-namespace=to-be-override' \
-        --set "server.podLabels=${labels}" \
+        --set "global.podLabels=${labels}" \
         --namespace default \
         --show-only ${template} \
         . || render_failed) |
@@ -307,6 +297,25 @@ release-namespace: {{ .Release.Namespace }}
             tee -a /dev/stderr)
 
     [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"'"${chart}"'","release-name":"release-name","release-namespace":"default"}' ]
+}
+
+@test "${kind}: global.podAnnotations are merged with the checksum annotations" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'global.podAnnotations.hello=varnish' \
+        --set-string 'server.vclConfig=vcl 4.1;' \
+        --namespace default \
+        --show-only ${template} \
+        . || render_failed) |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -o=json -I=0 '.spec.template.metadata.annotations | keys' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == '["checksum/release-name-vcl","hello"]' ]
 }
 
 @test "${kind}: inherits default selector labels" {

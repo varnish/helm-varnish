@@ -28,6 +28,8 @@ Values are now validated against `values.schema.json`, and unknown keys are reje
 - `server.otel.image` → none, the OTEL sidecar always runs `server.image`, like varnishncsa. To run `varnish-otel` from another image, add a container to `server.extraContainers`.
 - (Enterprise) `server.initAgent` → none, there is no `init-agent` init container. varnishd always loads `/var/lib/varnish-controller/varnish-controller-agent/$(VARNISH_CONTROLLER_AGENT_NAME)/cmds.cli`, as it did with `server.initAgent.enabled: false`. The `/etc/varnish/shared/agent` link no longer exists; read `/var/lib/varnish-controller/varnish-controller-agent/<Pod name>/` instead.
 - (Enterprise) `global.initContainer` → none, it only set the image of the `init-agent` container. It is now ignored rather than rejected, since `global` accepts keys from parent charts.
+- `server.labels`, `server.annotations` → `global.labels`, `global.annotations`. They apply to the same Deployment, StatefulSet or DaemonSet.
+- `server.podLabels`, `server.podAnnotations` → `global.podLabels`, `global.podAnnotations`.
 
 ### Changed
 

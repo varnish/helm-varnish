@@ -299,14 +299,14 @@ EOT
   schema_rejects "additional properties 'route' not allowed" --set server.vcls.route=x
 }
 
-@test "Schema: rejects a list server.labels" {
-  schema_rejects "at '/server/labels'" --set server.labels[0]=a
+@test "Schema: rejects a list global.labels" {
+  schema_rejects "at '/global/labels'" --set global.labels[0]=a
 }
 
 @test "Schema: accepts template-string labels" {
   local values="${BATS_TEST_TMPDIR}/values.yaml"
   cat > "${values}" <<'EOT'
-server:
+global:
   labels: "foo: {{ .Release.Name }}"
 EOT
   schema_accepts -f "${values}"
@@ -410,6 +410,13 @@ EOT
 
 @test "Schema: rejects the removed server.otel.image" {
   schema_rejects "additional properties 'image' not allowed" --set server.otel.image.tag=-
+}
+
+@test "Schema: rejects the removed server labels and annotations" {
+  local key
+  for key in labels annotations podLabels podAnnotations; do
+    schema_rejects "additional properties '${key}' not allowed" --set "server.${key}.foo=bar"
+  done
 }
 
 @test "Schema: rejects the removed server.initAgent" {

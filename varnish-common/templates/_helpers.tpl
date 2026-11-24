@@ -198,35 +198,27 @@ Sets extra envs from either an array, an object, or a string.
 {{- end }}
 
 {{/*
-Declares the YAML field.
+Renders `<fieldName>: <map>`: <section>.<fieldName> merged with global.<fieldName>
+(each an object or a template string), <section> winning. Renders nothing when empty.
 */}}
 {{- define "varnish-common.toYamlField" }}
-{{- $section := default "server" .section }}
 {{- $fieldName := .fieldName }}
-{{- $fieldKey := default $fieldName .fieldKey }}
 {{- $fieldValue := .Values }}
-{{- range $s := (splitList "." $section) }}
+{{- range $s := (splitList "." .section) }}
 {{- $fieldValue = (get $fieldValue $s) }}
 {{- end }}
-{{- $fieldValue = (get $fieldValue $fieldKey) }}
+{{- $fieldValue = (get $fieldValue $fieldName) }}
 {{- if (empty $fieldValue) }}
 {{- $fieldValue = (dict) }}
 {{- else if eq (kindOf $fieldValue) "string" }}
 {{- $fieldValue = (fromYaml (tpl $fieldValue .)) }}
 {{- end }}
-{{- $globalFieldValue := (get .Values.global $fieldKey) }}
+{{- $globalFieldValue := (get .Values.global $fieldName) }}
 {{- if eq (kindOf $globalFieldValue) "string" }}
 {{- $globalFieldValue = (fromYaml (tpl $globalFieldValue .)) }}
 {{- end }}
 {{- if not (empty $globalFieldValue) }}
 {{- $fieldValue = (merge $fieldValue $globalFieldValue) }}
-{{- end }}
-{{- $extraFieldValues := .extraFieldValues }}
-{{- if eq (kindOf $extraFieldValues) "string" }}
-{{- $extraFieldValues = (fromYaml (tpl $extraFieldValues .)) }}
-{{- end }}
-{{- if not (empty $extraFieldValues) }}
-{{- $fieldValue = (merge $fieldValue $extraFieldValues) }}
 {{- end }}
 {{- if not (empty $fieldValue) }}
 {{- (dict $fieldName $fieldValue) | toYaml }}

@@ -9,12 +9,12 @@ global:
     - name: pull-secret
   podLabels:
     tier: edge
-server:
-  replicas: 2
   labels:
     deploy-label: x
   annotations:
     deploy-annotation: y
+server:
+  replicas: 2
   extraListens:
     - name: proxy
       proto: PROXY
